@@ -25,15 +25,51 @@
 #include "ns3/lte-module.h"
 #include "ns3/config-store.h"
 //#include "ns3/gtk-config-store.h"
-
-
 using namespace ns3;
 
-int main (int argc, char *argv[])
+// position functions insipred by /examples/wireless/wifi-ap.cc
+
+static void
+SetPosition (Ptr<Node> node, Vector position)
 {
-  // Command line arguments
+  Ptr<MobilityModel> mobility = node->GetObject<MobilityModel> ();
+  mobility->SetPosition (position);
+}
+
+static Vector
+GetPosition (Ptr<Node> node)
+{
+  Ptr<MobilityModel> mobility = node->GetObject<MobilityModel> ();
+  return mobility->GetPosition ();
+}
+
+static void 
+ChangePosition (Ptr<Node> node) 
+{
+  Vector pos = GetPosition (node);
+ 
+  if (pos.x <= 10.0) 
+    {
+      pos.x = 100000.0; // force CQI to 0
+    }
+  else
+    {
+      pos.x = 5.0;
+    }
+  SetPosition (node, pos);
+  
+}
+
+int main (int argc, char *argv[])
+{	
   CommandLine cmd;
   cmd.Parse (argc, argv);
+	
+  // to save a template default attribute file run it like this:
+  // ./waf --command-template="%s --ns3::ConfigStore::Filename=input-defaults.txt --ns3::ConfigStore::Mode=Save --ns3::ConfigStore::FileFormat=RawText" --run src/lte/examples/lena-first-sim
+  //
+  // to load a previously created default attribute file
+  // ./waf --command-template="%s --ns3::ConfigStore::Filename=input-defaults.txt --ns3::ConfigStore::Mode=Load --ns3::ConfigStore::FileFormat=RawText" --run src/lte/examples/lena-first-sim
 
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
@@ -42,62 +78,61 @@ int main (int argc, char *argv[])
   cmd.Parse (argc, argv);
 
   Ptr<LenaHelper> lena = CreateObject<LenaHelper> ();
-
   lena->SetAttribute ("PathlossModel", StringValue ("ns3::FriisSpectrumPropagationLossModel"));
-  // Enable LTE log components
   //lena->EnableLogComponents ();
 
+  //   LogComponentEnable ("LtePhy", LOG_LEVEL_ALL);
+  LogComponentEnable ("LteEnbPhy", LOG_LEVEL_ALL);
+  //   LogComponentEnable ("LteUePhy", LOG_LEVEL_ALL);
+  LogComponentEnable ("PfFfMacScheduler", LOG_LEVEL_ALL);
+  LogComponentEnable ("RrFfMacScheduler", LOG_LEVEL_ALL);
+  LogComponentEnable ("LenaHelper", LOG_LEVEL_ALL);
+  LogComponentEnable ("BuildingsPropagationLossModel", LOG_LEVEL_ALL);
+ 
   // Create Nodes: eNodeB and UE
   NodeContainer enbNodes;
   NodeContainer ueNodes;
   enbNodes.Create (1);
-  ueNodes.Create (3);
+  ueNodes.Create (1);
 
   // Install Mobility Model
   MobilityHelper mobility;
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobility.SetMobilityModel ("ns3::BuildingsMobilityModel");
   mobility.Install (enbNodes);
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobility.SetMobilityModel ("ns3::BuildingsMobilityModel");
   mobility.Install (ueNodes);
 
   // Create Devices and install them in the Nodes (eNB and UE)
   NetDeviceContainer enbDevs;
   NetDeviceContainer ueDevs;
+//   lena->SetSchedulerType ("ns3::RrFfMacScheduler");
+  lena->SetSchedulerType ("ns3::PfFfMacScheduler");
+  lena->SetSchedulerAttribute ("CqiTimerThreshold", UintegerValue (3));
   enbDevs = lena->InstallEnbDevice (enbNodes);
   ueDevs = lena->InstallUeDevice (ueNodes);
+  
+  lena->EnableRlcTraces();
+  lena->EnableMacTraces();
 
   // Attach a UE to a eNB
   lena->Attach (ueDevs, enbDevs.Get (0));
+  
+  Simulator::Schedule (Seconds (0.010), &ChangePosition, ueNodes.Get (0));
+  Simulator::Schedule (Seconds (0.020), &ChangePosition, ueNodes.Get (0));
 
   // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
   EpsBearer bearer (q);
   lena->ActivateEpsBearer (ueDevs, bearer);
 
-  Simulator::Stop (Seconds (5));
 
-  lena->EnableMacTraces ();
-  lena->EnableRlcTraces ();
-
-
-  double distance_temp [] = { 10000,10000,10000}; //{10000, 10000, 10000};
-  std::vector<double> userDistance;
-  userDistance.assign (distance_temp, distance_temp + 3);
-  for (int i = 0; i < 3; i++)
-    {
-      Ptr<ConstantPositionMobilityModel> mm = ueNodes.Get (i)->GetObject<ConstantPositionMobilityModel> ();
-      mm->SetPosition (Vector (userDistance[i], 0.0, 0.0));
-    } // rkwan
+  Simulator::Stop (Seconds (0.030));
 
   Simulator::Run ();
 
-  // Uncomment to show available paths
-  /*GtkConfigStore config;
-  config.ConfigureAttributes ();*/
+  //GtkConfigStore config;
+  //config.ConfigureAttributes ();
 
   Simulator::Destroy ();
-
-  // Generate RLC output
-
   return 0;
 }
