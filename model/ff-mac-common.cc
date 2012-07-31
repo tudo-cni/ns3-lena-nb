@@ -1,6 +1,6 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2011 CTTC
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,41 +15,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Author: Marco Miozzo <mmiozzo@cttc.es>
  */
 
-#ifndef LTE_RADIO_BEARER_INFO_H
-#define LTE_RADIO_BEARER_INFO_H
-
-#include <ns3/object.h>
-#include <ns3/pointer.h>
-#include <ns3/eps-bearer.h>
+#include <ns3/ff-mac-common.h>
 
 namespace ns3 {
+  
 
-class LteRlc;
-class LtePdcp;
-
-/**
- * store information on active radio bearer instance
- * 
- */
-class LteRadioBearerInfo : public Object
+VendorSpecificValue::~VendorSpecificValue ()
 {
+  
+}
 
-public:
-  LteRadioBearerInfo (void);
-  virtual ~LteRadioBearerInfo (void);
-  static TypeId GetTypeId (void);
-
-  Ptr<LteRlc> m_rlc;
-  Ptr<LtePdcp> m_pdcp;  
-  EpsBearer m_epsBearer;
-  uint32_t m_teid;
-};
-
-
+  
 } // namespace ns3
-
-
-#endif // LTE_RADIO_BEARER_INFO_H
