@@ -15,41 +15,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Author: Marco Miozzo  <marco.miozzo@cttc.es>
  */
 
-#ifndef LTE_RADIO_BEARER_INFO_H
-#define LTE_RADIO_BEARER_INFO_H
+#include <ns3/lte-vendor-specific-parameters.h>
+#include <ns3/log.h>
 
-#include <ns3/object.h>
-#include <ns3/pointer.h>
-#include <ns3/eps-bearer.h>
+NS_LOG_COMPONENT_DEFINE ("LteVendorSpecificParameters");
 
 namespace ns3 {
-
-class LteRlc;
-class LtePdcp;
-
-/**
- * store information on active radio bearer instance
- * 
- */
-class LteRadioBearerInfo : public Object
+  
+SrsCqiRntiVsp::SrsCqiRntiVsp (uint16_t rnti)
+:  m_rnti (rnti)
 {
+  
+}
 
-public:
-  LteRadioBearerInfo (void);
-  virtual ~LteRadioBearerInfo (void);
-  static TypeId GetTypeId (void);
+SrsCqiRntiVsp::~SrsCqiRntiVsp ()
+{
+  
+}
 
-  Ptr<LteRlc> m_rlc;
-  Ptr<LtePdcp> m_pdcp;  
-  EpsBearer m_epsBearer;
-  uint32_t m_teid;
-};
-
-
-} // namespace ns3
+uint16_t
+SrsCqiRntiVsp::GetRnti ()
+{
+  return (m_rnti);
+}
 
 
-#endif // LTE_RADIO_BEARER_INFO_H
+}; // namespace ns3
