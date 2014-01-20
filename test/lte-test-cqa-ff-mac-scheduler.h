@@ -15,13 +15,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Marco Miozzo <marco.miozzo@cttc.es>,
- *         Nicola Baldo <nbaldo@cttc.es>
- *         Dizhi Zhou <dizhi.zhou@gmail.com>
+ * Author:  Biljana Bojovic<bbojovic@cttc.es>
+ *          Dizhi Zhou <dizhi.zhou@gmail.com>
+ * 			Marco Miozzo <marco.miozzo@cttc.es>,
+ *          Nicola Baldo <nbaldo@cttc.es>
+ *
  */
 
-#ifndef LENA_TEST_TDTBFQ_FF_MAC_SCHEDULER_H
-#define LENA_TEST_TDTBFQ_FF_MAC_SCHEDULER_H
+#ifndef LENA_TEST_CQA_FF_MAC_SCHEDULER_H
+#define LENA_TEST_CQA_FF_MAC_SCHEDULER_H
 
 #include "ns3/simulator.h"
 #include "ns3/test.h"
@@ -29,21 +31,17 @@
 
 using namespace ns3;
 
-
 /**
-* This system test program creates different test cases with a single eNB and 
-* several UEs, all having the same Radio Bearer specification. In each test 
-* case, the UEs see the same SINR from the eNB; different test cases are 
-* implemented obtained by using different SINR values and different numbers of 
-* UEs. The test consists on checking that the obtained throughput performance 
-* is equal among users is consistent with the definition of token bank fair  
-* queue scheduling
+* This is a system test program. The test is based on a scenario with single eNB and several UEs.
+* The goal of the test is validating if the obtained throughput performance is consistent with the definition of CQA scheduler.
+*
 */
-class LenaTdTbfqFfMacSchedulerTestCase1 : public TestCase
+
+class LenaCqaFfMacSchedulerTestCase1 : public TestCase
 {
 public:
-  LenaTdTbfqFfMacSchedulerTestCase1 (uint16_t nUser, uint16_t dist, double thrRefDl, double thrRefUl, uint16_t packetSize, uint16_t interval, bool  errorModelEnabled);
-  virtual ~LenaTdTbfqFfMacSchedulerTestCase1 ();
+  LenaCqaFfMacSchedulerTestCase1 (uint16_t nUser, uint16_t dist, double thrRefDl, double thrRefUl, uint16_t packetSize, uint16_t interval, bool  errorModelEnabled);
+  virtual ~LenaCqaFfMacSchedulerTestCase1 ();
 
 private:
   static std::string BuildNameString (uint16_t nUser, uint16_t dist);
@@ -58,11 +56,11 @@ private:
 };
 
 
-class LenaTdTbfqFfMacSchedulerTestCase2 : public TestCase
+class LenaCqaFfMacSchedulerTestCase2 : public TestCase
 {
 public:
-  LenaTdTbfqFfMacSchedulerTestCase2 (std::vector<uint16_t> dist, std::vector<uint32_t> estThrTdTbfqDl, std::vector<uint16_t> packetSize, uint16_t interval, bool  errorModelEnabled);
-  virtual ~LenaTdTbfqFfMacSchedulerTestCase2 ();
+  LenaCqaFfMacSchedulerTestCase2 (std::vector<uint16_t> dist, std::vector<uint32_t> estThrCqaDl, std::vector<uint16_t> packetSize, uint16_t interval, bool  errorModelEnabled);
+  virtual ~LenaCqaFfMacSchedulerTestCase2 ();
 
 private:
   static std::string BuildNameString (uint16_t nUser, std::vector<uint16_t> dist);
@@ -71,15 +69,15 @@ private:
   std::vector<uint16_t> m_dist;
   std::vector<uint16_t> m_packetSize;  // byte
   uint16_t m_interval;    // ms
-  std::vector<uint32_t> m_estThrTdTbfqDl;
+  std::vector<uint32_t> m_estThrCqaDl;
   bool m_errorModelEnabled;
 };
 
 
-class LenaTestTdTbfqFfMacSchedulerSuite : public TestSuite
+class LenaTestCqaFfMacSchedulerSuite : public TestSuite
 {
 public:
-  LenaTestTdTbfqFfMacSchedulerSuite ();
+  LenaTestCqaFfMacSchedulerSuite ();
 };
 
-#endif /* LENA_TEST_TDTBFQ_FF_MAC_SCHEDULER_H */
+#endif /* LENA_TEST_CQA_FF_MAC_SCHEDULER_H */

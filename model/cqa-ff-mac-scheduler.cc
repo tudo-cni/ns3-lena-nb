@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,8 +15,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Marco Miozzo <marco.miozzo@cttc.es>
- * Modification: Dizhi Zhou <dizhi.zhou@gmail.com>    // modify codes related to downlink scheduler
+ * Authors: Biljana Bojovic <bbojovic@cttc.es>, Nicola Baldo<nbaldo@cttc.es>.
+ *
+ * Note:
+ * Implementation is using many common scheduler functionalities in its
+ * original version implemented by Marco Miozzo<mmiozzo@cttc.es> in
+ * Proportional Fair and Round Robin schedulers implementations.
  */
 
 #include <ns3/log.h>
@@ -25,17 +29,21 @@
 
 #include <ns3/simulator.h>
 #include <ns3/lte-amc.h>
-#include <ns3/tdmt-ff-mac-scheduler.h>
+#include <ns3/cqa-ff-mac-scheduler.h>
+#include <ns3/ff-mac-common.h>
 #include <ns3/lte-vendor-specific-parameters.h>
 #include <ns3/boolean.h>
-#include <set>
 #include <cfloat>
+#include <set>
+#include <stdexcept>
+#include <ns3/integer.h>
+#include <ns3/string.h>
 
-NS_LOG_COMPONENT_DEFINE ("TdMtFfMacScheduler");
+NS_LOG_COMPONENT_DEFINE ("CqaFfMacScheduler");
 
 namespace ns3 {
 
-int TdMtType0AllocationRbg[4] = {
+int CqaType0AllocationRbg[4] = {
   10,       // RGB size 1
   26,       // RGB size 2
   63,       // RGB size 3
@@ -43,15 +51,55 @@ int TdMtType0AllocationRbg[4] = {
 };  // see table 7.1.6.1-1 of 36.213
 
 
-NS_OBJECT_ENSURE_REGISTERED (TdMtFfMacScheduler)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (CqaFfMacScheduler);
 
 
+struct qos_rb_and_CQI_assigned_to_lc
+{
+  uint16_t resource_block_index;       //Resource block indexHOL_GROUP_index
+  uint8_t  cqi_value_for_lc;       // CQI indicator value
+};
 
-class TdMtSchedulerMemberCschedSapProvider : public FfMacCschedSapProvider
+
+bool CQIValueDescComparator (uint8_t key1, uint8_t key2)
+{
+  return key1>key2;
+}
+
+bool CqaGroupDescComparator (int key1, int key2)
+{
+  return key1>key2;
+}
+
+typedef uint8_t CQI_value;
+typedef int RBG_index;
+typedef int HOL_group;
+
+typedef std::map<CQI_value,LteFlowId_t,bool(*)(uint8_t,uint8_t)> t_map_CQIToUE; //sorted
+typedef std::map<RBG_index,t_map_CQIToUE> t_map_RBGToCQIsSorted;
+typedef std::map<HOL_group,t_map_RBGToCQIsSorted> t_map_HOLGroupToRBGs;
+
+typedef std::map<CQI_value,LteFlowId_t,bool(*)(uint8_t,uint8_t)>::iterator t_it_CQIToUE; //sorted
+typedef std::map<RBG_index,t_map_CQIToUE>::iterator t_it_RBGToCQIsSorted;
+typedef std::map<HOL_group,t_map_RBGToCQIsSorted>::iterator t_it_HOLGroupToRBGs;
+
+typedef std::multimap<HOL_group,std::set<LteFlowId_t>,bool(*)(int,int)> t_map_HOLgroupToUEs;
+typedef std::map<HOL_group,std::set<LteFlowId_t> >::iterator t_it_HOLgroupToUEs;
+
+//typedef std::map<RBG_index,CQI_value>  map_RBG_to_CQI;
+//typedef std::map<LteFlowId_t,map_RBG_to_CQI> map_flowId_to_CQI_map;
+
+
+bool CqaKeyDescComparator (uint16_t key1, uint16_t key2)
+{
+  return key1>key2;
+}
+
+
+class CqaSchedulerMemberCschedSapProvider : public FfMacCschedSapProvider
 {
 public:
-  TdMtSchedulerMemberCschedSapProvider (TdMtFfMacScheduler* scheduler);
+  CqaSchedulerMemberCschedSapProvider (CqaFfMacScheduler* scheduler);
 
   // inherited from FfMacCschedSapProvider
   virtual void CschedCellConfigReq (const struct CschedCellConfigReqParameters& params);
@@ -61,57 +109,56 @@ public:
   virtual void CschedUeReleaseReq (const struct CschedUeReleaseReqParameters& params);
 
 private:
-  TdMtSchedulerMemberCschedSapProvider ();
-  TdMtFfMacScheduler* m_scheduler;
+  CqaSchedulerMemberCschedSapProvider ();
+  CqaFfMacScheduler* m_scheduler;
 };
 
-TdMtSchedulerMemberCschedSapProvider::TdMtSchedulerMemberCschedSapProvider ()
+CqaSchedulerMemberCschedSapProvider::CqaSchedulerMemberCschedSapProvider ()
 {
 }
 
-TdMtSchedulerMemberCschedSapProvider::TdMtSchedulerMemberCschedSapProvider (TdMtFfMacScheduler* scheduler) : m_scheduler (scheduler)
+CqaSchedulerMemberCschedSapProvider::CqaSchedulerMemberCschedSapProvider (CqaFfMacScheduler* scheduler) : m_scheduler (scheduler)
 {
 }
 
 
 void
-TdMtSchedulerMemberCschedSapProvider::CschedCellConfigReq (const struct CschedCellConfigReqParameters& params)
+CqaSchedulerMemberCschedSapProvider::CschedCellConfigReq (const struct CschedCellConfigReqParameters& params)
 {
   m_scheduler->DoCschedCellConfigReq (params);
 }
 
 void
-TdMtSchedulerMemberCschedSapProvider::CschedUeConfigReq (const struct CschedUeConfigReqParameters& params)
+CqaSchedulerMemberCschedSapProvider::CschedUeConfigReq (const struct CschedUeConfigReqParameters& params)
 {
   m_scheduler->DoCschedUeConfigReq (params);
 }
 
 
 void
-TdMtSchedulerMemberCschedSapProvider::CschedLcConfigReq (const struct CschedLcConfigReqParameters& params)
+CqaSchedulerMemberCschedSapProvider::CschedLcConfigReq (const struct CschedLcConfigReqParameters& params)
 {
   m_scheduler->DoCschedLcConfigReq (params);
 }
 
 void
-TdMtSchedulerMemberCschedSapProvider::CschedLcReleaseReq (const struct CschedLcReleaseReqParameters& params)
+CqaSchedulerMemberCschedSapProvider::CschedLcReleaseReq (const struct CschedLcReleaseReqParameters& params)
 {
   m_scheduler->DoCschedLcReleaseReq (params);
 }
 
 void
-TdMtSchedulerMemberCschedSapProvider::CschedUeReleaseReq (const struct CschedUeReleaseReqParameters& params)
+CqaSchedulerMemberCschedSapProvider::CschedUeReleaseReq (const struct CschedUeReleaseReqParameters& params)
 {
   m_scheduler->DoCschedUeReleaseReq (params);
 }
 
 
 
-
-class TdMtSchedulerMemberSchedSapProvider : public FfMacSchedSapProvider
+class CqaSchedulerMemberSchedSapProvider : public FfMacSchedSapProvider
 {
 public:
-  TdMtSchedulerMemberSchedSapProvider (TdMtFfMacScheduler* scheduler);
+  CqaSchedulerMemberSchedSapProvider (CqaFfMacScheduler* scheduler);
 
   // inherited from FfMacSchedSapProvider
   virtual void SchedDlRlcBufferReq (const struct SchedDlRlcBufferReqParameters& params);
@@ -128,84 +175,84 @@ public:
 
 
 private:
-  TdMtSchedulerMemberSchedSapProvider ();
-  TdMtFfMacScheduler* m_scheduler;
+  CqaSchedulerMemberSchedSapProvider ();
+  CqaFfMacScheduler* m_scheduler;
 };
 
 
 
-TdMtSchedulerMemberSchedSapProvider::TdMtSchedulerMemberSchedSapProvider ()
+CqaSchedulerMemberSchedSapProvider::CqaSchedulerMemberSchedSapProvider ()
 {
 }
 
 
-TdMtSchedulerMemberSchedSapProvider::TdMtSchedulerMemberSchedSapProvider (TdMtFfMacScheduler* scheduler)
+CqaSchedulerMemberSchedSapProvider::CqaSchedulerMemberSchedSapProvider (CqaFfMacScheduler* scheduler)
   : m_scheduler (scheduler)
 {
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedDlRlcBufferReq (const struct SchedDlRlcBufferReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedDlRlcBufferReq (const struct SchedDlRlcBufferReqParameters& params)
 {
   m_scheduler->DoSchedDlRlcBufferReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedDlPagingBufferReq (const struct SchedDlPagingBufferReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedDlPagingBufferReq (const struct SchedDlPagingBufferReqParameters& params)
 {
   m_scheduler->DoSchedDlPagingBufferReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedDlMacBufferReq (const struct SchedDlMacBufferReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedDlMacBufferReq (const struct SchedDlMacBufferReqParameters& params)
 {
   m_scheduler->DoSchedDlMacBufferReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedDlTriggerReq (const struct SchedDlTriggerReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedDlTriggerReq (const struct SchedDlTriggerReqParameters& params)
 {
   m_scheduler->DoSchedDlTriggerReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedDlRachInfoReq (const struct SchedDlRachInfoReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedDlRachInfoReq (const struct SchedDlRachInfoReqParameters& params)
 {
   m_scheduler->DoSchedDlRachInfoReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedDlCqiInfoReq (const struct SchedDlCqiInfoReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedDlCqiInfoReq (const struct SchedDlCqiInfoReqParameters& params)
 {
   m_scheduler->DoSchedDlCqiInfoReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedUlTriggerReq (const struct SchedUlTriggerReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedUlTriggerReq (const struct SchedUlTriggerReqParameters& params)
 {
   m_scheduler->DoSchedUlTriggerReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedUlNoiseInterferenceReq (const struct SchedUlNoiseInterferenceReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedUlNoiseInterferenceReq (const struct SchedUlNoiseInterferenceReqParameters& params)
 {
   m_scheduler->DoSchedUlNoiseInterferenceReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedUlSrInfoReq (const struct SchedUlSrInfoReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedUlSrInfoReq (const struct SchedUlSrInfoReqParameters& params)
 {
   m_scheduler->DoSchedUlSrInfoReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedUlMacCtrlInfoReq (const struct SchedUlMacCtrlInfoReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedUlMacCtrlInfoReq (const struct SchedUlMacCtrlInfoReqParameters& params)
 {
   m_scheduler->DoSchedUlMacCtrlInfoReq (params);
 }
 
 void
-TdMtSchedulerMemberSchedSapProvider::SchedUlCqiInfoReq (const struct SchedUlCqiInfoReqParameters& params)
+CqaSchedulerMemberSchedSapProvider::SchedUlCqiInfoReq (const struct SchedUlCqiInfoReqParameters& params)
 {
   m_scheduler->DoSchedUlCqiInfoReq (params);
 }
@@ -214,23 +261,24 @@ TdMtSchedulerMemberSchedSapProvider::SchedUlCqiInfoReq (const struct SchedUlCqiI
 
 
 
-TdMtFfMacScheduler::TdMtFfMacScheduler ()
+CqaFfMacScheduler::CqaFfMacScheduler ()
   :   m_cschedSapUser (0),
     m_schedSapUser (0),
+    m_timeWindow (99.0),
     m_nextRntiUl (0)
 {
   m_amc = CreateObject <LteAmc> ();
-  m_cschedSapProvider = new TdMtSchedulerMemberCschedSapProvider (this);
-  m_schedSapProvider = new TdMtSchedulerMemberSchedSapProvider (this);
+  m_cschedSapProvider = new CqaSchedulerMemberCschedSapProvider (this);
+  m_schedSapProvider = new CqaSchedulerMemberSchedSapProvider (this);
 }
 
-TdMtFfMacScheduler::~TdMtFfMacScheduler ()
+CqaFfMacScheduler::~CqaFfMacScheduler ()
 {
   NS_LOG_FUNCTION (this);
 }
 
 void
-TdMtFfMacScheduler::DoDispose ()
+CqaFfMacScheduler::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
   m_dlHarqProcessesDciBuffer.clear ();
@@ -245,25 +293,30 @@ TdMtFfMacScheduler::DoDispose ()
 }
 
 TypeId
-TdMtFfMacScheduler::GetTypeId (void)
+CqaFfMacScheduler::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::TdMtFfMacScheduler")
+  static TypeId tid = TypeId ("ns3::CqaFfMacScheduler")
     .SetParent<FfMacScheduler> ()
-    .AddConstructor<TdMtFfMacScheduler> ()
+    .AddConstructor<CqaFfMacScheduler>()
     .AddAttribute ("CqiTimerThreshold",
                    "The number of TTIs a CQI is valid (default 1000 - 1 sec.)",
                    UintegerValue (1000),
-                   MakeUintegerAccessor (&TdMtFfMacScheduler::m_cqiTimersThreshold),
+                   MakeUintegerAccessor (&CqaFfMacScheduler::m_cqiTimersThreshold),
                    MakeUintegerChecker<uint32_t> ())
+    .AddAttribute ("CqaMetric",
+                   "CqaFfMacScheduler metric type that can be: CqaFf, CqaPf",
+                   StringValue ("CqaFf"),
+                   MakeStringAccessor (&CqaFfMacScheduler::m_CqaMetric),
+                   MakeStringChecker ())
     .AddAttribute ("HarqEnabled",
                    "Activate/Deactivate the HARQ [by default is active].",
                    BooleanValue (true),
-                   MakeBooleanAccessor (&TdMtFfMacScheduler::m_harqOn),
+                   MakeBooleanAccessor (&CqaFfMacScheduler::m_harqOn),
                    MakeBooleanChecker ())
     .AddAttribute ("UlGrantMcs",
                    "The MCS of the UL grant, must be [0..15] (default 0)",
                    UintegerValue (0),
-                   MakeUintegerAccessor (&TdMtFfMacScheduler::m_ulGrantMcs),
+                   MakeUintegerAccessor (&CqaFfMacScheduler::m_ulGrantMcs),
                    MakeUintegerChecker<uint8_t> ())
   ;
   return tid;
@@ -272,31 +325,31 @@ TdMtFfMacScheduler::GetTypeId (void)
 
 
 void
-TdMtFfMacScheduler::SetFfMacCschedSapUser (FfMacCschedSapUser* s)
+CqaFfMacScheduler::SetFfMacCschedSapUser (FfMacCschedSapUser* s)
 {
   m_cschedSapUser = s;
 }
 
 void
-TdMtFfMacScheduler::SetFfMacSchedSapUser (FfMacSchedSapUser* s)
+CqaFfMacScheduler::SetFfMacSchedSapUser (FfMacSchedSapUser* s)
 {
   m_schedSapUser = s;
 }
 
 FfMacCschedSapProvider*
-TdMtFfMacScheduler::GetFfMacCschedSapProvider ()
+CqaFfMacScheduler::GetFfMacCschedSapProvider ()
 {
   return m_cschedSapProvider;
 }
 
 FfMacSchedSapProvider*
-TdMtFfMacScheduler::GetFfMacSchedSapProvider ()
+CqaFfMacScheduler::GetFfMacSchedSapProvider ()
 {
   return m_schedSapProvider;
 }
 
 void
-TdMtFfMacScheduler::DoCschedCellConfigReq (const struct FfMacCschedSapProvider::CschedCellConfigReqParameters& params)
+CqaFfMacScheduler::DoCschedCellConfigReq (const struct FfMacCschedSapProvider::CschedCellConfigReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
   // Read the subset of parameters used
@@ -309,13 +362,13 @@ TdMtFfMacScheduler::DoCschedCellConfigReq (const struct FfMacCschedSapProvider::
 }
 
 void
-TdMtFfMacScheduler::DoCschedUeConfigReq (const struct FfMacCschedSapProvider::CschedUeConfigReqParameters& params)
+CqaFfMacScheduler::DoCschedUeConfigReq (const struct FfMacCschedSapProvider::CschedUeConfigReqParameters& params)
 {
   NS_LOG_FUNCTION (this << " RNTI " << params.m_rnti << " txMode " << (uint16_t)params.m_transmissionMode);
   std::map <uint16_t,uint8_t>::iterator it = m_uesTxMode.find (params.m_rnti);
   if (it == m_uesTxMode.end ())
     {
-      m_uesTxMode.insert (std::pair <uint16_t, double> (params.m_rnti, params.m_transmissionMode));
+      m_uesTxMode.insert (std::pair <uint16_t, uint8_t> (params.m_rnti, params.m_transmissionMode));
       // generate HARQ buffers
       m_dlHarqCurrentProcessId.insert (std::pair <uint16_t,uint8_t > (params.m_rnti, 0));
       DlHarqProcessesStatus_t dlHarqPrcStatus;
@@ -348,19 +401,80 @@ TdMtFfMacScheduler::DoCschedUeConfigReq (const struct FfMacCschedSapProvider::Cs
 }
 
 void
-TdMtFfMacScheduler::DoCschedLcConfigReq (const struct FfMacCschedSapProvider::CschedLcConfigReqParameters& params)
+CqaFfMacScheduler::DoCschedLcConfigReq (const struct FfMacCschedSapProvider::CschedLcConfigReqParameters& params)
 {
   NS_LOG_FUNCTION (this << " New LC, rnti: "  << params.m_rnti);
 
-  std::set <uint16_t>::iterator it;
+  NS_LOG_FUNCTION ("LC configuration. Number of LCs:"<<params.m_logicalChannelConfigList.size ());
+
+  // m_reconfigureFlat indicates if this is a reconfiguration or new UE is added, table  4.1.5 in LTE MAC scheduler specification
+  if (params.m_reconfigureFlag)
+    {
+      std::vector <struct LogicalChannelConfigListElement_s>::const_iterator lcit;
+
+      for(lcit = params.m_logicalChannelConfigList.begin (); lcit!= params.m_logicalChannelConfigList.end (); lcit++)
+        {
+          LteFlowId_t flowid = LteFlowId_t (params.m_rnti,lcit->m_logicalChannelIdentity);
+
+          if (m_ueLogicalChannelsConfigList.find (flowid) == m_ueLogicalChannelsConfigList.end ())
+            {
+              NS_LOG_ERROR ("UE logical channels can not be reconfigured because it was not configured before.");
+            }
+          else
+            {
+              m_ueLogicalChannelsConfigList.find (flowid)->second = *lcit;
+            }
+        }
+
+    }    // else new UE is added
+  else
+    {
+      std::vector <struct LogicalChannelConfigListElement_s>::const_iterator lcit;
+
+      for (lcit = params.m_logicalChannelConfigList.begin (); lcit != params.m_logicalChannelConfigList.end (); lcit++)
+        {
+          LteFlowId_t flowId = LteFlowId_t (params.m_rnti,lcit->m_logicalChannelIdentity);
+          m_ueLogicalChannelsConfigList.insert (std::pair<LteFlowId_t, LogicalChannelConfigListElement_s>(flowId,*lcit));
+        }
+    }
+
+
+  std::map <uint16_t, CqasFlowPerf_t>::iterator it;
+
   for (uint16_t i = 0; i < params.m_logicalChannelConfigList.size (); i++)
     {
       it = m_flowStatsDl.find (params.m_rnti);
 
       if (it == m_flowStatsDl.end ())
         {
-          m_flowStatsDl.insert (params.m_rnti);
-          m_flowStatsUl.insert (params.m_rnti);
+          double tbrDlInBytes = params.m_logicalChannelConfigList.at (i).m_eRabGuaranteedBitrateDl / 8;   // byte/s
+          double tbrUlInBytes = params.m_logicalChannelConfigList.at (i).m_eRabGuaranteedBitrateUl / 8;   // byte/s
+
+          CqasFlowPerf_t flowStatsDl;
+          flowStatsDl.flowStart = Simulator::Now ();
+          flowStatsDl.totalBytesTransmitted = 0;
+          flowStatsDl.lastTtiBytesTransmitted = 0;
+          flowStatsDl.lastAveragedThroughput = 1;
+          flowStatsDl.secondLastAveragedThroughput = 1;
+          flowStatsDl.targetThroughput = tbrDlInBytes;
+          m_flowStatsDl.insert (std::pair<uint16_t, CqasFlowPerf_t> (params.m_rnti, flowStatsDl));
+          CqasFlowPerf_t flowStatsUl;
+          flowStatsUl.flowStart = Simulator::Now ();
+          flowStatsUl.totalBytesTransmitted = 0;
+          flowStatsUl.lastTtiBytesTransmitted = 0;
+          flowStatsUl.lastAveragedThroughput = 1;
+          flowStatsUl.secondLastAveragedThroughput = 1;
+          flowStatsUl.targetThroughput = tbrUlInBytes;
+          m_flowStatsUl.insert (std::pair<uint16_t, CqasFlowPerf_t> (params.m_rnti, flowStatsUl));
+        }
+      else
+        {
+          // update GBR from UeManager::SetupDataRadioBearer ()
+          double tbrDlInBytes = params.m_logicalChannelConfigList.at (i).m_eRabGuaranteedBitrateDl / 8;   // byte/s
+          double tbrUlInBytes = params.m_logicalChannelConfigList.at (i).m_eRabGuaranteedBitrateUl / 8;   // byte/s
+          m_flowStatsDl[(*it).first].targetThroughput = tbrDlInBytes;
+          m_flowStatsUl[(*it).first].targetThroughput = tbrUlInBytes;
+
         }
     }
 
@@ -368,9 +482,26 @@ TdMtFfMacScheduler::DoCschedLcConfigReq (const struct FfMacCschedSapProvider::Cs
 }
 
 void
-TdMtFfMacScheduler::DoCschedLcReleaseReq (const struct FfMacCschedSapProvider::CschedLcReleaseReqParameters& params)
+CqaFfMacScheduler::DoCschedLcReleaseReq (const struct FfMacCschedSapProvider::CschedLcReleaseReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
+  std::vector <uint8_t>::const_iterator it;
+
+  for (it = params.m_logicalChannelIdentity.begin (); it != params.m_logicalChannelIdentity.end (); it++)
+    {
+      LteFlowId_t flowId = LteFlowId_t (params.m_rnti, *it);
+
+      // find the logical channel with the same Logical Channel Identity in the current list, release it
+      if (m_ueLogicalChannelsConfigList.find (flowId)!= m_ueLogicalChannelsConfigList.end ())
+        {
+          m_ueLogicalChannelsConfigList.erase (flowId);
+        }
+      else
+        {
+          NS_FATAL_ERROR ("Logical channels cannot be released because it can not be found in the list of active LCs");
+        }
+    }
+	
   for (uint16_t i = 0; i < params.m_logicalChannelIdentity.size (); i++)
     {
       std::map<LteFlowId_t, FfMacSchedSapProvider::SchedDlRlcBufferReqParameters>::iterator it = m_rlcBufferReq.begin ();
@@ -393,10 +524,20 @@ TdMtFfMacScheduler::DoCschedLcReleaseReq (const struct FfMacCschedSapProvider::C
 }
 
 void
-TdMtFfMacScheduler::DoCschedUeReleaseReq (const struct FfMacCschedSapProvider::CschedUeReleaseReqParameters& params)
+CqaFfMacScheduler::DoCschedUeReleaseReq (const struct FfMacCschedSapProvider::CschedUeReleaseReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
-  
+
+  for (int i=0; i < MAX_LC_LIST; i++)
+    {
+      LteFlowId_t flowId = LteFlowId_t (params.m_rnti,i);
+      // find the logical channel with the same Logical Channel Identity in the current list, release it
+      if (m_ueLogicalChannelsConfigList.find (flowId)!= m_ueLogicalChannelsConfigList.end ())
+        {
+          m_ueLogicalChannelsConfigList.erase (flowId);
+        }
+    }
+
   m_uesTxMode.erase (params.m_rnti);
   m_dlHarqCurrentProcessId.erase (params.m_rnti);
   m_dlHarqProcessesStatus.erase  (params.m_rnti);
@@ -434,7 +575,7 @@ TdMtFfMacScheduler::DoCschedUeReleaseReq (const struct FfMacCschedSapProvider::C
 
 
 void
-TdMtFfMacScheduler::DoSchedDlRlcBufferReq (const struct FfMacSchedSapProvider::SchedDlRlcBufferReqParameters& params)
+CqaFfMacScheduler::DoSchedDlRlcBufferReq (const struct FfMacSchedSapProvider::SchedDlRlcBufferReqParameters& params)
 {
   NS_LOG_FUNCTION (this << params.m_rnti << (uint32_t) params.m_logicalChannelIdentity);
   // API generated by RLC for updating RLC parameters on a LC (tx and retx queues)
@@ -458,7 +599,7 @@ TdMtFfMacScheduler::DoSchedDlRlcBufferReq (const struct FfMacSchedSapProvider::S
 }
 
 void
-TdMtFfMacScheduler::DoSchedDlPagingBufferReq (const struct FfMacSchedSapProvider::SchedDlPagingBufferReqParameters& params)
+CqaFfMacScheduler::DoSchedDlPagingBufferReq (const struct FfMacSchedSapProvider::SchedDlPagingBufferReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
   NS_FATAL_ERROR ("method not implemented");
@@ -466,7 +607,7 @@ TdMtFfMacScheduler::DoSchedDlPagingBufferReq (const struct FfMacSchedSapProvider
 }
 
 void
-TdMtFfMacScheduler::DoSchedDlMacBufferReq (const struct FfMacSchedSapProvider::SchedDlMacBufferReqParameters& params)
+CqaFfMacScheduler::DoSchedDlMacBufferReq (const struct FfMacSchedSapProvider::SchedDlMacBufferReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
   NS_FATAL_ERROR ("method not implemented");
@@ -474,11 +615,11 @@ TdMtFfMacScheduler::DoSchedDlMacBufferReq (const struct FfMacSchedSapProvider::S
 }
 
 int
-TdMtFfMacScheduler::GetRbgSize (int dlbandwidth)
+CqaFfMacScheduler::GetRbgSize (int dlbandwidth)
 {
   for (int i = 0; i < 4; i++)
     {
-      if (dlbandwidth < TdMtType0AllocationRbg[i])
+      if (dlbandwidth < CqaType0AllocationRbg[i])
         {
           return (i + 1);
         }
@@ -489,7 +630,7 @@ TdMtFfMacScheduler::GetRbgSize (int dlbandwidth)
 
 
 int
-TdMtFfMacScheduler::LcActivePerFlow (uint16_t rnti)
+CqaFfMacScheduler::LcActivePerFlow (uint16_t rnti)
 {
   std::map <LteFlowId_t, FfMacSchedSapProvider::SchedDlRlcBufferReqParameters>::iterator it;
   int lcActive = 0;
@@ -512,7 +653,7 @@ TdMtFfMacScheduler::LcActivePerFlow (uint16_t rnti)
 
 
 uint8_t
-TdMtFfMacScheduler::HarqProcessAvailability (uint16_t rnti)
+CqaFfMacScheduler::HarqProcessAvailability (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << rnti);
 
@@ -545,7 +686,7 @@ TdMtFfMacScheduler::HarqProcessAvailability (uint16_t rnti)
 
 
 uint8_t
-TdMtFfMacScheduler::UpdateHarqProcessId (uint16_t rnti)
+CqaFfMacScheduler::UpdateHarqProcessId (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << rnti);
 
@@ -586,19 +727,19 @@ TdMtFfMacScheduler::UpdateHarqProcessId (uint16_t rnti)
 
 
 void
-TdMtFfMacScheduler::RefreshHarqProcesses ()
+CqaFfMacScheduler::RefreshHarqProcesses ()
 {
   NS_LOG_FUNCTION (this);
 
   std::map <uint16_t, DlHarqProcessesTimer_t>::iterator itTimers;
-  for (itTimers = m_dlHarqProcessesTimer.begin (); itTimers != m_dlHarqProcessesTimer.end (); itTimers ++)
+  for (itTimers = m_dlHarqProcessesTimer.begin (); itTimers != m_dlHarqProcessesTimer.end (); itTimers++)
     {
       for (uint16_t i = 0; i < HARQ_PROC_NUM; i++)
         {
           if ((*itTimers).second.at (i) == HARQ_DL_TIMEOUT)
             {
               // reset HARQ process
-              
+
               NS_LOG_DEBUG (this << " Reset HARQ proc " << i << " for RNTI " << (*itTimers).first);
               std::map <uint16_t, DlHarqProcessesStatus_t>::iterator itStat = m_dlHarqProcessesStatus.find ((*itTimers).first);
               if (itStat == m_dlHarqProcessesStatus.end ())
@@ -614,17 +755,15 @@ TdMtFfMacScheduler::RefreshHarqProcesses ()
             }
         }
     }
-  
+
 }
 
 
 void
-TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::SchedDlTriggerReqParameters& params)
+CqaFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::SchedDlTriggerReqParameters& params)
 {
   NS_LOG_FUNCTION (this << " Frame no. " << (params.m_sfnSf >> 4) << " subframe no. " << (0xF & params.m_sfnSf));
   // API generated by RLC for triggering the scheduling of a DL subframe
-
-
   // evaluate the relative channel quality indicator for each UE per each RBG
   // (since we are using allocation type 0 the small unit of allocation is RBG)
   // Resource allocation type 0 (see sec 7.1.6.1 of 36.213)
@@ -632,8 +771,16 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
   RefreshDlCqiMaps ();
 
   int rbgSize = GetRbgSize (m_cschedCellConfig.m_dlBandwidth);
-  int rbgNum = m_cschedCellConfig.m_dlBandwidth / rbgSize;
-  std::map <uint16_t, std::vector <uint16_t> > allocationMap; // RBs map per RNTI
+  int numberOfRBGs = m_cschedCellConfig.m_dlBandwidth / rbgSize;
+  std::map <uint16_t, std::multimap <uint8_t, qos_rb_and_CQI_assigned_to_lc> > allocationMapPerRntiPerLCId;
+  std::map <uint16_t, std::multimap <uint8_t, qos_rb_and_CQI_assigned_to_lc> >::iterator itMap;
+  allocationMapPerRntiPerLCId.clear ();
+  bool(*key_function_pointer_groups)(int,int) = CqaGroupDescComparator;
+  t_map_HOLgroupToUEs map_GBRHOLgroupToUE (key_function_pointer_groups);
+  t_map_HOLgroupToUEs map_nonGBRHOLgroupToUE (key_function_pointer_groups);
+  int grouping_parameter = 1000;
+  double tolerance = 1.1;
+  std::map<LteFlowId_t,int> UEtoHOL;
   std::vector <bool> rbgMap;  // global RBGs map
   uint16_t rbgAllocatedNum = 0;
   std::set <uint16_t> rntiAllocated;
@@ -646,6 +793,7 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
     {
       (*itProcId).second = ((*itProcId).second + 1) % HARQ_PROC_NUM;
     }
+
 
   // RACH Allocation
   m_rachAllocationMap.resize (m_cschedCellConfig.m_ulBandwidth, 0);
@@ -687,7 +835,7 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
           m_rachAllocationMap.at (i) = (*itRach).m_rnti;
         }
       rbStart = rbStart + rbLen;
-
+      
       if (m_harqOn == true)
         {
           // generate UL-DCI for HARQ retransmissions
@@ -725,7 +873,7 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
             }
           (*itDci).second.at (harqId) = uldci;
         }
-
+      
       ret.m_buildRarList.push_back (newRar);
     }
   m_rachList.clear ();
@@ -860,7 +1008,7 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
             {
               // find RBGs for sending HARQ retx
               uint8_t j = 0;
-              uint8_t rbgId = (dciRbg.at (dciRbg.size () - 1) + 1) % rbgNum;
+              uint8_t rbgId = (dciRbg.at (dciRbg.size () - 1) + 1) % numberOfRBGs;
               uint8_t startRbg = dciRbg.at (dciRbg.size () - 1);
               std::vector <bool> rbgMapCopy = rbgMap;
               while ((j < dciRbg.size ())&&(startRbg != rbgId))
@@ -986,166 +1134,424 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
     }
   m_dlInfoListBuffered.clear ();
   m_dlInfoListBuffered = dlInfoListUntxed;
-
-  if (rbgAllocatedNum == rbgNum)
+	
+	
+  std::map <LteFlowId_t,struct LogicalChannelConfigListElement_s>::iterator itLogicalChannels;
+	
+  for (itLogicalChannels = m_ueLogicalChannelsConfigList.begin (); itLogicalChannels != m_ueLogicalChannelsConfigList.end (); itLogicalChannels++)
     {
-      // all the RBGs are already allocated -> exit
-      if ((ret.m_buildDataList.size () > 0) || (ret.m_buildRarList.size () > 0))
-        {
-          m_schedSapUser->SchedDlConfigInd (ret);
-        }
-      return;
-    }
-
-
-  std::set <uint16_t>::iterator it;
-  std::set <uint16_t>::iterator itMax = m_flowStatsDl.end ();
-  double metricMax = 0.0;
-  for (it = m_flowStatsDl.begin (); it != m_flowStatsDl.end (); it++)
-    {
-      std::set <uint16_t>::iterator itRnti = rntiAllocated.find ((*it));
-      if ((itRnti != rntiAllocated.end ())||(!HarqProcessAvailability ((*it))))
+      std::set <uint16_t>::iterator itRnti = rntiAllocated.find (itLogicalChannels->first.m_rnti);
+      if ((itRnti != rntiAllocated.end ())||(!HarqProcessAvailability (itLogicalChannels->first.m_rnti)))
         {
           // UE already allocated for HARQ or without HARQ process available -> drop it
           if (itRnti != rntiAllocated.end ())
-          {
-            NS_LOG_DEBUG (this << " RNTI discared for HARQ tx" << (uint16_t)(*it));
-          }
-          if (!HarqProcessAvailability ((*it)))
-          {
-            NS_LOG_DEBUG (this << " RNTI discared for HARQ id" << (uint16_t)(*it));
-          }
-
+            {
+              NS_LOG_DEBUG (this << " RNTI discared for HARQ tx" << (uint16_t)(itLogicalChannels->first.m_rnti));
+            }
+          if (!HarqProcessAvailability (itLogicalChannels->first.m_rnti))
+            {
+              NS_LOG_DEBUG (this << " RNTI discared for HARQ id" << (uint16_t)(itLogicalChannels->first.m_rnti));
+            }
           continue;
         }
 
-     std::map <uint16_t,uint8_t>::iterator itTxMode;
-     itTxMode = m_uesTxMode.find ((*it));
-     if (itTxMode == m_uesTxMode.end ())
-       {
-         NS_FATAL_ERROR ("No Transmission Mode info on user " << (*it));
-       }
-     int nLayer = TransmissionModesLayers::TxMode2LayerNum ((*itTxMode).second);
-     std::map <uint16_t,uint8_t>::iterator itCqi = m_p10CqiRxed.find ((*it));
-     uint8_t wbCqi = 0;
-     if (itCqi != m_p10CqiRxed.end ())
-       {
-         wbCqi = (*itCqi).second;
-       }
-     else
-       {
-         wbCqi = 1; // lowest value fro trying a transmission
-       }
-     
-     if (wbCqi != 0)
-       {
-          // CQI == 0 means "out of range" (see table 7.2.3-1 of 36.213)
-          if (LcActivePerFlow (*it) > 0)
-            {
-              // this UE has data to transmit
-              double achievableRate = 0.0;
-              for (uint8_t k = 0; k < nLayer; k++) 
-                {
-                  uint8_t mcs = 0; 
-                  mcs = m_amc->GetMcsFromCqi (wbCqi);
-                  achievableRate += ((m_amc->GetTbSizeFromMcs (mcs, rbgSize) / 8) / 0.001); // = TB size / TTI
 
-                  NS_LOG_DEBUG (this << " RNTI " << (*it) << " MCS " << (uint32_t)mcs << " achievableRate " << achievableRate );
+      std::map <LteFlowId_t, FfMacSchedSapProvider::SchedDlRlcBufferReqParameters>::iterator itRlcBufferReq = m_rlcBufferReq.find (itLogicalChannels->first);
+      if (itRlcBufferReq==m_rlcBufferReq.end ())
+        continue;
+
+      int group = -1;
+      int delay = 0;
+
+      if (itRlcBufferReq->second.m_rlcRetransmissionQueueSize > 0)
+        {
+          delay = itRlcBufferReq->second.m_rlcRetransmissionHolDelay;
+          group = delay/grouping_parameter;
+        }
+      else if  (itRlcBufferReq->second.m_rlcTransmissionQueueSize > 0)
+        {
+          delay = itRlcBufferReq->second.m_rlcTransmissionQueueHolDelay;
+          group = delay/grouping_parameter;
+        }
+      else
+        {
+          continue;
+        }
+
+      UEtoHOL.insert (std::pair<LteFlowId_t,int>(itLogicalChannels->first,delay));
+
+      if (itLogicalChannels->second.m_qosBearerType == itLogicalChannels->second.QBT_NON_GBR )
+        {
+          if (map_nonGBRHOLgroupToUE.count (group)==0)
+            {
+              std::set<LteFlowId_t> v;
+              v.insert (itRlcBufferReq->first);
+              map_nonGBRHOLgroupToUE.insert (std::pair<int,std::set<LteFlowId_t> >(group,v));
+            }
+          else
+            {
+              map_nonGBRHOLgroupToUE.find (group)->second.insert (itRlcBufferReq->first);
+            }
+        }
+      else if (itLogicalChannels->second.m_qosBearerType == itLogicalChannels->second.QBT_GBR) {
+          if (map_GBRHOLgroupToUE.count (group)==0)
+            {
+              std::set<LteFlowId_t> v;
+              v.insert (itRlcBufferReq->first);
+              map_GBRHOLgroupToUE.insert (std::pair<int,std::set<LteFlowId_t> >(group,v));
+            }
+          else
+            {
+              map_GBRHOLgroupToUE.find (group)->second.insert (itRlcBufferReq->first);
+            }
+        }
+    };
+
+
+  // Prepare data for the scheduling mechanism
+  // map: UE, to the amount of traffic they have to transfer
+  std::map<LteFlowId_t, int> UeToAmountOfDataToTransfer;
+  //Initialize the map per UE, how much resources is already assigned to the user
+  std::map<LteFlowId_t, int> UeToAmountOfAssignedResources;
+  // prepare values to calculate FF metric, this metric will be the same for all flows(logical channels) that belong to the same RNTI
+  std::map < uint16_t, uint8_t > sbCqiSum;
+
+  for( std::map <LteFlowId_t, FfMacSchedSapProvider::SchedDlRlcBufferReqParameters>::iterator itrbr = m_rlcBufferReq.begin ();
+       itrbr!=m_rlcBufferReq.end (); itrbr++)
+    {
+
+      LteFlowId_t flowId = itrbr->first;                // Prepare data for the scheduling mechanism
+      // map: UE, to the amount of traffic they have to transfer
+      int amountOfDataToTransfer =  8*((int)m_rlcBufferReq.find (flowId)->second.m_rlcRetransmissionQueueSize +
+                                       (int)m_rlcBufferReq.find (flowId)->second.m_rlcTransmissionQueueSize);
+
+      UeToAmountOfDataToTransfer.insert (std::pair<LteFlowId_t,int>(flowId,amountOfDataToTransfer));
+      UeToAmountOfAssignedResources.insert (std::pair<LteFlowId_t,int>(flowId,0));
+
+      uint8_t sum = 0;
+      for (int i = 0; i < numberOfRBGs; i++)
+        {
+          std::map <uint16_t,SbMeasResult_s>::iterator itCqi;
+          itCqi = m_a30CqiRxed.find ((*itrbr).first.m_rnti);
+          std::map <uint16_t,uint8_t>::iterator itTxMode;
+          itTxMode = m_uesTxMode.find ((*itrbr).first.m_rnti);
+          if (itTxMode == m_uesTxMode.end ())
+            {
+              NS_FATAL_ERROR ("No Transmission Mode info on user " << (*itrbr).first.m_rnti);
+            }
+          int nLayer = TransmissionModesLayers::TxMode2LayerNum ((*itTxMode).second);
+          std::vector <uint8_t> sbCqis;
+          if (itCqi == m_a30CqiRxed.end ())
+            {
+              for (uint8_t k = 0; k < nLayer; k++)
+                {
+                  sbCqis.push_back (1);                        // start with lowest value
+                }
+            }
+          else
+            {
+              sbCqis = (*itCqi).second.m_higherLayerSelected.at (i).m_sbCqi;
+            }
+
+          uint8_t cqi1 = sbCqis.at (0);
+          uint8_t cqi2 = 1;
+          if (sbCqis.size () > 1)
+            {
+              cqi2 = sbCqis.at (1);
+            }
+
+          uint8_t sbCqi;
+          if ((cqi1 > 0)||(cqi2 > 0))               // CQI == 0 means "out of range" (see table 7.2.3-1 of 36.213)
+            {
+              for (uint8_t k = 0; k < nLayer; k++)
+                {
+                  if (sbCqis.size () > k)
+                    {
+                      sbCqi = sbCqis.at (k);
+                    }
+                  else
+                    {
+                      // no info on this subband
+                      sbCqi = 0;
+                    }
+                  sum += sbCqi;
+                }
+            }               // end if cqi
+        }        // end of rbgNum
+
+      sbCqiSum.insert (std::pair<uint16_t, uint8_t> ((*itrbr).first.m_rnti, sum));
+    }
+
+  // availableRBGs - set that contains indexes of available resource block groups
+  std::set<int> availableRBGs;
+  for (int i = 0; i <  numberOfRBGs; i++)
+    {
+      if (rbgMap.at (i) == false)
+        availableRBGs.insert (i);
+    }
+
+  t_it_HOLgroupToUEs itGBRgroups = map_GBRHOLgroupToUE.begin ();
+  t_it_HOLgroupToUEs itnonGBRgroups = map_nonGBRHOLgroupToUE.begin ();
+
+
+
+  // while there are more resources available, loop through the users that are grouped by HOL value
+  while (availableRBGs.size ()>0)
+    {
+      std::set<LteFlowId_t> vUEs;
+      t_it_HOLgroupToUEs itCurrentGroup;
+
+      if (itGBRgroups!=map_GBRHOLgroupToUE.end ())
+        {
+          itCurrentGroup=itGBRgroups;
+          itGBRgroups++;
+        }
+      else if (itnonGBRgroups!=map_nonGBRHOLgroupToUE.end ())                  // if there are no more flows with retransmission queue start to scheduler flows with transmission queue
+        {
+          itCurrentGroup=itnonGBRgroups;
+          itnonGBRgroups++;
+        }
+      else
+        {
+          NS_LOG_INFO ("Available RBGs:"<< availableRBGs.size ()<<"but no users");
+          break;
+        }
+
+      while (availableRBGs.size ()>0 and itCurrentGroup->second.size ()>0)
+        {
+          int currentRB = *(availableRBGs.begin ());
+          std::map<LteFlowId_t, CQI_value> UeToCQIValue;
+          std::map<LteFlowId_t, double > UeToCoitaMetric;
+          std::map<LteFlowId_t, bool> UeHasReachedGBR;
+          double maximumValueMetric = 0;
+          LteFlowId_t userWithMaximumMetric;
+          UeToCQIValue.clear ();
+          UeToCoitaMetric.clear ();
+
+          // Iterate through the users and calculate which user will use the best of the current resource bloc.end()k and assign to that user.
+          for (std::set<LteFlowId_t>::iterator it=itCurrentGroup->second.begin (); it!=itCurrentGroup->second.end (); it++)
+            {
+              LteFlowId_t flowId = *it;
+              uint8_t cqi_value = 1;                           //higher better, maximum is 15
+              double coita_metric = 1;
+              double coita_sum = 0;
+              double metric = 0;
+              uint8_t worstCQIAmongRBGsAllocatedForThisUser = 15;
+              int numberOfRBGAllocatedForThisUser = 0;
+              LogicalChannelConfigListElement_s lc = m_ueLogicalChannelsConfigList.find (flowId)->second;
+              std::map <uint16_t,SbMeasResult_s>::iterator itRntiCQIsMap = m_a30CqiRxed.find (flowId.m_rnti);
+
+              std::map <uint16_t, CqasFlowPerf_t>::iterator itStats;
+
+              if (m_flowStatsDl.find (flowId.m_rnti) == m_flowStatsDl.end ())
+                {
+                  continue;                               // TO DO:  check if this should be logged and how.
                 }
 
-             double metric = achievableRate;
+              itStats = m_flowStatsDl.find (flowId.m_rnti);
+              double tbr_weight = (*itStats).second.targetThroughput / (*itStats).second.lastAveragedThroughput;
+              if (tbr_weight < 1.0)
+                tbr_weight = 1.0;
 
-             if (metric > metricMax)
-               {
-                 metricMax = metric;
-                 itMax = it;
-               }
-           } // LcActivePerFlow
+              if (itRntiCQIsMap != m_a30CqiRxed.end ())
+                {
+                  for(std::set<int>::iterator it=availableRBGs.begin (); it!=availableRBGs.end (); it++)
+                    {
+                      try
+                        {
+                          int val = (itRntiCQIsMap->second.m_higherLayerSelected.at (*it).m_sbCqi.at (0));
+                          if (val==0)
+                            val=1;                                             //if no info, use minimum
+                          if (*it == currentRB)
+                            cqi_value = val;
+                          coita_sum+=val;
 
-       } // cqi
+                        }
+                      catch(std::out_of_range&)
+                        {
+                          coita_sum+=1;                                      //if no info on channel use the worst cqi
+                          NS_LOG_INFO ("No CQI for lcId:"<<flowId.m_lcId<<" rnti:"<<flowId.m_rnti<<" at subband:"<<currentRB);
+                          //std::cout<<"\n No CQI for lcId:.....................................";
+                        }
+                    }
+                  coita_metric =cqi_value/coita_sum;
+                  UeToCQIValue.insert (std::pair<LteFlowId_t,CQI_value>(flowId,cqi_value));
+                  UeToCoitaMetric.insert (std::pair<LteFlowId_t, double>(flowId,coita_metric));
+                }
 
-    } // end for m_flowStatsDl
+              if (allocationMapPerRntiPerLCId.find (flowId.m_rnti)==allocationMapPerRntiPerLCId.end ())
+                {
+                  worstCQIAmongRBGsAllocatedForThisUser=cqi_value;
+                }
+              else {
 
-  if (itMax == m_flowStatsDl.end ())
-    {
-      // no UE available for downlink 
-      NS_LOG_INFO (this << " any UE found");
-    }
-  else
-    {
-      // assign all free RBGs to this UE
-      std::vector <uint16_t> tempMap;
-      for (int i = 0; i < rbgNum; i++)
-        {
-          NS_LOG_INFO (this << " ALLOCATION for RBG " << i << " of " << rbgNum);
-          NS_LOG_DEBUG (this << " ALLOCATION for RBG " << i << " of " << rbgNum);
-          if (rbgMap.at (i) == false)
+                  numberOfRBGAllocatedForThisUser = (allocationMapPerRntiPerLCId.find (flowId.m_rnti)->second.size ());
+
+                  for (std::multimap <uint8_t, qos_rb_and_CQI_assigned_to_lc>::iterator itRBG = allocationMapPerRntiPerLCId.find (flowId.m_rnti)->second.begin ();
+                       itRBG!=allocationMapPerRntiPerLCId.find (flowId.m_rnti)->second.end (); itRBG++)
+                    {
+                      qos_rb_and_CQI_assigned_to_lc e = itRBG->second;
+                      if (e.cqi_value_for_lc < worstCQIAmongRBGsAllocatedForThisUser)
+                        worstCQIAmongRBGsAllocatedForThisUser=e.cqi_value_for_lc;
+                    }
+
+                  if (cqi_value < worstCQIAmongRBGsAllocatedForThisUser)
+                    {
+                      worstCQIAmongRBGsAllocatedForThisUser=cqi_value;
+                    }
+                }
+
+              int mcsForThisUser = m_amc->GetMcsFromCqi (worstCQIAmongRBGsAllocatedForThisUser);
+              int tbSize = m_amc->GetTbSizeFromMcs (mcsForThisUser, (numberOfRBGAllocatedForThisUser+1) * rbgSize)/8;                           // similar to calculation of TB size (size of TB in bytes according to table 7.1.7.2.1-1 of 36.213)
+
+
+              double achievableRate = (( m_amc->GetTbSizeFromMcs (mcsForThisUser, rbgSize)/ 8) / 0.001);
+              double pf_weight = achievableRate / (*itStats).second.secondLastAveragedThroughput;
+
+              UeToAmountOfAssignedResources.find (flowId)->second = tbSize;
+              FfMacSchedSapProvider::SchedDlRlcBufferReqParameters lcBufferInfo = m_rlcBufferReq.find (flowId)->second;
+
+              if (UeToAmountOfDataToTransfer.find (flowId)->second - UeToAmountOfAssignedResources.find (flowId)->second < 0)
+                {
+                  UeHasReachedGBR.insert (std::pair<LteFlowId_t,bool>(flowId,false));
+                }
+
+              double bitRateWithNewRBG = 0;
+
+              if (m_flowStatsDl.find (flowId.m_rnti)!= m_flowStatsDl.end ())                         // there are some statistics{
+                {
+                  bitRateWithNewRBG = (1.0 - (1.0 / m_timeWindow)) * (m_flowStatsDl.find (flowId.m_rnti)->second.lastAveragedThroughput) + ((1.0 / m_timeWindow) * (double)(tbSize*1000));
+                }
+              else
+                {
+                  bitRateWithNewRBG = (1.0 / m_timeWindow) * (double)(tbSize*1000);
+                }
+
+              if(bitRateWithNewRBG > lc.m_eRabGuaranteedBitrateDl)
+                {
+                  UeHasReachedGBR.insert (std::pair<LteFlowId_t,bool>(flowId,true));
+                }
+              else
+                {
+                  UeHasReachedGBR.insert (std::pair<LteFlowId_t,bool>(flowId,false));
+                }
+
+              int hol = UEtoHOL.find (flowId)->second;
+
+              if (hol==0)
+                hol=1;
+
+              if ( m_CqaMetric.compare ("CqaFf") == 0)
+                {
+                  metric = coita_metric*tbr_weight*hol;
+                }
+              else if (m_CqaMetric.compare ("CqaPf") == 0)
+                {
+                  metric = tbr_weight*pf_weight*hol;
+                }
+              else
+                {
+                  metric = 1;
+                }
+
+              if (metric >= maximumValueMetric)
+                {
+                  maximumValueMetric = metric;
+                  userWithMaximumMetric = flowId;
+                }
+            }
+
+          qos_rb_and_CQI_assigned_to_lc s;
+          s.cqi_value_for_lc = UeToCQIValue.find (userWithMaximumMetric)->second;
+          s.resource_block_index = currentRB;
+
+          itMap = allocationMapPerRntiPerLCId.find (userWithMaximumMetric.m_rnti);
+
+          if (itMap == allocationMapPerRntiPerLCId.end ())
             {
-              rbgMap.at (i) = true;
-              tempMap.push_back (i);
-            } // end for RBG free
+              std::multimap <uint8_t, qos_rb_and_CQI_assigned_to_lc> tempMap;
+              tempMap.insert (std::pair<uint8_t, qos_rb_and_CQI_assigned_to_lc> (userWithMaximumMetric.m_lcId,s));
+              allocationMapPerRntiPerLCId.insert (std::pair <uint16_t, std::multimap <uint8_t,qos_rb_and_CQI_assigned_to_lc> > (userWithMaximumMetric.m_rnti, tempMap));
+            }
+          else
+            {
+              itMap->second.insert (std::pair<uint8_t,qos_rb_and_CQI_assigned_to_lc> (userWithMaximumMetric.m_lcId,s));
+            }
 
-        } // end for RBGs
+          // erase current RBG from the list of available RBG
+          availableRBGs.erase (currentRB);
 
-      allocationMap.insert (std::pair <uint16_t, std::vector <uint16_t> > ((*itMax), tempMap));
+          if (UeToAmountOfDataToTransfer.find (userWithMaximumMetric)->second <= UeToAmountOfAssignedResources.find (userWithMaximumMetric)->second*tolerance)
+          //||(UeHasReachedGBR.find(userWithMaximumMetric)->second == true))
+            {
+              itCurrentGroup->second.erase (userWithMaximumMetric);
+            }
+
+        }                 // while there are more users in current group
+    }             // while there are more groups of users
+
+
+  // reset TTI stats of users
+  std::map <uint16_t, CqasFlowPerf_t>::iterator itStats;
+  for (itStats = m_flowStatsDl.begin (); itStats != m_flowStatsDl.end (); itStats++)
+    {
+      (*itStats).second.lastTtiBytesTransmitted = 0;
     }
 
-  // generate the transmission opportunities by grouping the RBGs of the same RNTI and
-  // creating the correspondent DCIs
-  std::map <uint16_t, std::vector <uint16_t> >::iterator itMap = allocationMap.begin ();
-  while (itMap != allocationMap.end ())
+  // 3) Creating the correspondent DCIs (Generate the transmission opportunities by grouping the RBGs of the same RNTI)
+  //FfMacSchedSapUser::SchedDlConfigIndParameters ret;
+  itMap = allocationMapPerRntiPerLCId.begin ();
+  int counter = 0;
+  std::map<uint16_t, double> m_rnti_per_ratio;
+
+  while (itMap != allocationMapPerRntiPerLCId.end ())
     {
       // create new BuildDataListElement_s for this LC
       BuildDataListElement_s newEl;
       newEl.m_rnti = (*itMap).first;
+      NS_LOG_INFO ("Scheduled RNTI:"<<newEl.m_rnti);
       // create the DlDciListElement_s
       DlDciListElement_s newDci;
+      std::vector <struct RlcPduListElement_s> newRlcPduLe;
       newDci.m_rnti = (*itMap).first;
       newDci.m_harqProcess = UpdateHarqProcessId ((*itMap).first);
-
-      uint16_t lcActives = LcActivePerFlow ((*itMap).first);
-      NS_LOG_INFO (this << "Allocate user " << newEl.m_rnti << " rbg " << lcActives);
-      if (lcActives == 0)
-        {
-          // Set to max value, to avoid divide by 0 below
-          lcActives = (uint16_t)65535; // UINT16_MAX;
-        }
+      uint16_t lcActives = LcActivePerFlow (itMap->first);
+      if (lcActives==0)           // if there is still no buffer report information on any flow
+        lcActives = 1;
+      // NS_LOG_DEBUG (this << "Allocate user " << newEl.m_rnti << " rbg " << lcActives);
       uint16_t RgbPerRnti = (*itMap).second.size ();
-      std::map <uint16_t,uint8_t>::iterator itCqi;
-      itCqi = m_p10CqiRxed.find ((*itMap).first);
-      std::map <uint16_t,uint8_t>::iterator itTxMode;
-      itTxMode = m_uesTxMode.find ((*itMap).first);
-      if (itTxMode == m_uesTxMode.end ())
-        {
-          NS_FATAL_ERROR ("No Transmission Mode info on user " << (*itMap).first);
-        }
-      int nLayer = TransmissionModesLayers::TxMode2LayerNum ((*itTxMode).second);
-      for (uint8_t j = 0; j < nLayer; j++)
-        {
-          if (itCqi == m_p10CqiRxed.end ())
-            {
-              newDci.m_mcs.push_back (0); // no info on this user -> lowest MCS
-            }
-          else
-            {
-              newDci.m_mcs.push_back ( m_amc->GetMcsFromCqi ((*itCqi).second) );
-            }
+      double doubleRBgPerRnti = RgbPerRnti;
+      double doubleRbgNum = numberOfRBGs;
+      double rrRatio = doubleRBgPerRnti/doubleRbgNum;
+      m_rnti_per_ratio.insert (std::pair<uint16_t,double>((*itMap).first,rrRatio));
+      std::map <uint16_t,SbMeasResult_s>::iterator itCqi;
+      itCqi = m_a30CqiRxed.find ((*itMap).first);
+      uint8_t worstCqi = 15;
 
-          int tbSize = (m_amc->GetTbSizeFromMcs (newDci.m_mcs.at (j), RgbPerRnti * rbgSize) / 8); // (size of TB in bytes according to table 7.1.7.2.1-1 of 36.213)
-          newDci.m_tbsSize.push_back (tbSize);
+      // assign the worst value of CQI that user experienced on any of its subbands
+      for ( std::multimap <uint8_t, qos_rb_and_CQI_assigned_to_lc> ::iterator it = (*itMap).second.begin (); it != (*itMap).second.end (); it++)
+        {
+          if (it->second.cqi_value_for_lc<worstCqi)
+            {
+              worstCqi = it->second.cqi_value_for_lc;
+            }
+          counter++;
         }
 
-      newDci.m_resAlloc = 0;  // only allocation type 0 at this stage
-      newDci.m_rbBitmap = 0; // TBD (32 bit bitmap see 7.1.6 of 36.213)
+      newDci.m_mcs.push_back (m_amc->GetMcsFromCqi (worstCqi));
+      int tbSize = (m_amc->GetTbSizeFromMcs (newDci.m_mcs.at (0), RgbPerRnti * rbgSize) / 8);           // (size of TB in bytes according to table 7.1.7.2.1-1 of 36.213)
+      newDci.m_tbsSize.push_back (tbSize);
+      newDci.m_resAlloc = 0;            // only allocation type 0 at this stage
+      newDci.m_rbBitmap = 0;    // TBD (32 bit bitmap see 7.1.6 of 36.213)
       uint32_t rbgMask = 0;
-      for (uint16_t k = 0; k < (*itMap).second.size (); k++)
+      std::multimap <uint8_t, qos_rb_and_CQI_assigned_to_lc> ::iterator itRBGsPerRNTI;
+      for ( itRBGsPerRNTI = (*itMap).second.begin (); itRBGsPerRNTI != (*itMap).second.end (); itRBGsPerRNTI++)
         {
-          rbgMask = rbgMask + (0x1 << (*itMap).second.at (k));
-          NS_LOG_INFO (this << " Allocated RBG " << (*itMap).second.at (k));
+          rbgMask = rbgMask + (0x1 << itRBGsPerRNTI->second.resource_block_index);
         }
-      newDci.m_rbBitmap = rbgMask; // (32 bit bitmap see 7.1.6 of 36.213)
-
-      // create the rlc PDUs -> equally divide resources among actives LCs
+      newDci.m_rbBitmap = rbgMask;   // (32 bit bitmap see 7.1.6 of 36.213)
+      // NOTE: In this first version of CqaFfMacScheduler, it is assumed one flow per user.
+      // create the rlc PDUs -> equally divide resources among active LCs
       std::map <LteFlowId_t, FfMacSchedSapProvider::SchedDlRlcBufferReqParameters>::iterator itBufReq;
       for (itBufReq = m_rlcBufferReq.begin (); itBufReq != m_rlcBufferReq.end (); itBufReq++)
         {
@@ -1155,25 +1561,27 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
                   || ((*itBufReq).second.m_rlcStatusPduSize > 0) ))
             {
               std::vector <struct RlcPduListElement_s> newRlcPduLe;
-              for (uint8_t j = 0; j < nLayer; j++)
+              //for (uint8_t j = 0; j < nLayer; j++)
+              //{
+              RlcPduListElement_s newRlcEl;
+              newRlcEl.m_logicalChannelIdentity = (*itBufReq).first.m_lcId;
+              // newRlcEl.m_size = newDci.m_tbsSize.at (j) / lcActives;
+              newRlcEl.m_size = tbSize / lcActives;
+              // NS_LOG_INFO (this << " LCID " << (uint32_t) newRlcEl.m_logicalChannelIdentity << " size " << newRlcEl.m_size << " layer " << (uint16_t)j);
+              newRlcPduLe.push_back (newRlcEl);
+              UpdateDlRlcBufferInfo (newDci.m_rnti, newRlcEl.m_logicalChannelIdentity, newRlcEl.m_size);
+              if (m_harqOn == true)
                 {
-                  RlcPduListElement_s newRlcEl;
-                  newRlcEl.m_logicalChannelIdentity = (*itBufReq).first.m_lcId;
-                  newRlcEl.m_size = newDci.m_tbsSize.at (j) / lcActives;
-                  NS_LOG_INFO (this << " LCID " << (uint32_t) newRlcEl.m_logicalChannelIdentity << " size " << newRlcEl.m_size << " layer " << (uint16_t)j);
-                  newRlcPduLe.push_back (newRlcEl);
-                  UpdateDlRlcBufferInfo (newDci.m_rnti, newRlcEl.m_logicalChannelIdentity, newRlcEl.m_size);
-                  if (m_harqOn == true)
+                  // store RLC PDU list for HARQ
+                  std::map <uint16_t, DlHarqRlcPduListBuffer_t>::iterator itRlcPdu =  m_dlHarqProcessesRlcPduListBuffer.find ((*itMap).first);
+                  if (itRlcPdu == m_dlHarqProcessesRlcPduListBuffer.end ())
                     {
-                      // store RLC PDU list for HARQ
-                      std::map <uint16_t, DlHarqRlcPduListBuffer_t>::iterator itRlcPdu =  m_dlHarqProcessesRlcPduListBuffer.find ((*itMap).first);
-                      if (itRlcPdu == m_dlHarqProcessesRlcPduListBuffer.end ())
-                        {
-                          NS_FATAL_ERROR ("Unable to find RlcPdcList in HARQ buffer for RNTI " << (*itMap).first);
-                        }
-                      (*itRlcPdu).second.at (j).at (newDci.m_harqProcess).push_back (newRlcEl);
+                      NS_FATAL_ERROR ("Unable to find RlcPdcList in HARQ buffer for RNTI " << (*itMap).first);
                     }
+                  int j=0;
+                  (*itRlcPdu).second.at (j).at (newDci.m_harqProcess).push_back (newRlcEl);
                 }
+              // }
               newEl.m_rlcPduList.push_back (newRlcPduLe);
             }
           if ((*itBufReq).first.m_rnti > (*itMap).first)
@@ -1181,11 +1589,11 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
               break;
             }
         }
-      for (uint8_t j = 0; j < nLayer; j++)
-        {
-          newDci.m_ndi.push_back (1);
-          newDci.m_rv.push_back (0);
-        }
+      // for (uint8_t j = 0; j < nLayer; j++)
+      // {
+      newDci.m_ndi.push_back (1);
+      newDci.m_rv.push_back (0);
+      //}
 
       newEl.m_dci = newDci;
 
@@ -1210,29 +1618,63 @@ TdMtFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sch
       // ...more parameters -> ingored in this version
 
       ret.m_buildDataList.push_back (newEl);
+      // update UE stats
+      std::map <uint16_t, CqasFlowPerf_t>::iterator it;
+      it = m_flowStatsDl.find ((*itMap).first);
+      if (it != m_flowStatsDl.end ())
+        {
+          (*it).second.lastTtiBytesTransmitted = tbSize;
+        }
+      else
+        {
+          NS_FATAL_ERROR (this << " No Stats for this allocated UE");
+        }
 
       itMap++;
     } // end while allocation
-  ret.m_nrOfPdcchOfdmSymbols = 1;   /// \todo check correct value according the DCIs txed
+  ret.m_nrOfPdcchOfdmSymbols = 1;   // TODO: check correct value according the DCIs txed
+
+  // update UEs stats
+  NS_LOG_INFO (this << " Update UEs statistics");
+  for (itStats = m_flowStatsDl.begin (); itStats != m_flowStatsDl.end (); itStats++)
+    {
+      if (allocationMapPerRntiPerLCId.find (itStats->first)!= allocationMapPerRntiPerLCId.end ())
+        {
+          (*itStats).second.secondLastAveragedThroughput = ((1.0 - (1 / m_timeWindow)) * (*itStats).second.secondLastAveragedThroughput) + ((1 / m_timeWindow) * (double)((*itStats).second.lastTtiBytesTransmitted / 0.001));
+        }
+
+      (*itStats).second.totalBytesTransmitted += (*itStats).second.lastTtiBytesTransmitted;
+      // update average throughput (see eq. 12.3 of Sec 12.3.1.2 of LTE – The UMTS Long Term Evolution, Ed Wiley)
+      (*itStats).second.lastAveragedThroughput = ((1.0 - (1.0 / m_timeWindow)) * (*itStats).second.lastAveragedThroughput) + ((1.0 / m_timeWindow) * (double)((*itStats).second.lastTtiBytesTransmitted / 0.001));
+      NS_LOG_INFO (this << " UE total bytes " << (*itStats).second.totalBytesTransmitted);
+      NS_LOG_INFO (this << " UE average throughput " << (*itStats).second.lastAveragedThroughput);
+      (*itStats).second.lastTtiBytesTransmitted = 0;
+    }
 
   m_schedSapUser->SchedDlConfigInd (ret);
 
+  int count_allocated_resource_blocks = 0;
+  for (std::map <uint16_t, std::multimap <uint8_t, qos_rb_and_CQI_assigned_to_lc> >::iterator itMap = allocationMapPerRntiPerLCId.begin (); itMap!=allocationMapPerRntiPerLCId.end (); itMap++)
+    {
+      count_allocated_resource_blocks+=itMap->second.size ();
+    }
+  NS_LOG_INFO (this << " Allocated RBs:" << count_allocated_resource_blocks);
 
   return;
 }
 
 void
-TdMtFfMacScheduler::DoSchedDlRachInfoReq (const struct FfMacSchedSapProvider::SchedDlRachInfoReqParameters& params)
+CqaFfMacScheduler::DoSchedDlRachInfoReq (const struct FfMacSchedSapProvider::SchedDlRachInfoReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
 
   m_rachList = params.m_rachList;
-  
+
   return;
 }
 
 void
-TdMtFfMacScheduler::DoSchedDlCqiInfoReq (const struct FfMacSchedSapProvider::SchedDlCqiInfoReqParameters& params)
+CqaFfMacScheduler::DoSchedDlCqiInfoReq (const struct FfMacSchedSapProvider::SchedDlCqiInfoReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
 
@@ -1293,7 +1735,7 @@ TdMtFfMacScheduler::DoSchedDlCqiInfoReq (const struct FfMacSchedSapProvider::Sch
 
 
 double
-TdMtFfMacScheduler::EstimateUlSinr (uint16_t rnti, uint16_t rb)
+CqaFfMacScheduler::EstimateUlSinr (uint16_t rnti, uint16_t rb)
 {
   std::map <uint16_t, std::vector <double> >::iterator itCqi = m_ueCqi.find (rnti);
   if (itCqi == m_ueCqi.end ())
@@ -1324,7 +1766,7 @@ TdMtFfMacScheduler::EstimateUlSinr (uint16_t rnti, uint16_t rb)
 }
 
 void
-TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::SchedUlTriggerReqParameters& params)
+CqaFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::SchedUlTriggerReqParameters& params)
 {
   NS_LOG_FUNCTION (this << " UL - Frame no. " << (params.m_sfnSf >> 4) << " subframe no. " << (0xF & params.m_sfnSf) << " size " << params.m_ulInfoList.size ());
 
@@ -1357,13 +1799,20 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
   if (m_harqOn == true)
     {
       //   Process UL HARQ feedback
+      //   update UL HARQ proc id
+      std::map <uint16_t, uint8_t>::iterator itProcId;
+      for (itProcId = m_ulHarqCurrentProcessId.begin (); itProcId != m_ulHarqCurrentProcessId.end (); itProcId++)
+        {
+          (*itProcId).second = ((*itProcId).second + 1) % HARQ_PROC_NUM;
+        }
+
       for (uint16_t i = 0; i < params.m_ulInfoList.size (); i++)
-        {        
+        {
           if (params.m_ulInfoList.at (i).m_receptionStatus == UlInfoListElement_s::NotOk)
             {
               // retx correspondent block: retrieve the UL-DCI
               uint16_t rnti = params.m_ulInfoList.at (i).m_rnti;
-              std::map <uint16_t, uint8_t>::iterator itProcId = m_ulHarqCurrentProcessId.find (rnti);
+              itProcId = m_ulHarqCurrentProcessId.find (rnti);
               if (itProcId == m_ulHarqCurrentProcessId.end ())
                 {
                   NS_LOG_ERROR ("No info find in HARQ buffer for UE (might change eNB) " << rnti);
@@ -1388,6 +1837,7 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
                   continue;
                 }
               bool free = true;
+
               for (int j = dci.m_rbStart; j < dci.m_rbStart + dci.m_rbLen; j++)
                 {
                   if (rbMap.at (j) == true)
@@ -1421,7 +1871,7 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
               ret.m_dciList.push_back (dci);
               rntiAllocated.insert (dci.m_rnti);
             }
-            else
+          else
             {
               NS_LOG_INFO (this << " HARQ-ACK feedback from RNTI " << params.m_ulInfoList.at (i).m_rnti);
             }
@@ -1447,7 +1897,7 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
         {
           m_schedSapUser->SchedUlConfigInd (ret);
         }
-        
+
       return;  // no flows to be scheduled
     }
 
@@ -1460,6 +1910,7 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
     }
   int rbAllocated = 0;
 
+  std::map <uint16_t, CqasFlowPerf_t>::iterator itStats;
   if (m_nextRntiUl != 0)
     {
       for (it = m_ceBsrRxed.begin (); it != m_ceBsrRxed.end (); it++)
@@ -1502,7 +1953,7 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
           if (rbPerFlow < 3)
             {
               // terminate allocation
-              rbPerFlow = 0;      
+              rbPerFlow = 0;
             }
         }
 
@@ -1546,7 +1997,7 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
               if (rbPerFlow < 3)
                 {
                   // terminate allocation
-                  rbPerFlow = 0;                 
+                  rbPerFlow = 0;
                 }
             }
         }
@@ -1594,8 +2045,8 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
 
           // translate SINR -> cqi: WILD ACK: same as DL
           double s = log2 ( 1 + (
-                                 std::pow (10, minSinr / 10 )  /
-                                 ( (-std::log (5.0 * 0.00005 )) / 1.5) ));
+                              std::pow (10, minSinr / 10 )  /
+                              ( (-std::log (5.0 * 0.00005 )) / 1.5) ));
           cqi = m_amc->GetCqiFromSpectralEfficiency (s);
           if (cqi == 0)
             {
@@ -1652,6 +2103,17 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
 
       NS_LOG_INFO (this << " UE Allocation RNTI " << (*it).first << " startPRB " << (uint32_t)uldci.m_rbStart << " nPRB " << (uint32_t)uldci.m_rbLen << " CQI " << cqi << " MCS " << (uint32_t)uldci.m_mcs << " TBsize " << uldci.m_tbSize << " RbAlloc " << rbAllocated << " harqId " << (uint16_t)harqId);
 
+      // update TTI  UE stats
+      itStats = m_flowStatsUl.find ((*it).first);
+      if (itStats != m_flowStatsUl.end ())
+        {
+          (*itStats).second.lastTtiBytesTransmitted =  uldci.m_tbSize;
+        }
+      else
+        {
+          NS_LOG_DEBUG (this << " No Stats for this allocated UE");
+        }
+
 
       it++;
       if (it == m_ceBsrRxed.end ())
@@ -1669,6 +2131,17 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
   while (((*it).first != m_nextRntiUl)&&(rbPerFlow!=0));
 
 
+  // Update global UE stats
+  // update UEs stats
+  for (itStats = m_flowStatsUl.begin (); itStats != m_flowStatsUl.end (); itStats++)
+    {
+      (*itStats).second.totalBytesTransmitted += (*itStats).second.lastTtiBytesTransmitted;
+      // update average throughput (see eq. 12.3 of Sec 12.3.1.2 of LTE – The UMTS Long Term Evolution, Ed Wiley)
+      (*itStats).second.lastAveragedThroughput = ((1.0 - (1.0 / m_timeWindow)) * (*itStats).second.lastAveragedThroughput) + ((1.0 / m_timeWindow) * (double)((*itStats).second.lastTtiBytesTransmitted / 0.001));
+      NS_LOG_INFO (this << " UE total bytes " << (*itStats).second.totalBytesTransmitted);
+      NS_LOG_INFO (this << " UE average throughput " << (*itStats).second.lastAveragedThroughput);
+      (*itStats).second.lastTtiBytesTransmitted = 0;
+    }
   m_allocationMaps.insert (std::pair <uint16_t, std::vector <uint16_t> > (params.m_sfnSf, rbgAllocationMap));
   m_schedSapUser->SchedUlConfigInd (ret);
 
@@ -1676,21 +2149,21 @@ TdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
 }
 
 void
-TdMtFfMacScheduler::DoSchedUlNoiseInterferenceReq (const struct FfMacSchedSapProvider::SchedUlNoiseInterferenceReqParameters& params)
+CqaFfMacScheduler::DoSchedUlNoiseInterferenceReq (const struct FfMacSchedSapProvider::SchedUlNoiseInterferenceReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
   return;
 }
 
 void
-TdMtFfMacScheduler::DoSchedUlSrInfoReq (const struct FfMacSchedSapProvider::SchedUlSrInfoReqParameters& params)
+CqaFfMacScheduler::DoSchedUlSrInfoReq (const struct FfMacSchedSapProvider::SchedUlSrInfoReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
   return;
 }
 
 void
-TdMtFfMacScheduler::DoSchedUlMacCtrlInfoReq (const struct FfMacSchedSapProvider::SchedUlMacCtrlInfoReqParameters& params)
+CqaFfMacScheduler::DoSchedUlMacCtrlInfoReq (const struct FfMacSchedSapProvider::SchedUlMacCtrlInfoReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
 
@@ -1713,7 +2186,7 @@ TdMtFfMacScheduler::DoSchedUlMacCtrlInfoReq (const struct FfMacSchedSapProvider:
               uint8_t bsrId = params.m_macCeList.at (i).m_macCeValue.m_bufferStatus.at (lcg);
               buffer += BufferSizeLevelBsr::BsrId2BufferSize (bsrId);
             }
-          
+
           uint16_t rnti = params.m_macCeList.at (i).m_rnti;
           NS_LOG_LOGIC (this << "RNTI=" << rnti << " buffer=" << buffer);
           it = m_ceBsrRxed.find (rnti);
@@ -1734,7 +2207,7 @@ TdMtFfMacScheduler::DoSchedUlMacCtrlInfoReq (const struct FfMacSchedSapProvider:
 }
 
 void
-TdMtFfMacScheduler::DoSchedUlCqiInfoReq (const struct FfMacSchedSapProvider::SchedUlCqiInfoReqParameters& params)
+CqaFfMacScheduler::DoSchedUlCqiInfoReq (const struct FfMacSchedSapProvider::SchedUlCqiInfoReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
 // retrieve the allocation for this subframe
@@ -1821,6 +2294,7 @@ TdMtFfMacScheduler::DoSchedUlCqiInfoReq (const struct FfMacSchedSapProvider::Sch
       break;
     case UlCqi_s::SRS:
       {
+        NS_LOG_DEBUG (this << " Collect SRS CQIs of Frame no. " << (params.m_sfnSf >> 4) << " subframe no. " << (0xF & params.m_sfnSf));
         // get the RNTI from vendor specific parameters
         uint16_t rnti = 0;
         NS_ASSERT (params.m_vendorSpecificList.size () > 0);
@@ -1872,7 +2346,7 @@ TdMtFfMacScheduler::DoSchedUlCqiInfoReq (const struct FfMacSchedSapProvider::Sch
     case UlCqi_s::PUCCH_2:
     case UlCqi_s::PRACH:
       {
-        NS_FATAL_ERROR ("TdMtFfMacScheduler supports only PUSCH and SRS UL-CQIs");
+        NS_FATAL_ERROR ("PfFfMacScheduler supports only PUSCH and SRS UL-CQIs");
       }
       break;
     default:
@@ -1882,7 +2356,7 @@ TdMtFfMacScheduler::DoSchedUlCqiInfoReq (const struct FfMacSchedSapProvider::Sch
 }
 
 void
-TdMtFfMacScheduler::RefreshDlCqiMaps (void)
+CqaFfMacScheduler::RefreshDlCqiMaps (void)
 {
   // refresh DL CQI P01 Map
   std::map <uint16_t,uint32_t>::iterator itP10 = m_p10CqiTimers.begin ();
@@ -1935,7 +2409,7 @@ TdMtFfMacScheduler::RefreshDlCqiMaps (void)
 
 
 void
-TdMtFfMacScheduler::RefreshUlCqiMaps (void)
+CqaFfMacScheduler::RefreshUlCqiMaps (void)
 {
   // refresh UL CQI  Map
   std::map <uint16_t,uint32_t>::iterator itUl = m_ueCqiTimers.begin ();
@@ -1965,7 +2439,7 @@ TdMtFfMacScheduler::RefreshUlCqiMaps (void)
 }
 
 void
-TdMtFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t size)
+CqaFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t size)
 {
   std::map<LteFlowId_t, FfMacSchedSapProvider::SchedDlRlcBufferReqParameters>::iterator it;
   LteFlowId_t flow (rnti, lcid);
@@ -1977,7 +2451,7 @@ TdMtFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t
       // Update status queue
       if (((*it).second.m_rlcStatusPduSize > 0) && (size >= (*it).second.m_rlcStatusPduSize))
         {
-           (*it).second.m_rlcStatusPduSize = 0;
+          (*it).second.m_rlcStatusPduSize = 0;
         }
       else if (((*it).second.m_rlcRetransmissionQueueSize > 0) && (size >= (*it).second.m_rlcRetransmissionQueueSize))
         {
@@ -1992,7 +2466,7 @@ TdMtFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t
               // overestimate RLC overhead rather than
               // underestimate it and risk unneeded
               // segmentation which increases delay 
-              rlcOverhead = 4;                                  
+              rlcOverhead = 4;
             }
           else
             {
@@ -2005,7 +2479,7 @@ TdMtFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t
               (*it).second.m_rlcTransmissionQueueSize = 0;
             }
           else
-            {                    
+            {
               (*it).second.m_rlcTransmissionQueueSize -= size - rlcOverhead;
             }
         }
@@ -2017,7 +2491,7 @@ TdMtFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t
 }
 
 void
-TdMtFfMacScheduler::UpdateUlRlcBufferInfo (uint16_t rnti, uint16_t size)
+CqaFfMacScheduler::UpdateUlRlcBufferInfo (uint16_t rnti, uint16_t size)
 {
 
   size = size - 2; // remove the minimum RLC overhead
@@ -2042,7 +2516,7 @@ TdMtFfMacScheduler::UpdateUlRlcBufferInfo (uint16_t rnti, uint16_t size)
 }
 
 void
-TdMtFfMacScheduler::TransmissionModeConfigurationUpdate (uint16_t rnti, uint8_t txMode)
+CqaFfMacScheduler::TransmissionModeConfigurationUpdate (uint16_t rnti, uint8_t txMode)
 {
   NS_LOG_FUNCTION (this << " RNTI " << rnti << " txMode " << (uint16_t)txMode);
   FfMacCschedSapUser::CschedUeConfigUpdateIndParameters params;
