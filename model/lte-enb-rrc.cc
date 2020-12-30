@@ -2246,6 +2246,8 @@ LteEnbRrc::ConfigureCell (std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> cc
         m_sib1.push_back (sib1);
         m_cphySapProvider.at (it.first)->SetSystemInformationBlockType1 (sib1);
       }
+
+  Simulator::Schedule (MilliSeconds (16), &LteEnbRrc::SendSystemInformation, this);
   }
   else{
     m_sib1Nb.clear();
@@ -2256,9 +2258,12 @@ LteEnbRrc::ConfigureCell (std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> cc
 
       NbIotRrcSap::SystemInformationBlockType1Nb sib1Nb;
       sib1Nb.cellAccessRelatedInfoNb.cellIdentity = it.second->GetCellId();
+
+      sib1Nb.cellSelectionInfo.qRxLevMin = m_qRxLevMin; // set as minimum value
       m_sib1Nb.push_back(sib1Nb);
       m_cphySapProvider.at(it.first)->SetSystemInformationBlockType1Nb(sib1Nb);
     }
+  Simulator::Schedule (MilliSeconds (16), &LteEnbRrc::SendSystemInformationNb, this);
   }
   /*
    * Enabling transmission of other SIB. The first time System Information is
@@ -2266,7 +2271,6 @@ LteEnbRrc::ConfigureCell (std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> cc
    * regularly transmitted every 80 ms by default (set the
    * SystemInformationPeriodicity attribute to configure this).
    */
-  Simulator::Schedule (MilliSeconds (16), &LteEnbRrc::SendSystemInformation, this);
 
   m_configured = true;
 
@@ -3091,6 +3095,34 @@ LteEnbRrc::SendSystemInformation ()
    */
   Simulator::Schedule (m_systemInformationPeriodicity, &LteEnbRrc::SendSystemInformation, this);
 }
+
+void
+LteEnbRrc::SendSystemInformationNb ()
+{
+  // NS_LOG_FUNCTION (this);
+
+  for (auto &it: m_componentCarrierPhyConf)
+    {
+      uint8_t ccId = it.first;
+
+      NbIotRrcSap::SystemInformationNb si;
+      si.haveSib2 = true;
+      si.sib2.freqInfo.ulCarrierFreq = it.second->GetUlEarfcn ();
+      si.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower = m_cphySapProvider.at (ccId)->GetReferenceSignalPower ();
+
+      LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
+      si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
+
+      m_rrcSapUser->SendSystemInformationNb (it.second->GetCellId (), si);
+    }
+
+  /*
+   * For simplicity, we use the same periodicity for all SIBs. Note that in real
+   * systems the periodicy of each SIBs could be different.
+   */
+  Simulator::Schedule (m_systemInformationPeriodicity, &LteEnbRrc::SendSystemInformationNb, this);
+}
+
 
 bool
 LteEnbRrc::IsRandomAccessCompleted (uint16_t rnti)

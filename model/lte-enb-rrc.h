@@ -1462,6 +1462,13 @@ private:
    */
   void SendSystemInformation ();
 
+  /** 
+   * method used to periodically send System Information
+   * 
+   */
+  void SendSystemInformationNb ();
+
+
   Callback <void, Ptr<Packet> > m_forwardUpCallback;  ///< forward up callback function
 
   /// Interface to receive messages from neighbour eNodeB over the X2 interface.
