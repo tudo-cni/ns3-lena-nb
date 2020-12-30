@@ -28,6 +28,7 @@
 
 #include <ns3/ptr.h>
 #include <ns3/simulator.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -1020,7 +1021,13 @@ public:
    * \param msg the message
    */
   virtual void RecvSystemInformation (SystemInformation msg) = 0;
-
+  /**
+   * \brief Receive a _SystemInformation_ message from the serving eNodeB
+   *        during a system information acquisition procedure
+   *        (Section 5.2.2 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void RecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg) = 0;
   /**
    * \brief Receive an _RRCConnectionSetup_ message from the serving eNodeB
    *        during an RRC connection establishment procedure
@@ -1108,7 +1115,14 @@ public:
    * \param msg the message
    */
   virtual void SendSystemInformation (uint16_t cellId, SystemInformation msg) = 0;
-
+  /**
+   * \brief Send a _SystemInformation_ message to all attached UEs
+   *        during a system information acquisition procedure
+   *        (Section 5.2.2 of TS 36.331).
+   * \param cellId cell ID
+   * \param msg the message
+   */
+  virtual void SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg) = 0;
   /**
    * \brief Send an _RRCConnectionSetup_ message to a UE
    *        during an RRC connection establishment procedure
@@ -1413,6 +1427,7 @@ public:
   // methods inherited from LteUeRrcSapProvider go here
   virtual void CompleteSetup (CompleteSetupParameters params);
   virtual void RecvSystemInformation (SystemInformation msg);
+  virtual void RecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg);
   virtual void RecvRrcConnectionSetup (RrcConnectionSetup msg);
   virtual void RecvRrcConnectionReconfiguration (RrcConnectionReconfiguration msg);
   virtual void RecvRrcConnectionReestablishment (RrcConnectionReestablishment msg);
@@ -1448,6 +1463,13 @@ void
 MemberLteUeRrcSapProvider<C>::RecvSystemInformation (SystemInformation msg)
 {
   Simulator::ScheduleNow (&C::DoRecvSystemInformation, m_owner, msg);
+}
+
+template <class C>
+void
+MemberLteUeRrcSapProvider<C>::RecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvSystemInformationNb, m_owner, msg);
 }
 
 template <class C>
@@ -1514,6 +1536,7 @@ public:
   virtual void SetupUe (uint16_t rnti, SetupUeParameters params);
   virtual void RemoveUe (uint16_t rnti);
   virtual void SendSystemInformation (uint16_t cellId, SystemInformation msg);
+  virtual void SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg);
   virtual void SendRrcConnectionSetup (uint16_t rnti, RrcConnectionSetup msg);
   virtual void SendRrcConnectionReconfiguration (uint16_t rnti, RrcConnectionReconfiguration msg);
   virtual void SendRrcConnectionReestablishment (uint16_t rnti, RrcConnectionReestablishment msg);
@@ -1560,6 +1583,12 @@ void
 MemberLteEnbRrcSapUser<C>::SendSystemInformation (uint16_t cellId, SystemInformation msg)
 {
   m_owner->DoSendSystemInformation (cellId, msg);
+}
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg)
+{
+  m_owner->DoSendSystemInformationNb (cellId, msg);
 }
 
 template <class C>
