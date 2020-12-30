@@ -514,6 +514,11 @@ private:
    * \param msg the LteRrcSap::SystemInformation
    */
   void DoRecvSystemInformation (LteRrcSap::SystemInformation msg);
+/**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvSystemInformation interface.
+   * \param msg the LteRrcSap::SystemInformation
+   */
+  void DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
    * \param msg the LteRrcSap::RrcConnectionSetup
@@ -582,6 +587,7 @@ private:
    */
   void EvaluateCellForSelection ();
 
+  void EvaluateCellForSelectionNb ();
   /**
    * \brief Update the current measurement configuration #m_varMeasConfig.
    * \param mc measurements to be performed by the UE
@@ -751,6 +757,8 @@ private:
   void ApplyRadioResourceConfigDedicatedSecondaryCarrier (LteRrcSap::NonCriticalExtensionConfiguration nonCec);
   /// Start connection function
   void StartConnection ();
+  /// Start connection function
+  void StartConnectionNb ();
   /**
    * \brief Leave connected mode method
    * Resets the UE back to an appropiate state depending
@@ -960,6 +968,14 @@ private:
   bool m_hasReceivedSib1;
   /// True if SIB2 was received for the current cell.
   bool m_hasReceivedSib2;
+
+  /// True if SIB2 was received for the current cell.
+  bool m_hasReceivedMibNb;
+  /// True if SIB1 was received for the current cell.
+  bool m_hasReceivedSib1Nb;
+  /// True if SIB2 was received for the current cell.
+  bool m_hasReceivedSib2Nb;
+
 
   /// Stored content of the last SIB1 received.
   LteRrcSap::SystemInformationBlockType1 m_lastSib1;

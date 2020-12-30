@@ -89,6 +89,7 @@ public:
   virtual void SendLteControlMessage (Ptr<LteControlMessage> msg);
   virtual void SendRachPreamble (uint32_t prachId, uint32_t raRnti);
   virtual void NotifyConnectionSuccessful ();
+  virtual double GetRSRP();
 
 private:
   LteUePhy* m_phy; ///< the Phy
@@ -122,7 +123,10 @@ UeMemberLteUePhySapProvider::NotifyConnectionSuccessful ()
 {
   m_phy->DoNotifyConnectionSuccessful ();
 }
-
+double UeMemberLteUePhySapProvider::GetRSRP()
+{
+  return m_phy->DoGetRSRP();
+}
 
 ////////////////////////////////////////
 // LteUePhy methods
@@ -1026,7 +1030,9 @@ LteUePhy::DoNotifyConnectionSuccessful ()
     }
 }
 
-
+double LteUePhy::DoGetRSRP(){
+  return 2.0;
+}
 
 void
 LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgList)

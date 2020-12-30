@@ -61,7 +61,9 @@ public:
 
   // inherited from LteUeCmacSapProvider
   virtual void ConfigureRach (RachConfig rc);
+  virtual void ConfigureNprach (NprachConfig rc);
   virtual void StartContentionBasedRandomAccessProcedure ();
+  virtual void StartRandomAccessProcedureNb ();
   virtual void StartNonContentionBasedRandomAccessProcedure (uint16_t rnti, uint8_t preambleId, uint8_t prachMask);
   virtual void SetRnti (uint16_t rnti);
   virtual void AddLc (uint8_t lcId, LteUeCmacSapProvider::LogicalChannelConfig lcConfig, LteMacSapUser* msu);
@@ -85,13 +87,21 @@ UeMemberLteUeCmacSapProvider::ConfigureRach (RachConfig rc)
 {
   m_mac->DoConfigureRach (rc);
 }
-
+void 
+UeMemberLteUeCmacSapProvider::ConfigureNprach (NprachConfig rc)
+{
+  m_mac->DoConfigureNprach (rc);
+}
   void 
 UeMemberLteUeCmacSapProvider::StartContentionBasedRandomAccessProcedure ()
 {
   m_mac->DoStartContentionBasedRandomAccessProcedure ();
 }
-
+  void 
+UeMemberLteUeCmacSapProvider::StartRandomAccessProcedureNb()
+{
+  m_mac->DoStartRandomAccessProcedureNb();
+}
  void 
 UeMemberLteUeCmacSapProvider::StartNonContentionBasedRandomAccessProcedure (uint16_t rnti, uint8_t preambleId, uint8_t prachMask)
 {
@@ -418,13 +428,24 @@ LteUeMac::RandomlySelectAndSendRaPreamble ()
 {
   NS_LOG_FUNCTION (this);
   // 3GPP 36.321 5.1.1  
-  NS_ASSERT_MSG (m_rachConfigured, "RACH not configured");
+  NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
   // assume that there is no Random Access Preambles group B
   m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, m_rachConfig.numberOfRaPreambles - 1);
   bool contention = true;
   SendRaPreamble (contention);
 }
-   
+
+void 
+LteUeMac::RandomlySelectAndSendRaPreambleNb ()
+{
+  NS_LOG_FUNCTION (this);
+  // 3GPP 36.321 5.1.1  
+  NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
+  // assume that there is no Random Access Preambles group B
+  m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, m_rachConfig.numberOfRaPreambles - 1);
+  bool contention = true;
+  SendRaPreamble (contention);
+}  
 void
 LteUeMac::SendRaPreamble (bool contention)
 {
@@ -533,7 +554,13 @@ LteUeMac::DoConfigureRach (LteUeCmacSapProvider::RachConfig rc)
   m_rachConfig = rc;
   m_rachConfigured = true;
 }
-
+void 
+LteUeMac::DoConfigureNprach (LteUeCmacSapProvider::NprachConfig rc)
+{
+  NS_LOG_FUNCTION (this);
+  m_nprachConfig = rc;
+  m_nprachConfigured = true;
+}
 void 
 LteUeMac::DoStartContentionBasedRandomAccessProcedure ()
 {
@@ -545,7 +572,20 @@ LteUeMac::DoStartContentionBasedRandomAccessProcedure ()
   m_backoffParameter = 0;
   RandomlySelectAndSendRaPreamble ();
 }
+void 
+LteUeMac::DoStartRandomAccessProcedureNb ()
+{
+  NS_LOG_FUNCTION (this);
 
+  // 3GPP 36.321 5.1.1
+  NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
+  m_preambleTransmissionCounter = 0;
+  m_preambleTransmissionCounterCe = 0;
+  // Check CE Level
+  
+  m_backoffParameter = 0;
+  RandomlySelectAndSendRaPreamble ();
+}
 void
 LteUeMac::DoSetRnti (uint16_t rnti)
 {

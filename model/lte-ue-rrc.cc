@@ -962,9 +962,9 @@ LteUeRrc::DoRecvMasterInformationBlockNb (uint16_t cellId,
                                         NbIotRrcSap::MasterInformationBlockNb msg)
 { 
   NS_LOG_FUNCTION(this);
-  // m_dlBandwidth = msg.dlBandwidth;
-  // m_cphySapProvider.at(0)->SetDlBandwidth (msg.dlBandwidth);
-  //m_hasReceivedMib = true;
+  m_dlBandwidth = 1; // msg.dlBandwidth;
+  m_cphySapProvider.at(0)->SetDlBandwidth (1);
+  m_hasReceivedMibNb = true;
   m_mibReceivedTrace (m_imsi, m_cellId, m_rnti, cellId);
 
   switch (m_state)
@@ -976,7 +976,7 @@ LteUeRrc::DoRecvMasterInformationBlockNb (uint16_t cellId,
 
     case IDLE_WAIT_MIB_SIB1:
       // automatic attachment from Idle mode cell selection
-      // SwitchToState (IDLE_WAIT_SIB1);
+      SwitchToState (IDLE_WAIT_SIB1);
       break;
 
     default:
@@ -993,11 +993,11 @@ LteUeRrc::DoRecvSystemInformationBlockType1Nb (uint16_t cellId,
   switch (m_state)
     {
     case IDLE_WAIT_SIB1:
-      // NS_ASSERT_MSG (cellId == msg.cellAccessRelatedInfo.cellIdentity, "Cell identity in SIB1 does not match with the originating cell");
-      //m_hasReceivedSib1 = true;
+      NS_ASSERT_MSG(cellId == msg.cellAccessRelatedInfoNb.cellIdentity, "Cell identity in SIB1 does not match with the originating cell");
+      m_hasReceivedSib1Nb = true;
       m_lastSib1Nb = msg;
       m_sib1ReceivedTrace (m_imsi, m_cellId, m_rnti, cellId);
-      EvaluateCellForSelection ();
+      EvaluateCellForSelectionNb ();
       break;
 
     case IDLE_CAMPED_NORMALLY:
@@ -1007,8 +1007,8 @@ LteUeRrc::DoRecvSystemInformationBlockType1Nb (uint16_t cellId,
     case CONNECTED_HANDOVER:
     case CONNECTED_PHY_PROBLEM:
     case CONNECTED_REESTABLISHING:
-      // NS_ASSERT_MSG (cellId == msg.cellAccessRelatedInfo.cellIdentity, "Cell identity in SIB1 does not match with the originating cell");
-      m_hasReceivedSib1 = true;
+      NS_ASSERT_MSG (cellId == msg.cellAccessRelatedInfoNb.cellIdentity, "Cell identity in SIB1 does not match with the originating cell");
+      m_hasReceivedSib1Nb = true;
       m_lastSib1Nb = msg;
       m_sib1ReceivedTrace (m_imsi, m_cellId, m_rnti, cellId);
       break;
@@ -1087,6 +1087,54 @@ LteUeRrc::DoRecvSystemInformation (LteRrcSap::SystemInformation msg)
 
 }
 
+void 
+LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
+{
+  NS_LOG_FUNCTION (this << " RNTI " << m_rnti);
+
+
+  if (msg.haveSib2)
+    {
+      switch (m_state)
+        {
+        case IDLE_CAMPED_NORMALLY:
+        case IDLE_WAIT_SIB2:
+        case IDLE_RANDOM_ACCESS:
+        case IDLE_CONNECTING:
+        case CONNECTED_NORMALLY:
+        case CONNECTED_HANDOVER:
+        case CONNECTED_PHY_PROBLEM:
+        case CONNECTED_REESTABLISHING:
+          m_hasReceivedSib2Nb = true;
+          m_ulEarfcn = msg.sib2.freqInfo.ulCarrierFreq;
+          m_sib2ReceivedTrace (m_imsi, m_cellId, m_rnti);
+          LteUeCmacSapProvider::NprachConfig rc;
+          //rc.numberOfRaPreambles = msg.sib2.radioResourceConfigCommon.rachConfigCommon.preambleInfo.numberOfRaPreambles;
+          //rc.preambleTransMax = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.preambleTransMax;
+          //rc.raResponseWindowSize = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.raResponseWindowSize;
+          //rc.connEstFailCount = msg.sib2.radioResourceConfigCommon.rachConfigCommon.txFailParam.connEstFailCount;
+          //m_connEstFailCountLimit = rc.connEstFailCount;
+          //NS_ASSERT_MSG (m_connEstFailCountLimit > 0 && m_connEstFailCountLimit < 5,
+          //               "SIB2 msg contains wrong value "
+          //               << m_connEstFailCountLimit << "of connEstFailCount");
+          std::cout << "Did we get here?\n";
+          m_cmacSapProvider.at (0)->ConfigureNprach (rc);
+          m_cphySapProvider.at (0)->ConfigureUplink (m_ulEarfcn, m_ulBandwidth);
+          m_cphySapProvider.at (0)->ConfigureReferenceSignalPower (msg.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower);
+          if (m_state == IDLE_WAIT_SIB2)
+            {
+              NS_ASSERT (m_connectionPending);
+              StartConnectionNb ();
+            }
+          break;
+
+        default: // IDLE_START, IDLE_CELL_SEARCH, IDLE_WAIT_MIB, IDLE_WAIT_MIB_SIB1, IDLE_WAIT_SIB1
+          // do nothing
+          break;
+        }
+    }
+
+}
 
 void 
 LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
@@ -1328,6 +1376,80 @@ LteUeRrc::SynchronizeToStrongestCell ()
     }
 
 } // end of void LteUeRrc::SynchronizeToStrongestCell ()
+
+void
+LteUeRrc::EvaluateCellForSelectionNb ()
+{
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT (m_state == IDLE_WAIT_SIB1);
+  NS_ASSERT (m_hasReceivedMibNb);
+  NS_ASSERT (m_hasReceivedSib1Nb);
+  uint16_t cellId = m_lastSib1Nb.cellAccessRelatedInfoNb.cellIdentity;
+
+  // Cell selection criteria evaluation
+
+  bool isSuitableCell = false;
+  bool isAcceptableCell = false;
+  std::map<uint16_t, MeasValues>::iterator storedMeasIt = m_storedMeasValues.find (cellId);
+  double qRxLevMeas = storedMeasIt->second.rsrp;
+  double qRxLevMin = EutranMeasurementMapping::IeValue2ActualQRxLevMin (m_lastSib1Nb.cellSelectionInfo.qRxLevMin);
+  NS_LOG_LOGIC (this << " cell selection to cellId=" << cellId
+                     << " qrxlevmeas=" << qRxLevMeas << " dBm"
+                     << " qrxlevmin=" << qRxLevMin << " dBm");
+
+  if (qRxLevMeas - qRxLevMin > 0)
+    {
+      isAcceptableCell = true;
+
+      isSuitableCell = true;
+    }
+
+  // Cell selection decision
+
+  if (isSuitableCell)
+    {
+      m_cellId = cellId;
+      m_cphySapProvider.at(0)->SynchronizeWithEnb (cellId, m_dlEarfcn);
+      m_cphySapProvider.at(0)->SetDlBandwidth (m_dlBandwidth);
+      m_initialCellSelectionEndOkTrace (m_imsi, cellId);
+      // Once the UE is connected, m_connectionPending is
+      // set to false. So, when RLF occurs and UE performs
+      // cell selection upon leaving RRC_CONNECTED state,
+      // the following call to DoConnect will make the
+      // m_connectionPending to be true again. Thus,
+      // upon calling SwitchToState (IDLE_CAMPED_NORMALLY)
+      // UE state is instantly change to IDLE_WAIT_SIB2.
+      // This will make the UE to read the SIB2 message
+      // and start random access.
+      if (!m_connectionPending)
+        {
+          NS_LOG_DEBUG ("Calling DoConnect in state = " << ToString (m_state));
+          DoConnect ();
+        }
+      SwitchToState (IDLE_CAMPED_NORMALLY);
+    }
+  else
+    {
+      // ignore the MIB and SIB1 received from this cell
+      m_hasReceivedMib = false;
+      m_hasReceivedSib1 = false;
+
+      m_initialCellSelectionEndErrorTrace (m_imsi, cellId);
+
+      if (isAcceptableCell)
+        {
+          /*
+           * The cells inserted into this list will not be considered for
+           * subsequent cell search attempt.
+           */
+          m_acceptableCell.insert (cellId);
+        }
+
+      SwitchToState (IDLE_CELL_SEARCH);
+      SynchronizeToStrongestCell (); // retry to a different cell
+    }
+
+} // end of void LteUeRrc::EvaluateCellForSelection ()
 
 
 void
@@ -3141,7 +3263,16 @@ LteUeRrc::StartConnection ()
   SwitchToState (IDLE_RANDOM_ACCESS);
   m_cmacSapProvider.at (0)->StartContentionBasedRandomAccessProcedure ();
 }
-
+void 
+LteUeRrc::StartConnectionNb ()
+{
+  NS_LOG_FUNCTION (this << m_imsi);
+  NS_ASSERT (m_hasReceivedMibNb);
+  NS_ASSERT (m_hasReceivedSib2Nb);
+  m_connectionPending = false; // reset the flag
+  SwitchToState (IDLE_RANDOM_ACCESS);
+  m_cmacSapProvider.at (0)->StartRandomAccessProcedureNb();
+}
 void 
 LteUeRrc::LeaveConnectedMode ()
 {

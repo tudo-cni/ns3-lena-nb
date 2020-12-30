@@ -25,13 +25,13 @@
 #include <ns3/ff-mac-common.h>
 #include <ns3/eps-bearer.h>
 #include <ns3/lte-common.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
 
 
 class LteMacSapUser;
-
 /**
  * Service Access Point (SAP) offered by the UE MAC to the UE RRC
  *
@@ -50,21 +50,32 @@ public:
     uint8_t raResponseWindowSize; ///< RA response window size
     uint8_t connEstFailCount; ///< the counter value for T300 timer expiration
   };
-  
+      /// RachConfig structure
+  struct NprachConfig : NbIotRrcSap::NprachParametersNb{};
   /** 
    * Configure RACH function 
    *
    * \param rc the RACH config
    */
   virtual void ConfigureRach (RachConfig rc) = 0;
-
+/** 
+   * Configure RACH function 
+   *
+   * \param rc the RACH config
+   */
+  virtual void ConfigureNprach (NprachConfig rc) = 0;
   /** 
    * tell the MAC to start a contention-based random access procedure,
    * e.g., to perform RRC connection establishment 
    * 
    */
   virtual void StartContentionBasedRandomAccessProcedure () = 0;
-
+/** 
+   * tell the MAC to start a contention-based random access procedure,
+   * e.g., to perform RRC connection establishment 
+   * 
+   */
+  virtual void StartRandomAccessProcedureNb () = 0;
   /** 
    * tell the MAC to start a non-contention-based random access
    * procedure, e.g., as a consequence of handover

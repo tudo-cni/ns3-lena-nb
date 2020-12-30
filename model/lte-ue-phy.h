@@ -629,6 +629,7 @@ private:
    */
   double ComputeAvgSinr (const SpectrumValue& sinr);
 
+
   // UE PHY SAP methods 
   virtual void DoSendMacPdu (Ptr<Packet> p);
   /**
@@ -650,6 +651,7 @@ private:
    */
   virtual void DoNotifyConnectionSuccessful ();
 
+  virtual double DoGetRSRP();
   /// A list of sub channels to use in TX.
   std::vector <int> m_subChannelsForTransmission;
   /// A list of sub channels to use in RX.

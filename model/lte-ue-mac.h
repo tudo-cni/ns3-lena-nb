@@ -149,9 +149,19 @@ private:
   */
   void DoConfigureRach (LteUeCmacSapProvider::RachConfig rc);
  /**
+  * Configure RACH function
+  *
+  * \param rc LteUeCmacSapProvider::RachConfig
+  */
+  void DoConfigureNprach (LteUeCmacSapProvider::NprachConfig rc);
+ /**
   * Start contention based random access procedure function
   */
   void DoStartContentionBasedRandomAccessProcedure ();
+ /**
+  * Start contention based random access procedure function
+  */
+  void DoStartRandomAccessProcedureNb ();
  /**
   * Set RNTI
   *
@@ -213,6 +223,10 @@ private:
   // internal methods
   /// Randomly select and send RA preamble function
   void RandomlySelectAndSendRaPreamble ();
+
+  // internal methods
+  /// Randomly select and send RA preamble function
+  void RandomlySelectAndSendRaPreambleNb ();
  /**
   * Send RA preamble function
   *
@@ -276,9 +290,12 @@ private:
   uint16_t m_imsi; ///< IMSI
 
   bool m_rachConfigured; ///< is RACH configured?
+  bool m_nprachConfigured; ///< is RACH configured?
   LteUeCmacSapProvider::RachConfig m_rachConfig; ///< RACH configuration
+  LteUeCmacSapProvider::NprachConfig m_nprachConfig; ///< RACH configuration
   uint8_t m_raPreambleId; ///< RA preamble ID
   uint8_t m_preambleTransmissionCounter; ///< preamble tranamission counter
+  uint8_t m_preambleTransmissionCounterCe; ///< preamble tranamission counter
   uint16_t m_backoffParameter; ///< backoff parameter
   EventId m_noRaResponseReceivedEvent; ///< no RA response received event ID
   Ptr<UniformRandomVariable> m_raPreambleUniformVariable; ///< RA preamble random variable

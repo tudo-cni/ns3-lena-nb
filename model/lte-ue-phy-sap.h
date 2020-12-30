@@ -69,6 +69,8 @@ public:
    */
   virtual void NotifyConnectionSuccessful () = 0;
 
+  virtual double GetRSRP() = 0;
+
 };
 
 
