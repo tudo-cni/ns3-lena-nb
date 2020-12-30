@@ -122,7 +122,7 @@ class NbIotRrcSap{
 
         struct EutraControlRegionSizeNb
         {
-            enum {
+            enum class Ecrs {
             N1,
             N2,
             N3
@@ -131,7 +131,7 @@ class NbIotRrcSap{
 
         struct NrsCrsPowerOffsetNb
         {
-            enum {
+            enum class Crs {
             dB_6,
             dB_4dot77,
             dB_3,
@@ -156,8 +156,7 @@ class NbIotRrcSap{
 
         struct SiWindowLengthNb
         {
-            enum
-            {
+            enum class Swl{
             ms160,
             ms320,
             ms480,
@@ -177,7 +176,7 @@ class NbIotRrcSap{
         struct SystemInformationBlockType1Nb{
             std::bitset<8> hyperSfnMsb;
             CellAccessRelatedInfoNb cellAccessRelatedInfoNb;
-            CellSelectionInfoNb CellSelectionInfo;
+            CellSelectionInfoNb cellSelectionInfo;
             PMaxNb pMax;
             FreqBandIndicatorNb freqBandIndicator;
             FreqBandInfoNb freqBandInfo;
@@ -194,10 +193,263 @@ class NbIotRrcSap{
 
         };
 
-        struct RadioResourceConfigCommonNb{};
+        struct PowerRampingParameters{
+            enum class PowerRampingStep {
+                dB0,
+                dB2,
+                dB4,
+                dB6
+            } powerRampingStep;
+            enum class PreambleInitialReceivedTargetPower{
+                dbm_120,
+                dbm_118,
+                dbm_116,
+                dbm_114,
+                dbm_112,
+                dbm_110,
+                dbm_108,
+                dbm_106,
+                dbm_104,
+                dbm_102,
+                dbm_100,
+                dbm_98,
+                dbm_96,
+                dbm_94,
+                dbm_92,
+                dbm_90
+            } preambleInitialReceivedTargetPower;
+        };
+        // TS 36.331 6.7.4 maxNPRACH-Resources-NB-r13 INTEGER ::= 3 -- Maximum number of NPRACH resources for NB-IoT 
+        struct RachInfo{
+            enum class RaResponseWindowSize{
+                pp2,
+                pp3,
+                pp4,
+                pp5,
+                pp6,
+                pp7,
+                pp8,
+                pp10
+            } RaResponseWindowSize;
+            enum class MacContentionResolutionTimer{
+                pp1,
+                pp2,
+                pp3,
+                pp4,
+                pp8,
+                pp16,
+                pp32,
+                pp64
+            } macContentionResolutionTimer;
+
+        };
+
+        struct RachInfoList{
+            RachInfo rachInfo1;
+            RachInfo rachInfo2;
+            RachInfo rachInfo3;
+        };
+
+        struct RachConfigCommon{
+            uint8_t preambleTransMaxCE;
+            PowerRampingParameters powerRampingParameters;
+            RachInfoList rachInfoList;
+            uint8_t connEstFailOffset;
+        };
+
+        struct BcchConfig{
+            enum class ModificationPeriodCoeff{
+                n16,
+                n32,
+                n64,
+                n128
+            } modificationPeriodCoeff;
+        };
+        struct PcchConfig{
+            enum class DefaultPagingCycle{
+                rf128,
+                rf256,
+                rf512,
+                rf1024
+            } defaultPagingCycle;
+            enum class NB{
+                fourT,
+                twoT,
+                oneT,
+                halfT,
+                quarterT,
+                one8thT,
+                one16thT,
+                one32thT,
+                one64thT,
+                one128thT,
+                one256thT,
+                one512thT,
+                one1024thT,
+                nbspare3,
+                nbspare2,
+                nbspare1
+            } nB;
+            enum class NpdcchNumRepetitionPaging{
+                r1,
+                r2,
+                r4,
+                r8,
+                r16,
+                r32,
+                r64,
+                r128,
+                r256,
+                r512,
+                r1024,
+                r2048,
+                spare4,
+                spare3,
+                spare2,
+                spare1
+            }npdcchNumRepetitionPaging;
+        };
+
+        struct NprachParametersNb{
+           enum class NprachPeriodicity{
+               ms40,
+               ms80,
+               ms160,
+               ms240,
+               ms320,
+               ms640,
+               ms1280,
+               ms2560
+           } nprachPeriodicity; 
+           enum class NprachStartTime{
+               ms8,
+               ms16,
+               ms32,
+               ms64,
+               ms128,
+               ms256,
+               ms512,
+               ms1024
+           } nprachStartTime;
+           enum class NprachSubcarrierOffset{
+               n0,
+               n12,
+               n24,
+               n36,
+               n2,
+               n18,
+               n34,
+               spare1
+           } nprachSubcarrierOffset;
+           enum class NprachNumSubcarriers{
+               n12,
+               n24,
+               n36,
+               n48
+           } nprachNumSubcarriers;
+           enum class nprachSubcarrierMsg3RangeStart{
+               zero,
+               oneThird,
+               twoThird,
+               one
+           } nprachSubcarrierMsg3RangeStart;
+           enum class MaxNumPreambleAttemptCE{
+               n3,
+               n4,
+               n5,
+               n6,
+               n7,
+               n8,
+               n10,
+               spare1
+           } maxNumPreambleAttemptCE;
+           enum class NumRepetitionsPerPreambleAttempt{
+               n1,
+               n2,
+               n4,
+               n8,
+               n16,
+               n32,
+               n64,
+               n128
+           } numRepetitionsPerPreambleAttempt;
+           enum class NpdcchNumRepetitionsRA{
+               r1,
+               r2,
+               r4,
+               r8,
+               r16,
+               r32,
+               r64,
+               r128,
+               r256,
+               r512,
+               r1024,
+               r2048,
+               spare4,
+               spare3,
+               spare2,
+               spare1
+           } npdcchNumRepetitionsRA;
+           enum class NpdcchStartSfCssRa{
+               v1dot5,
+               v2,
+               v4,
+               v8,
+               v16,
+               v32,
+               v48,
+               v64
+           } npdcchStartSfCssRa;
+           enum class NpdcchOffsetRa{
+               zero,
+               oneEighth,
+               oneFourth,
+               threeEighth
+           } npdcchOffsetRa;
+        };
+        struct NprachParametersList{
+            NprachParametersNb nprachParametersNb0;
+            NprachParametersNb nprachParametersNb1;
+            NprachParametersNb nprachParametersNb2;
+        };
+        struct RsrpThresholdsPrachInfoList{
+            int16_t ce1_lowerbound;
+            int16_t ce2_lowerbound;
+            int16_t ce3_lowerbound;
+        };
+
+        struct NprachConfig{
+            enum {
+                us66dot7,
+                us266dot7
+            } nprachCpLength;
+            RsrpThresholdsPrachInfoList raspThresholdsPrachInfoList;
+            NprachParametersList nprachParametersList;   
+        };
+        struct NpdschConfigCommon{
+            int8_t nrsPower;
+        };
+        struct NpuschConfigCommon{};
+        struct DlGap{};
+        struct UplinkPowerControlCommon{};
+        struct RadioResourceConfigCommonNb{
+            RachConfigCommon rachConfigCommon;
+            BcchConfig bcchConfig;
+            PcchConfig pcchConfig;
+            NprachConfig nprachConfig;
+            NpdschConfigCommon npdschConfigCommon;
+            NpuschConfigCommon npuschConfigCommon;
+            DlGap dlGap;
+            UplinkPowerControlCommon uplinkPowerControlCommon;
+        };
         struct UeTimersAndConstantsNb{};
-        struct FreqInfoNb{};
+        struct FreqInfoNb{
+            uint32_t ulCarrierFreq;
+            uint32_t additionalSpectrumEmission;
+        };
         struct TimeAlignmnentTimerCommonNb{};
+
         struct SystemInformationBlockType2Nb{
             RadioResourceConfigCommonNb radioResourceConfigCommon;
             UeTimersAndConstantsNb ueTimersAndConstants;
@@ -206,6 +458,13 @@ class NbIotRrcSap{
             MultiBandInfoListNb multiBandInfoList; 
             LateNonCriticalExtensionNb lateNonCriticalExtension;
             LateNonCriticalExtensionNb lateNonCriticalExtension1;
+        };
+
+        /// SystemInformation structure
+        struct SystemInformationNb
+        {
+            bool haveSib2; ///< have SIB2?
+            SystemInformationBlockType2Nb sib2; ///< SIB2
         };
 
         static double ConvertChannelRasterOffsetNb2Double (ChannelRasterOffsetNb channelRasterOffset)
@@ -238,31 +497,31 @@ class NbIotRrcSap{
             double res = 0;
             switch (siWindowLength.swl)
             {
-            case SiWindowLengthNb::ms160:
+            case SiWindowLengthNb::Swl::ms160:
                 res = 160.0;
                 break;
 
-            case SiWindowLengthNb::ms320:
+            case SiWindowLengthNb::Swl::ms320:
                 res = 320.0;
                 break;
 
-            case SiWindowLengthNb::ms480:
+            case SiWindowLengthNb::Swl::ms480:
                 res = 480.0;
                 break;
 
-            case SiWindowLengthNb::ms640:
+            case SiWindowLengthNb::Swl::ms640:
                 res = 640.0;
                 break;
 
-            case SiWindowLengthNb::ms960:
+            case SiWindowLengthNb::Swl::ms960:
                 res = 960.0;
                 break;
 
-            case SiWindowLengthNb::ms1280:
+            case SiWindowLengthNb::Swl::ms1280:
                 res = 1280.0;
                 break;
 
-            case SiWindowLengthNb::ms1600:
+            case SiWindowLengthNb::Swl::ms1600:
                 res = 1600.0;
                 break;
 
@@ -278,67 +537,67 @@ class NbIotRrcSap{
             double res = 0;
             switch (nrsCrsPowerOffset.crs)
             {
-            case NrsCrsPowerOffsetNb::dB_6:
+            case NrsCrsPowerOffsetNb::Crs::dB_6:
                 res = -6.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB_4dot77:
+            case NrsCrsPowerOffsetNb::Crs::dB_4dot77:
                 res = -4.77;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB_3:
+            case NrsCrsPowerOffsetNb::Crs::dB_3:
                 res = -3.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB_1dot77:
+            case NrsCrsPowerOffsetNb::Crs::dB_1dot77:
                 res = -1.77;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB0:
+            case NrsCrsPowerOffsetNb::Crs::dB0:
                 res = 0.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB1:
+            case NrsCrsPowerOffsetNb::Crs::dB1:
                 res = 1.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB1dot23:
+            case NrsCrsPowerOffsetNb::Crs::dB1dot23:
                 res = 1.23;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB2:
+            case NrsCrsPowerOffsetNb::Crs::dB2:
                 res = 2.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB3:
+            case NrsCrsPowerOffsetNb::Crs::dB3:
                 res = 3.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB4:
+            case NrsCrsPowerOffsetNb::Crs::dB4:
                 res = 4.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB4dot23:
+            case NrsCrsPowerOffsetNb::Crs::dB4dot23:
                 res = 4.23;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB5:
+            case NrsCrsPowerOffsetNb::Crs::dB5:
                 res = 5.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB6:
+            case NrsCrsPowerOffsetNb::Crs::dB6:
                 res = 6.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB7:
+            case NrsCrsPowerOffsetNb::Crs::dB7:
                 res = 7.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB8:
+            case NrsCrsPowerOffsetNb::Crs::dB8:
                 res = 8.0;
                 break;
 
-            case NrsCrsPowerOffsetNb::dB9:
+            case NrsCrsPowerOffsetNb::Crs::dB9:
                 res = 9.0;
                 break;
 
