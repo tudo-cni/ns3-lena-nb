@@ -267,6 +267,13 @@ private:
    * \param cellId cell ID
    * \param msg LteRrcSap::SystemInformation
    */
+  void DoSendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg);
+  /**
+   * Send system information function
+   *
+   * \param cellId cell ID
+   * \param msg LteRrcSap::SystemInformation
+   */
   void SendSystemInformation (uint16_t cellId, LteRrcSap::SystemInformation msg);
   /**
    * Send RRC connection setup function

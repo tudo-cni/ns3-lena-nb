@@ -560,7 +560,38 @@ LteEnbRrcProtocolReal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::Syst
         }
     } 
 }
+void 
 
+LteEnbRrcProtocolReal::DoSendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg)
+{
+  NS_LOG_FUNCTION (this << cellId);
+  // walk list of all nodes to get UEs with this cellId
+  Ptr<LteUeRrc> ueRrc;
+  for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
+    {
+      Ptr<Node> node = *i;
+      int nDevs = node->GetNDevices ();
+      for (int j = 0; j < nDevs; ++j)
+        {
+          Ptr<LteUeNetDevice> ueDev = node->GetDevice (j)->GetObject <LteUeNetDevice> ();
+          if (ueDev != 0)
+            {
+              Ptr<LteUeRrc> ueRrc = ueDev->GetRrc ();
+              NS_LOG_LOGIC ("considering UE IMSI " << ueDev->GetImsi () << " that has cellId " << ueRrc->GetCellId ());
+              if (ueRrc->GetCellId () == cellId)
+                {
+                  NS_LOG_LOGIC ("sending SI to IMSI " << ueDev->GetImsi ());
+
+                  Simulator::ScheduleWithContext (node->GetId (),
+                                                  RRC_REAL_MSG_DELAY,
+                                                  &LteUeRrcSapProvider::RecvSystemInformationNb,
+                                                  ueRrc->GetLteUeRrcSapProvider (),
+                                                  msg);
+                }
+            }
+        }
+    } 
+}
 void 
 LteEnbRrcProtocolReal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcConnectionSetup msg)
 {
