@@ -3112,7 +3112,11 @@ LteEnbRrc::SendSystemInformationNb ()
 
       LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
       si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
-
+      NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
+      // From Vodafone wireshark
+      rsrpprachinfolist.ce1_lowerbound = -115.5;
+      rsrpprachinfolist.ce2_lowerbound = -127.5;
+      si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
       m_rrcSapUser->SendSystemInformationNb (it.second->GetCellId (), si);
     }
 

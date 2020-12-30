@@ -153,7 +153,7 @@ private:
   *
   * \param rc LteUeCmacSapProvider::RachConfig
   */
-  void DoConfigureNprach (LteUeCmacSapProvider::NprachConfig rc);
+  void DoConfigureNprach (NbIotRrcSap::NprachConfig rc);
  /**
   * Start contention based random access procedure function
   */
@@ -292,7 +292,7 @@ private:
   bool m_rachConfigured; ///< is RACH configured?
   bool m_nprachConfigured; ///< is RACH configured?
   LteUeCmacSapProvider::RachConfig m_rachConfig; ///< RACH configuration
-  LteUeCmacSapProvider::NprachConfig m_nprachConfig; ///< RACH configuration
+  NbIotRrcSap::NprachConfig m_nprachConfig; ///< RACH configuration
   uint8_t m_raPreambleId; ///< RA preamble ID
   uint8_t m_preambleTransmissionCounter; ///< preamble tranamission counter
   uint8_t m_preambleTransmissionCounterCe; ///< preamble tranamission counter
@@ -305,6 +305,7 @@ private:
   uint8_t m_raRnti; ///< RA RNTI
   bool m_waitingForRaResponse; ///< waiting for RA response
 
+  uint8_t m_CeLevel;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
    * Exporting IMSI, contention flag, preamble transmission counter

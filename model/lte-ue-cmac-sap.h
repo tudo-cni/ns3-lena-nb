@@ -51,7 +51,6 @@ public:
     uint8_t connEstFailCount; ///< the counter value for T300 timer expiration
   };
       /// RachConfig structure
-  struct NprachConfig : NbIotRrcSap::NprachParametersNb{};
   /** 
    * Configure RACH function 
    *
@@ -63,7 +62,7 @@ public:
    *
    * \param rc the RACH config
    */
-  virtual void ConfigureNprach (NprachConfig rc) = 0;
+  virtual void ConfigureNprach (NbIotRrcSap::NprachConfig rc) = 0;
   /** 
    * tell the MAC to start a contention-based random access procedure,
    * e.g., to perform RRC connection establishment 

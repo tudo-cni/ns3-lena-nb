@@ -1108,7 +1108,8 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
           m_hasReceivedSib2Nb = true;
           m_ulEarfcn = msg.sib2.freqInfo.ulCarrierFreq;
           m_sib2ReceivedTrace (m_imsi, m_cellId, m_rnti);
-          LteUeCmacSapProvider::NprachConfig rc;
+          NbIotRrcSap::NprachConfig rc;
+          rc = msg.sib2.radioResourceConfigCommon.nprachConfig;
           //rc.numberOfRaPreambles = msg.sib2.radioResourceConfigCommon.rachConfigCommon.preambleInfo.numberOfRaPreambles;
           //rc.preambleTransMax = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.preambleTransMax;
           //rc.raResponseWindowSize = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.raResponseWindowSize;

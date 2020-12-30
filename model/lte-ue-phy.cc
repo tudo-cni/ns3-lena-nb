@@ -1031,7 +1031,8 @@ LteUePhy::DoNotifyConnectionSuccessful ()
 }
 
 double LteUePhy::DoGetRSRP(){
-  return 2.0;
+  ;
+  return m_ueMeasurementsMap[m_cellId].rsrpSum/m_ueMeasurementsMap[m_cellId].rsrpNum;
 }
 
 void

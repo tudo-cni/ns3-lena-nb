@@ -61,7 +61,7 @@ public:
 
   // inherited from LteUeCmacSapProvider
   virtual void ConfigureRach (RachConfig rc);
-  virtual void ConfigureNprach (NprachConfig rc);
+  virtual void ConfigureNprach (NbIotRrcSap::NprachConfig rc);
   virtual void StartContentionBasedRandomAccessProcedure ();
   virtual void StartRandomAccessProcedureNb ();
   virtual void StartNonContentionBasedRandomAccessProcedure (uint16_t rnti, uint8_t preambleId, uint8_t prachMask);
@@ -88,7 +88,7 @@ UeMemberLteUeCmacSapProvider::ConfigureRach (RachConfig rc)
   m_mac->DoConfigureRach (rc);
 }
 void 
-UeMemberLteUeCmacSapProvider::ConfigureNprach (NprachConfig rc)
+UeMemberLteUeCmacSapProvider::ConfigureNprach (NbIotRrcSap::NprachConfig rc)
 {
   m_mac->DoConfigureNprach (rc);
 }
@@ -555,7 +555,7 @@ LteUeMac::DoConfigureRach (LteUeCmacSapProvider::RachConfig rc)
   m_rachConfigured = true;
 }
 void 
-LteUeMac::DoConfigureNprach (LteUeCmacSapProvider::NprachConfig rc)
+LteUeMac::DoConfigureNprach (NbIotRrcSap::NprachConfig rc)
 {
   NS_LOG_FUNCTION (this);
   m_nprachConfig = rc;
@@ -582,7 +582,17 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   m_preambleTransmissionCounter = 0;
   m_preambleTransmissionCounterCe = 0;
   // Check CE Level
-  
+  double rsrp = m_uePhySapProvider->GetRSRP();
+  m_CeLevel = 2;
+  if (rsrp < m_nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound){
+    m_CeLevel = 2;
+  }
+  if (rsrp  > m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+    m_CeLevel = 1;
+  }
+  if (rsrp > m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+    m_CeLevel = 0;
+  }
   m_backoffParameter = 0;
   RandomlySelectAndSendRaPreamble ();
 }
