@@ -482,6 +482,26 @@ private:
    */
   void DoReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params);
 
+ /**
+   * Receive master information block function
+   *
+   * \param cellId the cell ID
+   * \param msg LteRrcSap::MasterInformationBlock
+   */
+  void DoRecvMasterInformationBlockNb (uint16_t cellId,
+                                     NbIotRrcSap::MasterInformationBlockNb msg);
+  /**
+   * Receive system information block type 1 function
+   *
+   * \param cellId the cell ID
+   * \param msg LteRrcSap::SystemInformationBlockType1
+   */
+  void DoRecvSystemInformationBlockType1Nb (uint16_t cellId,
+                                          NbIotRrcSap::SystemInformationBlockType1Nb msg);
+
+
+
+
   // RRC SAP methods
 
   /**
@@ -943,6 +963,7 @@ private:
 
   /// Stored content of the last SIB1 received.
   LteRrcSap::SystemInformationBlockType1 m_lastSib1;
+  NbIotRrcSap::SystemInformationBlockType1Nb m_lastSib1Nb;
 
   /// List of cell ID of acceptable cells for cell selection that have been detected.
   std::set<uint16_t> m_acceptableCell;

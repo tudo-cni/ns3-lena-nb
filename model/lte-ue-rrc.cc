@@ -957,6 +957,72 @@ LteUeRrc::DoReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters par
 
 } // end of LteUeRrc::DoReportUeMeasurements
 
+void
+LteUeRrc::DoRecvMasterInformationBlockNb (uint16_t cellId,
+                                        NbIotRrcSap::MasterInformationBlockNb msg)
+{ 
+  NS_LOG_FUNCTION(this);
+  // m_dlBandwidth = msg.dlBandwidth;
+  // m_cphySapProvider.at(0)->SetDlBandwidth (msg.dlBandwidth);
+  //m_hasReceivedMib = true;
+  m_mibReceivedTrace (m_imsi, m_cellId, m_rnti, cellId);
+
+  switch (m_state)
+    {
+    case IDLE_WAIT_MIB:
+      // manual attachment
+      SwitchToState (IDLE_CAMPED_NORMALLY);
+      break;
+
+    case IDLE_WAIT_MIB_SIB1:
+      // automatic attachment from Idle mode cell selection
+      // SwitchToState (IDLE_WAIT_SIB1);
+      break;
+
+    default:
+      // do nothing extra
+      break;
+    }
+}
+
+void
+LteUeRrc::DoRecvSystemInformationBlockType1Nb (uint16_t cellId,
+                                             NbIotRrcSap::SystemInformationBlockType1Nb msg)
+{
+  NS_LOG_FUNCTION (this);
+  switch (m_state)
+    {
+    case IDLE_WAIT_SIB1:
+      // NS_ASSERT_MSG (cellId == msg.cellAccessRelatedInfo.cellIdentity, "Cell identity in SIB1 does not match with the originating cell");
+      //m_hasReceivedSib1 = true;
+      m_lastSib1Nb = msg;
+      m_sib1ReceivedTrace (m_imsi, m_cellId, m_rnti, cellId);
+      EvaluateCellForSelection ();
+      break;
+
+    case IDLE_CAMPED_NORMALLY:
+    case IDLE_RANDOM_ACCESS:
+    case IDLE_CONNECTING:
+    case CONNECTED_NORMALLY:
+    case CONNECTED_HANDOVER:
+    case CONNECTED_PHY_PROBLEM:
+    case CONNECTED_REESTABLISHING:
+      // NS_ASSERT_MSG (cellId == msg.cellAccessRelatedInfo.cellIdentity, "Cell identity in SIB1 does not match with the originating cell");
+      m_hasReceivedSib1 = true;
+      m_lastSib1Nb = msg;
+      m_sib1ReceivedTrace (m_imsi, m_cellId, m_rnti, cellId);
+      break;
+
+    case IDLE_WAIT_MIB_SIB1:
+      // MIB has not been received, so ignore this SIB1
+      break;
+
+    default: // e.g. IDLE_START, IDLE_CELL_SEARCH, IDLE_WAIT_MIB, IDLE_WAIT_SIB2
+      // do nothing
+      break;
+    }
+}
+
 
 
 // RRC SAP methods

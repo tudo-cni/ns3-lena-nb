@@ -1171,6 +1171,20 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           Ptr<Sib1LteControlMessage> msg2 = DynamicCast<Sib1LteControlMessage> (msg);
           m_ueCphySapUser->RecvSystemInformationBlockType1 (m_cellId, msg2->GetSib1 ());
         }
+      else if (msg->GetMessageType () == LteControlMessage::MIB_NB)
+        {
+          NS_LOG_INFO ("received MIB_NB");
+          NS_ASSERT (m_cellId > 0);
+          Ptr<MibNbiotControlMessage> msg2 = DynamicCast<MibNbiotControlMessage> (msg);
+          m_ueCphySapUser->RecvMasterInformationBlockNb (m_cellId, msg2->GetMib());
+        }
+      else if (msg->GetMessageType () == LteControlMessage::SIB1_NB)
+        {
+          NS_LOG_INFO ("received SIB1_NB");
+          NS_ASSERT (m_cellId > 0);
+          Ptr<Sib1NbiotControlMessage> msg2 = DynamicCast<Sib1NbiotControlMessage> (msg);
+          m_ueCphySapUser->RecvSystemInformationBlockType1Nb (m_cellId, msg2->GetSib1());
+        }
       else
         {
           // pass the message to UE-MAC

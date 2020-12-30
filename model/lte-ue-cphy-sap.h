@@ -26,6 +26,7 @@
 #include <ns3/ptr.h>
 
 #include <ns3/lte-rrc-sap.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -258,6 +259,33 @@ public:
   virtual void RecvSystemInformationBlockType1 (uint16_t cellId,
                                                 LteRrcSap::SystemInformationBlockType1 sib1) = 0;
 
+
+  /**
+   * \brief Relay an MIB message from the PHY entity to the RRC layer.
+   * 
+   * This function is typically called after PHY receives an MIB message over
+   * the BCH.
+   *
+   * \param cellId the ID of the eNodeB where the message originates from
+   * \param mib the Master Information Block message.
+   */
+  virtual void RecvMasterInformationBlockNb (uint16_t cellId,
+                                           NbIotRrcSap::MasterInformationBlockNb mib) = 0;
+
+  /**
+   * \brief Relay an SIB1 message from the PHY entity to the RRC layer.
+   *
+   * This function is typically called after PHY receives an SIB1 message over
+   * the BCH.
+   *
+   * \param cellId the ID of the eNodeB where the message originates from
+   * \param sib1 the System Information Block Type 1 message
+   */
+  virtual void RecvSystemInformationBlockType1Nb (uint16_t cellId,
+                                                NbIotRrcSap::SystemInformationBlockType1Nb sib1) = 0;
+
+
+
   /**
    * \brief Send a report of RSRP and RSRQ values perceived from PSS by the PHY
    *        entity (after applying layer-1 filtering) to the RRC layer.
@@ -477,6 +505,10 @@ public:
                                            LteRrcSap::MasterInformationBlock mib);
   virtual void RecvSystemInformationBlockType1 (uint16_t cellId,
                                                 LteRrcSap::SystemInformationBlockType1 sib1);
+  virtual void RecvMasterInformationBlockNb (uint16_t cellId,
+                                           NbIotRrcSap::MasterInformationBlockNb mib);
+  virtual void RecvSystemInformationBlockType1Nb (uint16_t cellId,
+                                                NbIotRrcSap::SystemInformationBlockType1Nb sib1);
   virtual void ReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params);
   virtual void NotifyOutOfSync ();
   virtual void NotifyInSync ();
@@ -514,6 +546,21 @@ MemberLteUeCphySapUser<C>::RecvSystemInformationBlockType1 (uint16_t cellId,
   m_owner->DoRecvSystemInformationBlockType1 (cellId, sib1);
 }
 
+template <class C> 
+void 
+MemberLteUeCphySapUser<C>::RecvMasterInformationBlockNb (uint16_t cellId,
+                                                       NbIotRrcSap::MasterInformationBlockNb mib)
+{
+  m_owner->DoRecvMasterInformationBlockNb (cellId, mib);
+}
+
+template <class C>
+void
+MemberLteUeCphySapUser<C>::RecvSystemInformationBlockType1Nb (uint16_t cellId,
+                                                            NbIotRrcSap::SystemInformationBlockType1Nb sib1)
+{
+  m_owner->DoRecvSystemInformationBlockType1Nb (cellId, sib1);
+}
 template <class C>
 void
 MemberLteUeCphySapUser<C>::ReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params)
