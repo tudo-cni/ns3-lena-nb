@@ -28,6 +28,8 @@
 #include <ns3/lte-rrc-sap.h>
 #include <list>
 
+#include "nb-iot-rrc-sap.h"
+
 namespace ns3 {
 
 class LteNetDevice;
@@ -61,6 +63,9 @@ public:
     RAR, // Random Access Response
     MIB, // Master Information Block
     SIB1, // System Information Block Type 1
+    MIB_NB,
+    SIB1_NB,
+    SIB2_NB
   };
 
   LteControlMessage (void);
@@ -401,6 +406,131 @@ private:
   LteRrcSap::SystemInformationBlockType1 m_sib1; ///< SIB1
 
 }; // end of class Sib1LteControlMessage
+
+
+// ---------------------------------------------------------------------------
+
+
+/**
+ * \ingroup lte
+ * \brief Abstract model for broadcasting the Master Information Block (MIB)
+ *        within the control channel (BCCH).
+ *
+ * MIB is transmitted by eNodeB RRC and received by UE RRC at every radio frame,
+ * i.e., every 10 milliseconds.
+ *
+ * \sa LteEnbRrc::ConfigureCell, LteEnbPhy::StartFrame,
+ *     LteUeRrc::DoRecvMasterInformationBlock
+ */
+class MibNbiotControlMessage : public LteControlMessage
+{
+public:
+  /**
+   * \brief Create a new instance of MIB control message.
+   */
+  MibNbiotControlMessage (void);
+
+  /**
+   * \brief Replace the MIB content of this control message.
+   * \param mib the desired MIB content
+   */
+  void SetMib (NbIotRrcSap::MasterInformationBlockNb mib);
+
+  /**
+   * \brief Retrieve the MIB content from this control message.
+   * \return the current MIB content that this control message holds
+   */
+  NbIotRrcSap::MasterInformationBlockNb GetMib () const;
+
+private:
+  NbIotRrcSap::MasterInformationBlockNb m_mib; ///< MIB
+
+}; // end of class MibLteControlMessage
+
+
+// ---------------------------------------------------------------------------
+
+
+/**
+ * \ingroup lte
+ * \brief Abstract model for broadcasting the Master Information Block (MIB)
+ *        within the control channel (BCCH).
+ *
+ * MIB is transmitted by eNodeB RRC and received by UE RRC at every radio frame,
+ * i.e., every 10 milliseconds.
+ *
+ * \sa LteEnbRrc::ConfigureCell, LteEnbPhy::StartFrame,
+ *     LteUeRrc::DoRecvMasterInformationBlock
+ */
+class Sib1NbiotControlMessage : public LteControlMessage
+{
+public:
+  /**
+   * \brief Create a new instance of MIB control message.
+   */
+  Sib1NbiotControlMessage (void);
+
+  /**
+   * \brief Replace the MIB content of this control message.
+   * \param sib1 the desired MIB content
+   */
+  void SetSib1 (NbIotRrcSap::SystemInformationBlockType1Nb sib1);
+
+  /**
+   * \brief Retrieve the MIB content from this control message.
+   * \return the current MIB content that this control message holds
+   */
+  NbIotRrcSap::SystemInformationBlockType1Nb GetSib1 () const;
+
+private:
+  NbIotRrcSap::SystemInformationBlockType1Nb m_sib1; ///< MIB
+
+}; // end of class MibLteControlMessage
+
+
+// ---------------------------------------------------------------------------
+
+/**
+ * \ingroup lte
+ * \brief Abstract model for broadcasting the Master Information Block (MIB)
+ *        within the control channel (BCCH).
+ *
+ * MIB is transmitted by eNodeB RRC and received by UE RRC at every radio frame,
+ * i.e., every 10 milliseconds.
+ *
+ * \sa LteEnbRrc::ConfigureCell, LteEnbPhy::StartFrame,
+ *     LteUeRrc::DoRecvMasterInformationBlock
+ */
+class Sib2NbiotControlMessage : public LteControlMessage
+{
+public:
+  /**
+   * \brief Create a new instance of MIB control message.
+   */
+  Sib2NbiotControlMessage (void);
+
+  /**
+   * \brief Replace the MIB content of this control message.
+   * \param sib2 the desired MIB content
+   */
+  void SetSib2 (NbIotRrcSap::SystemInformationBlockType2Nb sib2);
+
+  /**
+   * \brief Retrieve the MIB content from this control message.
+   * \return the current MIB content that this control message holds
+   */
+  NbIotRrcSap::SystemInformationBlockType2Nb GetSib2 () const;
+
+private:
+  NbIotRrcSap::SystemInformationBlockType2Nb m_sib2; ///< MIB
+
+}; // end of class MibLteControlMessage
+
+
+// ---------------------------------------------------------------------------
+
+
+
 
 
 } // namespace ns3

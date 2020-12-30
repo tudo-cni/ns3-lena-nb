@@ -308,6 +308,55 @@ DlHarqFeedbackLteControlMessage::GetDlHarqFeedback (void)
   return m_dlInfoListElement;
 }
 
+// ----------------------------------------------------------------------------------------------------------
+
+
+
+MibNbiotControlMessage::MibNbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::MIB_NB);
+}
+
+
+void
+MibNbiotControlMessage::SetMib (NbIotRrcSap::MasterInformationBlockNb mib)
+{
+  m_mib = mib;
+}
+
+NbIotRrcSap::MasterInformationBlockNb MibNbiotControlMessage::GetMib () const
+{
+  return m_mib;
+}
+
+
+// ----------------------------------------------------------------------------------------------------------
+
+
+
+Sib1NbiotControlMessage::Sib1NbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::SIB1_NB);
+}
+
+
+void
+Sib1NbiotControlMessage::SetSib1 (NbIotRrcSap::SystemInformationBlockType1Nb sib1)
+{
+  m_sib1 = sib1;
+}
+
+NbIotRrcSap::SystemInformationBlockType1Nb Sib1NbiotControlMessage::GetSib1 () const
+{
+  return m_sib1;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+
+
 
 } // namespace ns3
 
