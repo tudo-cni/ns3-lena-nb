@@ -2224,27 +2224,42 @@ LteEnbRrc::ConfigureCell (std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> cc
   m_ueMeasConfig.haveSmeasure = false;
   m_ueMeasConfig.haveSpeedStatePars = false;
 
-  m_sib1.clear ();
-  m_sib1.reserve (ccPhyConf.size ());
-  for (const auto &it: ccPhyConf)
-    {
-      // Enabling MIB transmission
-      LteRrcSap::MasterInformationBlock mib;
-      mib.dlBandwidth = it.second->GetDlBandwidth ();
-      mib.systemFrameNumber = 0;
-      m_cphySapProvider.at (it.first)->SetMasterInformationBlock (mib);
+  if (m_legacy_lte){
+    m_sib1.clear ();
+    m_sib1.reserve (ccPhyConf.size ());
+    for (const auto &it: ccPhyConf)
+      {
+        // Enabling MIB transmission
+        LteRrcSap::MasterInformationBlock mib;
+        mib.dlBandwidth = it.second->GetDlBandwidth ();
+        mib.systemFrameNumber = 0;
+        m_cphySapProvider.at (it.first)->SetMasterInformationBlock (mib);
 
-      // Enabling SIB1 transmission with default values
-      LteRrcSap::SystemInformationBlockType1 sib1;
-      sib1.cellAccessRelatedInfo.cellIdentity = it.second->GetCellId ();
-      sib1.cellAccessRelatedInfo.csgIndication = false;
-      sib1.cellAccessRelatedInfo.csgIdentity = 0;
-      sib1.cellAccessRelatedInfo.plmnIdentityInfo.plmnIdentity = 0; // not used
-      sib1.cellSelectionInfo.qQualMin = -34; // not used, set as minimum value
-      sib1.cellSelectionInfo.qRxLevMin = m_qRxLevMin; // set as minimum value
-      m_sib1.push_back (sib1);
-      m_cphySapProvider.at (it.first)->SetSystemInformationBlockType1 (sib1);
+        // Enabling SIB1 transmission with default values
+        LteRrcSap::SystemInformationBlockType1 sib1;
+        sib1.cellAccessRelatedInfo.cellIdentity = it.second->GetCellId ();
+        sib1.cellAccessRelatedInfo.csgIndication = false;
+        sib1.cellAccessRelatedInfo.csgIdentity = 0;
+        sib1.cellAccessRelatedInfo.plmnIdentityInfo.plmnIdentity = 0; // not used
+        sib1.cellSelectionInfo.qQualMin = -34; // not used, set as minimum value
+        sib1.cellSelectionInfo.qRxLevMin = m_qRxLevMin; // set as minimum value
+        m_sib1.push_back (sib1);
+        m_cphySapProvider.at (it.first)->SetSystemInformationBlockType1 (sib1);
+      }
+  }
+  else{
+    m_sib1Nb.clear();
+    m_sib1Nb.reserve(ccPhyConf.size());
+    for(const auto &it: ccPhyConf){
+      NbIotRrcSap::MasterInformationBlockNb mibNb;
+      m_cphySapProvider.at(it.first)->SetMasterInformationBlockNb(mibNb);
+
+      NbIotRrcSap::SystemInformationBlockType1Nb sib1Nb;
+      sib1Nb.cellAccessRelatedInfoNb.cellIdentity = it.second->GetCellId();
+      m_sib1Nb.push_back(sib1Nb);
+      m_cphySapProvider.at(it.first)->SetSystemInformationBlockType1Nb(sib1Nb);
     }
+  }
   /*
    * Enabling transmission of other SIB. The first time System Information is
    * transmitted is arbitrarily assumed to be at +0.016s, and then it will be

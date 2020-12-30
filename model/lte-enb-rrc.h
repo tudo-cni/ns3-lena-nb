@@ -1527,6 +1527,7 @@ private:
 
   /// The System Information Block Type 1 that is currently broadcasted over BCH.
   std::vector<LteRrcSap::SystemInformationBlockType1> m_sib1;
+  std::vector<NbIotRrcSap::SystemInformationBlockType1Nb> m_sib1Nb;
 
   /**
    * The `UeMap` attribute. List of UeManager by C-RNTI.
@@ -1693,6 +1694,7 @@ private:
 
   std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> m_componentCarrierPhyConf; ///< component carrier phy configuration
 
+  bool m_legacy_lte;
 }; // end of `class LteEnbRrc`
 
 

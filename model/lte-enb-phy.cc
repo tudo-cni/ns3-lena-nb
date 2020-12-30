@@ -593,12 +593,57 @@ LteEnbPhy::StartFrame (void)
   NS_LOG_INFO ("-----frame " << m_nrFrames << "-----");
   m_nrSubFrames = 0;
 
-  // send MIB at beginning of every frame
-  m_mib.systemFrameNumber = m_nrSubFrames;
-  Ptr<MibLteControlMessage> mibMsg = Create<MibLteControlMessage> ();
-  mibMsg->SetMib (m_mib);
-  m_controlMessagesQueue.at (0).push_back (mibMsg);
+  if(m_legacy_lte){
+    // send MIB at beginning of every frame
+    m_mib.systemFrameNumber = m_nrSubFrames;
+    Ptr<MibLteControlMessage> mibMsg = Create<MibLteControlMessage> ();
+    mibMsg->SetMib (m_mib);
+    m_controlMessagesQueue.at (0).push_back (mibMsg);
+  }else{
+    if((m_nrFrames % 64) == 0){
+      m_mibNbRepetitionsCounter = 0; // Cout Repetitions
+      std::bitset<4> systemFrameNumberMsb(m_nrFrames >> 6);
+      m_mibNb.systemFrameNumberMsb = systemFrameNumberMsb;
+    }
+    else{
+      m_mibNbRepetitionsCounter++;
+      if(m_mibNbRepetitionsCounter == 8){
+        m_mibNbRepetitionsCounter = 0;
+      }
+    }
+    m_mibNb.abEnabled = false;
+    m_mibNb.inbandSamePci.eutraCrsSequenceInfo = 1;
+    m_mibNb.schedulingInfoSib1 = 2;
+    m_mibNb.hyperSfnLsb = std::bitset<2>(3);
+    
+    Ptr<MibNbiotControlMessage> mibMsg = Create<MibNbiotControlMessage>();
+    mibMsg->SetMib (m_mibNb);
+    m_controlMessagesQueue.at(0).push_back(mibMsg);
 
+    if ((m_nrFrames % 256) == 0){
+      m_sib1NbPeriod=true;
+      switch(m_mibNb.schedulingInfoSib1){
+        case 0:
+        case 3:
+        case 6:
+        case 9:
+          m_sib1NbRepetitions = 4;
+          break;
+        case 1:
+        case 4:
+        case 7:
+        case 10:
+          m_sib1NbRepetitions = 8;
+          break;
+        default:
+          m_sib1NbRepetitions = 16;
+          break;
+      }
+    }
+
+
+    
+  }
   StartSubFrame ();
 }
 
@@ -617,12 +662,27 @@ LteEnbPhy::StartSubFrame (void)
    * which SFN mod 2 = 0," except that 3GPP counts frames and subframes starting
    * from 0, while ns-3 counts starting from 1.
    */
-  if ((m_nrSubFrames == 6) && ((m_nrFrames % 2) == 1))
-    {
-      Ptr<Sib1LteControlMessage> msg = Create<Sib1LteControlMessage> ();
-      msg->SetSib1 (m_sib1);
-      m_controlMessagesQueue.at (0).push_back (msg);
+  if (m_legacy_lte){
+    if ((m_nrSubFrames == 6) && ((m_nrFrames % 2) == 1))
+      {
+        Ptr<Sib1LteControlMessage> msg = Create<Sib1LteControlMessage> ();
+        msg->SetSib1 (m_sib1);
+        m_controlMessagesQueue.at (0).push_back (msg);
+      }
+  }
+  else{
+    if((m_nrSubFrames == 4) && (m_sib1NbPeriod) && (m_sib1NbRepetitions > 0) && ((m_nrFrames % 2) == 1)){
+      m_sib1NbRepetitions--;
+
+      m_sib1Nb.hyperSfnMsb = std::bitset<8>(0);
+      Ptr<Sib1NbiotControlMessage> msg = Create<Sib1NbiotControlMessage> ();
+      msg->SetSib1(m_sib1Nb);
+      m_controlMessagesQueue.at(0).push_back(msg);
     }
+    if(m_sib1NbRepetitions == 0){
+      m_sib1NbPeriod = false;
+    }
+  }
 
   if (m_srsPeriodicity>0)
     { 
@@ -1162,6 +1222,19 @@ LteEnbPhy::DoSetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockTy
   m_sib1 = sib1;
 }
 
+void
+LteEnbPhy::DoSetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mibNb)	// Used by NB-IoT. 3GPP Release 13.
+{
+  NS_LOG_FUNCTION (this);
+  m_mibNb = mibNb;
+}
+
+void
+LteEnbPhy::DoSetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1Nb)  // Used by NB-IoT. 3GPP Release 13.
+{
+  NS_LOG_FUNCTION (this);
+  m_sib1Nb = sib1Nb;
+}
 
 void
 LteEnbPhy::SetHarqPhyModule (Ptr<LteHarqPhy> harq)

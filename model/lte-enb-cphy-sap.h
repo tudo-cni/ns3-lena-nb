@@ -26,6 +26,7 @@
 #include <ns3/ptr.h>
 
 #include <ns3/lte-rrc-sap.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -110,6 +111,18 @@ public:
    * \param sib1 the System Information Block Type 1 to be sent on the BCH
    */
   virtual void SetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockType1 sib1) = 0;
+  /** 
+   * 
+   * \param mib the Master Information Block to be sent on the BCH
+   */
+  virtual void SetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mib) = 0;
+
+  /**
+   *
+   * \param sib1 the System Information Block Type 1 to be sent on the BCH
+   */
+  virtual void SetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1) = 0;
+
 
   /**
    *
@@ -164,6 +177,8 @@ public:
   virtual void SetSrsConfigurationIndex (uint16_t  rnti, uint16_t srsCi);
   virtual void SetMasterInformationBlock (LteRrcSap::MasterInformationBlock mib);
   virtual void SetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockType1 sib1);
+  virtual void SetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mib);
+  virtual void SetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1);
   virtual int8_t GetReferenceSignalPower ();
   
 private:
@@ -252,6 +267,21 @@ MemberLteEnbCphySapProvider<C>::SetSystemInformationBlockType1 (LteRrcSap::Syste
 {
   m_owner->DoSetSystemInformationBlockType1 (sib1);
 }
+
+template <class C> 
+void 
+MemberLteEnbCphySapProvider<C>::SetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mib)
+{
+  m_owner->DoSetMasterInformationBlockNb (mib);
+}
+
+template <class C>
+void
+MemberLteEnbCphySapProvider<C>::SetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1)
+{
+  m_owner->DoSetSystemInformationBlockType1Nb (sib1);
+}
+
 
 template <class C>
 int8_t

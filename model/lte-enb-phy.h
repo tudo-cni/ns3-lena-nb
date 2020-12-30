@@ -28,6 +28,7 @@
 #include <ns3/lte-enb-cphy-sap.h>
 #include <ns3/lte-phy.h>
 #include <ns3/lte-harq-phy.h>
+#include "nb-iot-rrc-sap.h"
 
 #include <map>
 #include <set>
@@ -382,6 +383,19 @@ private:
    * \param sib1 LteRrcSap::SystemInformationBlockType1
    */
   void DoSetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockType1 sib1);
+  /**
+   * Set master information block
+   *
+   * \param mib LteRrcSap::MasterInformationBlock
+   */
+  void DoSetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mib);
+  /**
+   * Set system information block
+   *
+   * \param sib1 LteRrcSap::SystemInformationBlockType1
+   */
+  void DoSetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1);
+
 
   // LteEnbPhySapProvider forwarded methods
   void DoSendMacPdu (Ptr<Packet> p);
@@ -481,6 +495,24 @@ private:
    */
   LteRrcSap::SystemInformationBlockType1 m_sib1;
 
+  /**
+   * The Master Information Block Narrow Band message to be broadcasted every 64 frames,
+   * with a period of 640 ms.
+   * The content of the MIB-NB is arranged in 8 subframes and it is repeated 8 times,
+   * before to change the current value.
+   * To get more information see 36.331 sec. 5.2.1.2a.
+   * The message content is specified by the upper layer through the RRC SAP.
+   */
+  NbIotRrcSap::MasterInformationBlockNb m_mibNb;
+
+  /**
+   * The System Information Block Type 1 Narrow Band message to be broadcasted every 256 frame,
+   * with a period of 2560 ms.
+   * The SIB1−NB is transmitted in subframe #4 o f every other frame in max 16 continuous frames.
+   * The message content is specified by the upper layer through the RRC SAP.
+   */
+  NbIotRrcSap::SystemInformationBlockType1Nb m_sib1Nb;
+
   Ptr<LteHarqPhy> m_harqPhyModule; ///< HARQ Phy module
 
   /**
@@ -518,6 +550,10 @@ private:
    */
   TracedCallback<PhyTransmissionStatParameters> m_dlPhyTransmission;
 
+  bool m_legacy_lte = false; // No NB-IoT
+  bool m_sib1NbPeriod; // No NB-IoT
+  uint8_t m_mibNbRepetitionsCounter;
+  uint8_t m_sib1NbRepetitions;
 }; // end of `class LteEnbPhy`
 
 
