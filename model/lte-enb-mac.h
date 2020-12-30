@@ -39,6 +39,7 @@
 #include <ns3/packet.h>
 #include <ns3/packet-burst.h>
 #include <ns3/lte-ccm-mac-sap.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -256,6 +257,11 @@ private:
   */
   LteEnbCmacSapProvider::RachConfig DoGetRachConfig ();
   /**
+  * \brief Get RACH configuration function
+  * \returns LteEnbCmacSapProvider::RachConfig
+  */
+  LteEnbCmacSapProvider::RachConfigNb DoGetRachConfigNb ();
+  /**
   * \brief Allocate NC RA preamble function
   * \param rnti the RNTI
   * \returns LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue
@@ -442,6 +448,13 @@ private:
   uint8_t m_preambleTransMax; ///< preamble transmit maximum
   uint8_t m_raResponseWindowSize; ///< RA response window size
   uint8_t m_connEstFailCount; ///< the counter value for T300 timer expiration
+
+
+  uint8_t m_preambleTransMaxCe;
+  uint8_t m_powerRampingStep;
+  uint8_t m_preambleInitialReceivedTargetPower;
+  NbIotRrcSap::RachInfoList m_rachInfoList;
+  uint8_t m_connEstFailOffset;
 
   /**
    * info associated with a preamble allocated for non-contention based RA

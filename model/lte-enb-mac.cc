@@ -75,6 +75,7 @@ public:
   virtual void ReleaseLc (uint16_t rnti, uint8_t lcid);
   virtual void UeUpdateConfigurationReq (UeConfig params);
   virtual RachConfig GetRachConfig ();
+  virtual RachConfigNb GetRachConfigNb ();
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti);
   
 
@@ -135,7 +136,13 @@ EnbMacMemberLteEnbCmacSapProvider::GetRachConfig ()
 {
   return m_mac->DoGetRachConfig ();
 }
- 
+
+LteEnbCmacSapProvider::RachConfigNb 
+EnbMacMemberLteEnbCmacSapProvider::GetRachConfigNb ()
+{
+  return m_mac->DoGetRachConfigNb ();
+}
+
 LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue 
 EnbMacMemberLteEnbCmacSapProvider::AllocateNcRaPreamble (uint16_t rnti)
 {
@@ -974,7 +981,15 @@ LteEnbMac::DoGetRachConfig ()
   rc.connEstFailCount = m_connEstFailCount;
   return rc;
 }
- 
+LteEnbCmacSapProvider::RachConfigNb LteEnbMac::DoGetRachConfigNb ()
+{
+  struct LteEnbCmacSapProvider::RachConfigNb rc;
+  //rc.numberOfRaPreambles = m_numberOfRaPreambles;
+  //rc.preambleTransMax = m_preambleTransMax;
+  //rc.raResponseWindowSize = m_raResponseWindowSize;
+  //rc.connEstFailCount = m_connEstFailCount;
+  return rc;
+}
 LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue 
 LteEnbMac::DoAllocateNcRaPreamble (uint16_t rnti)
 {

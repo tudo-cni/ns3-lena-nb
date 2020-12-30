@@ -26,6 +26,7 @@
 #include <ns3/ff-mac-common.h>
 #include <ns3/eps-bearer.h>
 #include <ns3/lte-common.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -147,6 +148,15 @@ public:
    * \return the current RACH configuration of the MAC
    */
   virtual RachConfig GetRachConfig () = 0;
+
+  struct RachConfigNb : NbIotRrcSap::RachConfigCommon {} ;
+
+  /** 
+   * 
+   * \return the current RACH configuration of the MAC
+   */
+  virtual RachConfigNb GetRachConfigNb () = 0;
+
 
   /**
    * \brief AllocateNcRaPreambleReturnValue structure
