@@ -646,6 +646,13 @@ private:
    */
   virtual void DoSendRachPreamble (uint32_t prachId, uint32_t raRnti);
   /**
+   * \brief Send RACH preamble function
+   *
+   * \param prachId the RACH preamble ID
+   * \param raRnti the rnti
+   */
+  virtual void DoSendNprachPreamble (uint32_t prachId, uint32_t raRnti);
+  /**
    * \brief Notify PHY about the successful RRC connection
    * establishment.
    */

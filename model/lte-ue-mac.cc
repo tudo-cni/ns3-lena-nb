@@ -428,7 +428,7 @@ LteUeMac::RandomlySelectAndSendRaPreamble ()
 {
   NS_LOG_FUNCTION (this);
   // 3GPP 36.321 5.1.1  
-  NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
+  NS_ASSERT_MSG (m_rachConfigured, "RACH not configured");
   // assume that there is no Random Access Preambles group B
   m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, m_rachConfig.numberOfRaPreambles - 1);
   bool contention = true;
@@ -442,9 +442,9 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
   // 3GPP 36.321 5.1.1  
   NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
   // assume that there is no Random Access Preambles group B
-  m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, m_rachConfig.numberOfRaPreambles - 1);
+  m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, NbIotRrcSap::ConvertNprachNumSubcarriers2int(m_CeLevel) -1 );
   bool contention = true;
-  SendRaPreamble (contention);
+  SendRaPreambleNb(contention);
 }  
 void
 LteUeMac::SendRaPreamble (bool contention)
@@ -467,9 +467,59 @@ LteUeMac::SendRaPreamble (bool contention)
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
   m_noRaResponseReceivedEvent = Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeout, this, contention);
 }
+void
+LteUeMac::SendRaPreambleNb (bool contention)
+{
+  NS_LOG_FUNCTION (this << (uint32_t) m_raPreambleId << contention);
+  // Since regular UL LteControlMessages need m_ulConfigured = true in
+  // order to be sent by the UE, the rach preamble needs to be sent
+  // with a dedicated primitive (not
+  // m_uePhySapProvider->SendLteControlMessage (msg)) so that it can
+  // bypass the m_ulConfigured flag. This is reasonable, since In fact
+  // the RACH preamble is sent on 6RB bandwidth so the uplink
+  // bandwidth does not need to be configured. 
 
+  // NPRACH WINDOW STARTS at framenumber mod (NPRACH_PERIOD/10) = 0 (A Tutorial on NB-IoT Physical Layer Design, Mathhieu Kanj, et al.)
+  uint16_t window_condition = (m_frameNo-1) % (NbIotRrcSap::ConvertNprachPeriodicity2int(m_CeLevel)/10);
+  if (window_condition!= 0){
+    uint16_t frames_to_wait = ((NbIotRrcSap::ConvertNprachPeriodicity2int(m_CeLevel)/10) - window_condition) *10;
+    Simulator::Schedule(MilliSeconds(frames_to_wait), &LteUeMac::SendRaPreambleNb, this, contention);
+    return;
+  }
+
+  NS_ASSERT (m_frameNo > 0); // sanity check for subframe starting at 1
+  // ETSI 36.321 5.1.4
+  m_raRnti = 1+floor(m_frameNo/4);
+
+  //m_uePhySapProvider->SendRachPreamble (m_raPreambleId, m_raRnti);
+  int sendingTime = NbIotRrcSap::ConvertNprachStartTime2int(m_CeLevel);
+  std::cout << sendingTime << "\n";
+  double ts = 1000.0/(15000.0*2048.0);
+  double preambleSymbolTime = 2048.0*ts;
+  double preambleGroupTimeNoCP = 5.0*preambleSymbolTime; 
+  double preambleGroupTime = NbIotRrcSap::ConvertNprachCpLenght2double(m_nprachConfig)+preambleGroupTimeNoCP;
+  double preambleRepetition = 4.0*preambleGroupTime;
+  for(size_t i = 0; i < NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(m_CeLevel); i++){
+    double time = sendingTime+(i*preambleRepetition);
+    std::cout << "Scheduling Preamble "<< i << " at "<< time << " Milliseconds \n";
+    Simulator::Schedule(MilliSeconds(time), &LteUePhySapProvider::SendNprachPreamble, m_uePhySapProvider, m_raPreambleId,m_raRnti);
+  }
+  NS_LOG_INFO (this << " sent preamble id " << (uint32_t) m_raPreambleId << ", RA-RNTI " << (uint32_t) m_raRnti);
+  // 3GPP 36.321 5.1.4 
+
+  Time raWindowBegin = MilliSeconds (4); 
+  Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
+  Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
+  m_noRaResponseReceivedEvent = Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeout, this, contention);
+}
 void 
 LteUeMac::StartWaitingForRaResponse ()
+{
+   NS_LOG_FUNCTION (this);
+   m_waitingForRaResponse = true;
+}
+void 
+LteUeMac::StartWaitingForRaResponseNb ()
 {
    NS_LOG_FUNCTION (this);
    m_waitingForRaResponse = true;
@@ -583,18 +633,17 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   m_preambleTransmissionCounterCe = 0;
   // Check CE Level
   double rsrp = m_uePhySapProvider->GetRSRP();
-  m_CeLevel = 2;
   if (rsrp < m_nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound){
-    m_CeLevel = 2;
+    m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb2;
   }
-  if (rsrp  > m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
-    m_CeLevel = 1;
+  if (rsrp  < m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+    m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb1;
   }
   if (rsrp > m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
-    m_CeLevel = 0;
+    m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb0;
   }
   m_backoffParameter = 0;
-  RandomlySelectAndSendRaPreamble ();
+  RandomlySelectAndSendRaPreambleNb ();
 }
 void
 LteUeMac::DoSetRnti (uint16_t rnti)

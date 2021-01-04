@@ -233,14 +233,23 @@ private:
   * \param contention if true randomly select and send the RA preamble
   */
   void SendRaPreamble (bool contention);
+  void SendRaPreambleNb (bool contention);
   /// Start waiting for RA response function
   void StartWaitingForRaResponse ();
+/// Start waiting for RA response function
+  void StartWaitingForRaResponseNb ();
  /**
   * Receive the RA response function
   *
   * \param raResponse RA response received
   */
   void RecvRaResponse (BuildRarListElement_s raResponse);
+ /**
+  * Receive the RA response function
+  *
+  * \param raResponse RA response received
+  */
+  void RecvRaResponseNb (BuildRarListElement_s raResponse);
  /**
   * RA response timeout function
   *
@@ -305,7 +314,7 @@ private:
   uint8_t m_raRnti; ///< RA RNTI
   bool m_waitingForRaResponse; ///< waiting for RA response
 
-  uint8_t m_CeLevel;
+  NbIotRrcSap::NprachParametersNb m_CeLevel;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
    * Exporting IMSI, contention flag, preamble transmission counter

@@ -1107,6 +1107,7 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
         case CONNECTED_REESTABLISHING:
           m_hasReceivedSib2Nb = true;
           m_ulEarfcn = msg.sib2.freqInfo.ulCarrierFreq;
+          m_ulBandwidth = 1;
           m_sib2ReceivedTrace (m_imsi, m_cellId, m_rnti);
           NbIotRrcSap::NprachConfig rc;
           rc = msg.sib2.radioResourceConfigCommon.nprachConfig;
@@ -1118,7 +1119,6 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
           //NS_ASSERT_MSG (m_connEstFailCountLimit > 0 && m_connEstFailCountLimit < 5,
           //               "SIB2 msg contains wrong value "
           //               << m_connEstFailCountLimit << "of connEstFailCount");
-          std::cout << "Did we get here?\n";
           m_cmacSapProvider.at (0)->ConfigureNprach (rc);
           m_cphySapProvider.at (0)->ConfigureUplink (m_ulEarfcn, m_ulBandwidth);
           m_cphySapProvider.at (0)->ConfigureReferenceSignalPower (msg.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower);
@@ -3410,7 +3410,7 @@ LteUeRrc::SwitchToState (State newState)
       if (m_hasReceivedSib2)
         {
           NS_ASSERT (m_connectionPending);
-          StartConnection ();
+          StartConnectionNb ();
         }
       break;
 

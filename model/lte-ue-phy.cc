@@ -88,6 +88,7 @@ public:
   virtual void SendMacPdu (Ptr<Packet> p);
   virtual void SendLteControlMessage (Ptr<LteControlMessage> msg);
   virtual void SendRachPreamble (uint32_t prachId, uint32_t raRnti);
+  virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti);
   virtual void NotifyConnectionSuccessful ();
   virtual double GetRSRP();
 
@@ -117,7 +118,11 @@ UeMemberLteUePhySapProvider::SendRachPreamble (uint32_t prachId, uint32_t raRnti
 {
   m_phy->DoSendRachPreamble (prachId, raRnti);
 }
-
+void
+UeMemberLteUePhySapProvider::SendNprachPreamble (uint32_t prachId, uint32_t raRnti)
+{
+  m_phy->DoSendNprachPreamble (prachId, raRnti);
+}
 void
 UeMemberLteUePhySapProvider::NotifyConnectionSuccessful ()
 {
@@ -1014,6 +1019,18 @@ LteUePhy::DoSendRachPreamble (uint32_t raPreambleId, uint32_t raRnti)
   m_controlMessagesQueue.at (0).push_back (msg);
 }
 
+void 
+LteUePhy::DoSendNprachPreamble (uint32_t raPreambleId, uint32_t raRnti)
+{
+  NS_LOG_FUNCTION (this << raPreambleId << "BLA");
+  // unlike other control messages, RACH preamble is sent ASAP
+   Ptr<NprachPreambleNbiotControlMessage> msg = Create<NprachPreambleNbiotControlMessage> ();
+   msg->SetRapId (raPreambleId);
+   m_raPreambleId = raPreambleId;
+   m_raRnti = raRnti;
+   m_controlMessagesQueue.at (0).push_back (msg);
+}
+
 void
 LteUePhy::DoNotifyConnectionSuccessful ()
 {
@@ -1219,13 +1236,11 @@ LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
       sum += powerTxW;
       nRB++;
     }
-
   // measure instantaneous RSRP now
   double rsrp_dBm = 10 * log10 (1000 * (sum / (double)nRB));
   NS_LOG_INFO (this << " PSS RNTI " << m_rnti << " cellId " << m_cellId
                     << " has RSRP " << rsrp_dBm << " and RBnum " << nRB);
   // note that m_pssReceptionThreshold does not apply here
-
   // store measurements
   std::map <uint16_t, UeMeasurementsElement>::iterator itMeasMap = m_ueMeasurementsMap.find (cellId);
   if (itMeasMap == m_ueMeasurementsMap.end ())
