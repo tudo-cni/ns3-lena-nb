@@ -355,6 +355,24 @@ NbIotRrcSap::SystemInformationBlockType1Nb Sib1NbiotControlMessage::GetSib1 () c
 // ---------------------------------------------------------------------------
 
 
+NprachPreambleNbiotControlMessage::NprachPreambleNbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::NPRACH_PREAMBLE);
+}
+
+void
+NprachPreambleNbiotControlMessage::SetRapId (uint8_t rapId)
+{
+  m_rapId = rapId;
+}
+
+uint8_t 
+NprachPreambleNbiotControlMessage::GetRapId () const
+{
+  return m_rapId;
+}
+
+
 
 
 

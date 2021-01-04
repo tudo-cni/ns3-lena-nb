@@ -279,6 +279,7 @@ public:
   virtual void SubframeIndication (uint32_t frameNo, uint32_t subframeNo);
   virtual void ReceiveLteControlMessage (Ptr<LteControlMessage> msg);
   virtual void ReceiveRachPreamble (uint32_t prachId);
+  virtual void ReceiveNprachPreamble (uint32_t prachId);
   virtual void UlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi);
   virtual void UlInfoListElementHarqFeeback (UlInfoListElement_s params);
   virtual void DlInfoListElementHarqFeeback (DlInfoListElement_s params);
@@ -316,6 +317,11 @@ EnbMacMemberLteEnbPhySapUser::ReceiveRachPreamble (uint32_t prachId)
   m_mac->DoReceiveRachPreamble (prachId);
 }
 
+void
+EnbMacMemberLteEnbPhySapUser::ReceiveNprachPreamble (uint32_t prachId)
+{
+  m_mac->DoReceiveNprachPreamble (prachId);
+}
 void
 EnbMacMemberLteEnbPhySapUser::UlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi)
 {
@@ -682,6 +688,13 @@ LteEnbMac::DoReceiveRachPreamble  (uint8_t rapId)
   NS_LOG_FUNCTION (this << (uint32_t) rapId);
   // just record that the preamble has been received; it will be processed later
   ++m_receivedRachPreambleCount[rapId]; // will create entry if not exists
+}
+void
+LteEnbMac::DoReceiveNprachPreamble  (uint8_t rapId)
+{
+  NS_LOG_FUNCTION (this << (uint32_t) rapId);
+  // just record that the preamble has been received; it will be processed later
+  ++m_receivedNprachPreambleCount[rapId]; // will create entry if not exists
 }
 
 void

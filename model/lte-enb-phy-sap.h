@@ -104,6 +104,13 @@ public:
    */
   virtual void ReceiveRachPreamble (uint32_t prachId) = 0;
 
+  /** 
+   * notify the reception of a RACH preamble on the PRACH 
+   * 
+   * \param prachId the ID of the preamble
+   */
+  virtual void ReceiveNprachPreamble (uint32_t prachId) = 0;
+
   /**
    * \brief Returns to MAC level the UL-CQI evaluated
    * \param ulcqi the UL-CQI (see FF MAC API 4.3.29)

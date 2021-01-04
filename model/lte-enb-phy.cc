@@ -536,6 +536,13 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
     {
       switch ((*it)->GetMessageType ())
         {
+        case LteControlMessage::NPRACH_PREAMBLE:
+          {
+            Ptr<NprachPreambleNbiotControlMessage> nprachPreamble = DynamicCast<NprachPreambleNbiotControlMessage> (*it);
+            m_enbPhySapUser->ReceiveNprachPreamble (nprachPreamble->GetRapId ());
+            
+          }
+          break;
         case LteControlMessage::RACH_PREAMBLE:
           {
             Ptr<RachPreambleLteControlMessage> rachPreamble = DynamicCast<RachPreambleLteControlMessage> (*it);
@@ -592,7 +599,6 @@ LteEnbPhy::StartFrame (void)
   ++m_nrFrames;
   NS_LOG_INFO ("-----frame " << m_nrFrames << "-----");
   m_nrSubFrames = 0;
-
   if(m_legacy_lte){
     // send MIB at beginning of every frame
     m_mib.systemFrameNumber = m_nrSubFrames;

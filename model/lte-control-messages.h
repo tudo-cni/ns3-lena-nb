@@ -65,7 +65,8 @@ public:
     SIB1, // System Information Block Type 1
     MIB_NB,
     SIB1_NB,
-    SIB2_NB
+    SIB2_NB,
+    NPRACH_PREAMBLE
   };
 
   LteControlMessage (void);
@@ -528,7 +529,33 @@ private:
 
 
 // ---------------------------------------------------------------------------
+/**
+ * \ingroup lte
+ *
+ * abstract model for the Random Access Preamble
+ */
+class NprachPreambleNbiotControlMessage : public LteControlMessage
+{
+public:
+  NprachPreambleNbiotControlMessage (void);
+  
+  /** 
+   * Set the Random Access Preamble Identifier (RAPID), see 3GPP TS 36.321 6.2.2
+   *
+   * \param rapid the RAPID
+   */
+  void SetRapId (uint8_t rapid);
+  
+  /** 
+   * 
+   * \return the RAPID
+   */
+  uint8_t GetRapId () const;
 
+private:
+  uint8_t m_rapId; ///< the RAPID
+
+};
 
 
 

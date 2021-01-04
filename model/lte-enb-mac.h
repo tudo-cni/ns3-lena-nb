@@ -342,7 +342,11 @@ private:
   * \param prachId PRACH ID number
   */
   void DoReceiveRachPreamble (uint8_t prachId);
-
+  /**
+  * \brief Receive RACH Preamble function
+  * \param prachId PRACH ID number
+  */
+  void DoReceiveNprachPreamble (uint8_t prachId);
   // forwarded by LteCcmMacSapProvider
   /**
    * Report MAC CE to scheduler
@@ -474,6 +478,7 @@ private:
   std::map<uint8_t, NcRaPreambleInfo> m_allocatedNcRaPreambleMap;
  
   std::map<uint8_t, uint32_t> m_receivedRachPreambleCount; ///< received RACH preamble count
+  std::map<uint8_t, uint32_t> m_receivedNprachPreambleCount; 
 
   std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
 
