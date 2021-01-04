@@ -3116,7 +3116,50 @@ LteEnbRrc::SendSystemInformationNb ()
       // From Vodafone wireshark
       rsrpprachinfolist.ce1_lowerbound = -115.5;
       rsrpprachinfolist.ce2_lowerbound = -127.5;
+
       si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
+      // Values from Vodafone Cell / temporary
+      NbIotRrcSap::NprachParametersNb ce0;
+      ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+      ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+      ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
+      ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
+      ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+      ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+      NbIotRrcSap::NprachParametersNb ce1;
+      ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+      ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
+      ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
+      ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
+      ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
+      ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+
+      NbIotRrcSap::NprachParametersNb ce2;
+      ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
+      ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
+      ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32;
+      ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
+      ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
+      ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
+      si.sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
       m_rrcSapUser->SendSystemInformationNb (it.second->GetCellId (), si);
     }
 
