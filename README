@@ -1,3 +1,8 @@
 
 NS_LOG="LteUeRrc=level_all|time" ./waf --run lena-simple-epc 2> test.log
 ./waf configure --disable-python --enable-module=lte
+
+
+
+IMPORTANT ONE !!!!!!
+CXXFLAGS="-O3 -w" ./waf -d optimized configure --enable-static --enable-examples --enable-modules=lte
