@@ -58,6 +58,10 @@ struct NpdcchMessage{
   NpdcchUeInformation ue;
   NbIotRrcSap::DciN1 dciN1;
   NbIotRrcSap::DciN0 dciN0;
+  std::vector<int> npdschOpportunity;
+  std::vector<int> npuschOpportunity;
+  std::vector<int> dciRepetitionsubframes;
+};
 
 };
 
@@ -78,24 +82,31 @@ bool IsSeachSpaceType2Begin(NbIotRrcSap::NprachParametersNb ce);
 //bool IsSeachSpaceUeSpecificBegin(NbIotRrcSap::NprachParametersNb ce);
  
 void ScheduleRarReq(int rnti, int rapid, NbIotRrcSap::NprachParametersNb ue, NbIotRrcSap::DciN1::DciRepetitions rep);
-std::vector<std::pair<int, LteControlMessage>> Schedule(int frameNo, int subframeNo);
-std::vector<std::pair<int, LteControlMessage>> ScheduleSearchSpace(NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NprachParametersNb ce);
+void ScheduleNpdcchMessageReq(NpdcchMessage msg);
+std::vector<NpdcchMessage> Schedule(int frameNo, int subframeNo);
+std::vector<NpdcchMessage> ScheduleSearchSpace(NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NprachParametersNb ce);
 std::vector<int> GetNextAvailableSearchSpaceCandidate(int SearchSpaceStartFrame, int SearchSpaceStartSubframe, int R_max, int R);
-std::vector<int> GetSubframeRangeWithoutSystemResources(int frameNo, int subframeNo, int numSubframes);
+std::vector<int> GetSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes);
 std::vector<std::pair<int,int>> GetAllPossibleSearchSpaceCandidates(std::vector<int> subframes, int R_max);
 std::vector<int> CheckforNContiniousSubframes(std::vector<int> Subframes, int StartSubframe, uint N);
+std::vector<int> GetNextAvailableNpdschCandidate(int endSubframeDci, int minSchedulingDelay, int numSubframes, int R_max);
 std::vector<int8_t> m_downlink;
+void SetCeLevel(NbIotRrcSap::NprachParametersNb ce0, NbIotRrcSap::NprachParametersNb ce1, NbIotRrcSap::NprachParametersNb ce2);
 NbIotRrcSap::NprachParametersNb m_ce0;
 protected:
   std::vector<int8_t> m_uplink;
   std::vector<NpdcchMessage> m_NpdcchQueue;
   std::vector<NpdcchMessage> m_NpdschQueue;
   std::vector<NpdcchMessage> m_NpuschQueue;
+  std::vector<NbIotRrcSap::DciN1::NpdcchTimeOffset> m_DciTimeOffsetRmaxSmall;
+  std::vector<NbIotRrcSap::DciN1::NpdcchTimeOffset> m_DciTimeOffsetRmaxBig;
   NbIotRrcSap::NprachParametersNb m_ce1;
   NbIotRrcSap::NprachParametersNb m_ce2;
   int m_frameNo;
   int m_subframeNo;
   int m_currenthyperindex;
+  const int m_minSchedulingDelayDci2Downlink = 4;
+  const int m_minSchedulingDelayDci2Uplink = 8;
 };
 
 }  // namespace ns3
