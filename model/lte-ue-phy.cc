@@ -88,7 +88,7 @@ public:
   virtual void SendMacPdu (Ptr<Packet> p);
   virtual void SendLteControlMessage (Ptr<LteControlMessage> msg);
   virtual void SendRachPreamble (uint32_t prachId, uint32_t raRnti);
-  virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti);
+  virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset);
   virtual void NotifyConnectionSuccessful ();
   virtual double GetRSRP();
 
@@ -119,9 +119,9 @@ UeMemberLteUePhySapProvider::SendRachPreamble (uint32_t prachId, uint32_t raRnti
   m_phy->DoSendRachPreamble (prachId, raRnti);
 }
 void
-UeMemberLteUePhySapProvider::SendNprachPreamble (uint32_t prachId, uint32_t raRnti)
+UeMemberLteUePhySapProvider::SendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset)
 {
-  m_phy->DoSendNprachPreamble (prachId, raRnti);
+  m_phy->DoSendNprachPreamble (prachId, raRnti,subcarrieroffset);
 }
 void
 UeMemberLteUePhySapProvider::NotifyConnectionSuccessful ()
@@ -1020,12 +1020,14 @@ LteUePhy::DoSendRachPreamble (uint32_t raPreambleId, uint32_t raRnti)
 }
 
 void 
-LteUePhy::DoSendNprachPreamble (uint32_t raPreambleId, uint32_t raRnti)
+LteUePhy::DoSendNprachPreamble (uint32_t raPreambleId, uint32_t raRnti, uint8_t subcarrieroffset)
 {
   NS_LOG_FUNCTION (this << raPreambleId << "BLA");
   // unlike other control messages, RACH preamble is sent ASAP
    Ptr<NprachPreambleNbiotControlMessage> msg = Create<NprachPreambleNbiotControlMessage> ();
    msg->SetRapId (raPreambleId);
+   msg->SetSubcarrierOffset(subcarrieroffset);
+   msg->SetRanti(raRnti);
    m_raPreambleId = raPreambleId;
    m_raRnti = raRnti;
    m_controlMessagesQueue.at (0).push_back (msg);
@@ -1208,6 +1210,17 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           NS_ASSERT (m_cellId > 0);
           Ptr<Sib1NbiotControlMessage> msg2 = DynamicCast<Sib1NbiotControlMessage> (msg);
           m_ueCphySapUser->RecvSystemInformationBlockType1Nb (m_cellId, msg2->GetSib1());
+        }
+      else if (msg->GetMessageType () == LteControlMessage::DL_DCI_NB)
+        {
+          Ptr<DlDciN1NbiotControlMessage> msg2 = DynamicCast<DlDciN1NbiotControlMessage> (msg);
+          if (msg2->GetRanti() == m_raRnti){
+            std::cout << "Received my dci "<< std::endl;
+          }
+          //NS_LOG_INFO ("received SIB1_NB");
+          //NS_ASSERT (m_cellId > 0);
+          //Ptr<Sib1NbiotControlMessage> msg2 = DynamicCast<Sib1NbiotControlMessage> (msg);
+          //m_ueCphySapUser->RecvSystemInformationBlockType1Nb (m_cellId, msg2->GetSib1());
         }
       else
         {

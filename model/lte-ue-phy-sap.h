@@ -68,7 +68,7 @@ public:
    * \param prachId the ID of the preamble
    * \param raRnti the RA RNTI
    */
-  virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti) = 0;
+  virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset) = 0;
   /**
    * \brief Notify PHY about the successful RRC connection
    * establishment.
