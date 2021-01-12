@@ -347,7 +347,7 @@ class NbIotRrcSap{
                n36,
                n48
            } nprachNumSubcarriers;
-           enum class nprachSubcarrierMsg3RangeStart{
+           enum class NprachSubcarrierMsg3RangeStart{
                zero,
                oneThird,
                twoThird,
@@ -416,15 +416,14 @@ class NbIotRrcSap{
         struct RsrpThresholdsPrachInfoList{
             int16_t ce1_lowerbound;
             int16_t ce2_lowerbound;
-            int16_t ce3_lowerbound;
         };
 
         struct NprachConfig{
-            enum {
+            enum NprachCpLength {
                 us66dot7,
                 us266dot7
             } nprachCpLength;
-            RsrpThresholdsPrachInfoList raspThresholdsPrachInfoList;
+            RsrpThresholdsPrachInfoList rsrpThresholdsPrachInfoList;
             NprachParametersList nprachParametersList;   
         };
         struct NpdschConfigCommon{
@@ -467,6 +466,152 @@ class NbIotRrcSap{
             SystemInformationBlockType2Nb sib2; ///< SIB2
         };
 
+        struct HarqAckResource{
+            enum class TimeOffset{
+                thirteen,
+                fifteen,
+                seventeen,
+                eighteen
+            } timeOffset;
+            enum class SubcarrierIndex {
+                one,
+                two,
+                three, 
+                // only valid 3.75 khz 
+                thirtyeight,
+                thirtynine,
+                forty,
+                fortyone, 
+                fortytwo,
+                fortythree,
+                fortyfour,
+                fortyfive
+            } subcarrierIndex;
+        };
+
+        // Liberg et al. p285
+        struct DciN1{
+            bool format = 0;
+            bool npdcchOrderIndication;
+            enum class NpdcchTimeOffset{
+                ms0,
+                ms4,// Only for R_max < 128
+                ms8,// Only for R_max < 128
+                ms12,// Only for R_max < 128
+                ms16,
+                ms32,
+                ms64,
+                ms128,
+                ms256, // Only for R_max >= 128
+                ms512, // Only for R_max >= 128
+                ms1024 // Only for R_max >= 128
+            } npdcchTimeOffset;
+            enum class DciRepetitions{
+                r1,
+                r2,
+                r4,
+                r8 // not sure about this value
+            } dciRepetitions; 
+            enum class NumNpdschSubframesPerRepetition{
+                s1,
+                s2,
+                s3,
+                s4,
+                s5,
+                s6,
+                s8,
+                s10
+            } numNpdschSubframesPerRepetition;
+            enum class NumNpdschRepetitions{
+                r1,
+                r2,
+                r4,
+                r8,
+                r16,
+                r32,
+                r64,
+                r128,
+                r192,
+                r256,
+                r384,
+                r512,
+                r768,
+                r1024,
+                r1536,
+                r2048
+            } numNpdschRepetitions;
+            enum class MCS{
+                one,
+                two,
+                three,
+                four,
+                five,
+                six,
+                seven,
+                eight,
+                nine,
+                ten,
+                eleven,
+                twelve
+            } mCS;
+            bool NDI;
+            uint8_t m_rapId;
+            HarqAckResource harqAckResource; 
+        };
+
+
+        struct DciN0{
+        };
+
+        static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)
+        {
+            double res = 0;
+            switch (nprachconfig.nprachCpLength)
+            {
+            case NprachConfig::NprachCpLength::us66dot7:
+                res = 0.0667;
+                break;
+
+            case NprachConfig::NprachCpLength::us266dot7:
+                res = 0.2666;
+                break;
+            default:
+                break;
+            }
+            return res;
+        }
+        static uint16_t ConvertNumRepetitionsPerPreambleAttempt2int(NprachParametersNb nprachParametersNb){
+            uint8_t res = 0;
+            switch(nprachParametersNb.numRepetitionsPerPreambleAttempt){
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1:
+                    res = 1;
+                    break;
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n2:
+                    res = 2;
+                    break;    
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n4:
+                    res = 4;
+                    break;
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8:
+                    res = 8;
+                    break;
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n16:
+                    res = 16;
+                    break;
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32:
+                    res = 32;
+                    break;
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n64:
+                    res = 64;
+                    break;               
+                case NprachParametersNb::NumRepetitionsPerPreambleAttempt::n128:
+                    res = 128;
+                    break;               
+                default:
+                    break;
+             }
+            return res;
+        }
         static double ConvertChannelRasterOffsetNb2Double (ChannelRasterOffsetNb channelRasterOffset)
         {
             double res = 0;
@@ -531,7 +676,244 @@ class NbIotRrcSap{
             return res;
         }
 
-
+        static uint8_t ConvertNprachNumSubcarriers2int (NprachParametersNb nprachParametersNb){
+            uint8_t res = 0;
+            switch(nprachParametersNb.nprachNumSubcarriers){
+                case NprachParametersNb::NprachNumSubcarriers::n12:
+                    res = 12;
+                    break;
+                case NprachParametersNb::NprachNumSubcarriers::n24:
+                    res = 24;
+                    break;    
+                case NprachParametersNb::NprachNumSubcarriers::n36:
+                    res = 36;
+                    break;
+                case NprachParametersNb::NprachNumSubcarriers::n48:
+                    res = 48;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNprachPeriodicity2int (NprachParametersNb nprachParametersNb){
+            uint16_t res = 0;
+            switch(nprachParametersNb.nprachPeriodicity){
+                case NprachParametersNb::NprachPeriodicity::ms40:
+                    res = 40;
+                    break;
+                case NprachParametersNb::NprachPeriodicity::ms80:
+                    res = 80;
+                    break;    
+                case NprachParametersNb::NprachPeriodicity::ms160:
+                    res = 160;
+                    break;
+                case NprachParametersNb::NprachPeriodicity::ms240:
+                    res = 240;
+                    break;
+                case NprachParametersNb::NprachPeriodicity::ms320:
+                    res = 320;
+                    break;
+                case NprachParametersNb::NprachPeriodicity::ms640:
+                    res = 640;
+                    break;
+                case NprachParametersNb::NprachPeriodicity::ms1280:
+                    res = 1280;
+                    break;
+                case NprachParametersNb::NprachPeriodicity::ms2560:
+                    res = 2560;
+                    break;               
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertMaxNumPreambleAttemptCE2int (NprachParametersNb nprachParametersNb){
+            uint8_t res = 0;
+            switch(nprachParametersNb.maxNumPreambleAttemptCE){
+                case NprachParametersNb::MaxNumPreambleAttemptCE::n3:
+                    res = 3;
+                    break;
+                case NprachParametersNb::MaxNumPreambleAttemptCE::n4:
+                    res = 4;
+                    break;    
+                case NprachParametersNb::MaxNumPreambleAttemptCE::n5:
+                    res = 5;
+                    break;
+                case NprachParametersNb::MaxNumPreambleAttemptCE::n6:
+                    res = 6;
+                    break;
+                case NprachParametersNb::MaxNumPreambleAttemptCE::n7:
+                    res = 7;
+                    break;
+                case NprachParametersNb::MaxNumPreambleAttemptCE::n8:
+                    res = 8;
+                    break;
+                case NprachParametersNb::MaxNumPreambleAttemptCE::n10:
+                    res = 10;
+                    break;               
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNprachStartTime2int (NprachParametersNb nprachParametersNb){
+            uint16_t res = 0;
+            switch(nprachParametersNb.nprachStartTime){
+                case NprachParametersNb::NprachStartTime::ms8:
+                    res = 8;
+                    break;
+                case NprachParametersNb::NprachStartTime::ms16:
+                    res = 16;
+                    break;    
+                case NprachParametersNb::NprachStartTime::ms32:
+                    res = 32;
+                    break;
+                case NprachParametersNb::NprachStartTime::ms64:
+                    res = 64;
+                    break;
+                case NprachParametersNb::NprachStartTime::ms128:
+                    res = 128;
+                    break;
+                case NprachParametersNb::NprachStartTime::ms256:
+                    res = 256;
+                    break;
+                case NprachParametersNb::NprachStartTime::ms512:
+                    res = 512;
+                    break;               
+                case NprachParametersNb::NprachStartTime::ms1024:
+                    res = 1024;
+                    break;               
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNprachSubcarrierOffset2int (NprachParametersNb nprachParametersNb){
+            uint8_t res = 0;
+            switch(nprachParametersNb.nprachSubcarrierOffset){
+                case NprachParametersNb::NprachSubcarrierOffset::n0:
+                    res = 0;
+                    break;
+                case NprachParametersNb::NprachSubcarrierOffset::n2:
+                    res = 2;
+                    break;
+                case NprachParametersNb::NprachSubcarrierOffset::n12:
+                    res = 12;
+                    break;
+                case NprachParametersNb::NprachSubcarrierOffset::n18:
+                    res = 18;
+                    break;
+                case NprachParametersNb::NprachSubcarrierOffset::n24:
+                    res = 24;
+                    break;
+                case NprachParametersNb::NprachSubcarrierOffset::n34:
+                    res = 34;
+                    break;
+                case NprachParametersNb::NprachSubcarrierOffset::n36:
+                    res = 36;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNpdcchNumRepetitionsRa2int (NprachParametersNb nprachParametersNb){
+            uint16_t res = 0;
+            switch(nprachParametersNb.npdcchNumRepetitionsRA){
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r1:
+                    res = 1;
+                    break;
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r2:
+                    res = 2;
+                    break;    
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r4:
+                    res = 4;
+                    break;
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r8:
+                    res = 8;
+                    break;
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r16:
+                    res = 16;
+                    break;
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r32:
+                    res = 32;
+                    break;
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r64:
+                    res = 64;
+                    break;               
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r128:
+                    res = 128;
+                    break;               
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r256:
+                    res = 256;
+                    break;               
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r512:
+                    res = 512;
+                    break;               
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r1024:
+                    res = 1024;
+                    break;               
+                case NprachParametersNb::NpdcchNumRepetitionsRA::r2048:
+                    res = 2048;
+                    break;               
+                default:
+                    break;
+             }
+            return res;
+        }
+        static double ConvertNpdcchStartSfCssRa2double (NprachParametersNb nprachParametersNb){
+            double res = 0;
+            switch(nprachParametersNb.npdcchStartSfCssRa){
+                case NprachParametersNb::NpdcchStartSfCssRa::v1dot5:
+                    res = 1.5;
+                    break;
+                case NprachParametersNb::NpdcchStartSfCssRa::v2:
+                    res = 2;
+                    break;
+                case NprachParametersNb::NpdcchStartSfCssRa::v4:
+                    res = 4;
+                    break;
+                case NprachParametersNb::NpdcchStartSfCssRa::v8:
+                    res = 8;
+                    break;
+                case NprachParametersNb::NpdcchStartSfCssRa::v16:
+                    res = 16;
+                    break;
+                case NprachParametersNb::NpdcchStartSfCssRa::v32:
+                    res = 32;
+                    break;
+                case NprachParametersNb::NpdcchStartSfCssRa::v48:
+                    res = 48;
+                    break;
+                case NprachParametersNb::NpdcchStartSfCssRa::v64:
+                    res = 64;
+                    break;              
+                default:
+                    break;
+             }
+            return res;
+        }
+        static double ConvertNpdcchOffsetRa2double (NprachParametersNb nprachParametersNb){
+            double res = 0;
+            switch(nprachParametersNb.npdcchOffsetRa){
+                case NprachParametersNb::NpdcchOffsetRa::zero:
+                    res = 0;
+                    break;
+                case NprachParametersNb::NpdcchOffsetRa::oneEighth:
+                    res = 0.125;
+                    break;
+                case NprachParametersNb::NpdcchOffsetRa::oneFourth:
+                    res = 0.25;
+                    break;
+                case NprachParametersNb::NpdcchOffsetRa::threeEighth:
+                    res = 0.375;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
         static double ConvertNrsCrsPowerOffset2Double (NrsCrsPowerOffsetNb nrsCrsPowerOffset)
         {
             double res = 0;
@@ -604,6 +986,156 @@ class NbIotRrcSap{
             default:
                 break;
             }
+            return res;
+        }
+    static uint16_t ConvertNpdcchTimeOffset2int (DciN1 dci){
+            uint16_t res = 0;
+            switch(dci.npdcchTimeOffset){
+                case DciN1::NpdcchTimeOffset::ms0:
+                    res = 0;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms4:
+                    res = 4;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms8:
+                    res = 8;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms12:
+                    res = 12;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms16:
+                    res = 16;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms32:
+                    res = 32;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms64:
+                    res = 64;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms128:
+                    res = 128;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms256:
+                    res = 256;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms512:
+                    res = 512;
+                    break;
+                case DciN1::NpdcchTimeOffset::ms1024:
+                    res = 1024;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint8_t ConvertDciRepetitions2int (DciN1 dci){
+            uint8_t res = 0;
+            switch(dci.dciRepetitions){
+                case DciN1::DciRepetitions::r1:
+                    res = 1;
+                    break;
+                case DciN1::DciRepetitions::r2:
+                    res = 2;
+                    break;
+                case DciN1::DciRepetitions::r4:
+                    res = 4;
+                    break;
+                case DciN1::DciRepetitions::r8:
+                    res = 4;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNumNpdschRepetitions2int (DciN1 dci){
+            uint16_t res = 0;
+            switch(dci.numNpdschRepetitions){
+                case DciN1::NumNpdschRepetitions::r1:
+                    res = 1;
+                    break;
+                case DciN1::NumNpdschRepetitions::r2:
+                    res = 2;
+                    break;
+                case DciN1::NumNpdschRepetitions::r4:
+                    res = 4;
+                    break;
+                case DciN1::NumNpdschRepetitions::r8:
+                    res = 8;
+                    break;
+                case DciN1::NumNpdschRepetitions::r16:
+                    res = 16;
+                    break;
+                case DciN1::NumNpdschRepetitions::r32:
+                    res = 32;
+                    break;
+                case DciN1::NumNpdschRepetitions::r64:
+                    res = 64;
+                    break;
+                case DciN1::NumNpdschRepetitions::r128:
+                    res = 128;
+                    break;
+                case DciN1::NumNpdschRepetitions::r192:
+                    res = 192;
+                    break;
+                case DciN1::NumNpdschRepetitions::r256:
+                    res = 256;
+                    break;
+                case DciN1::NumNpdschRepetitions::r384:
+                    res = 384;
+                    break;
+                case DciN1::NumNpdschRepetitions::r512:
+                    res = 512;
+                    break;
+                case DciN1::NumNpdschRepetitions::r768:
+                    res = 768;
+                    break;
+                case DciN1::NumNpdschRepetitions::r1024:
+                    res = 1024;
+                    break;
+                case DciN1::NumNpdschRepetitions::r1536:
+                    res = 1536;
+                    break;
+                case DciN1::NumNpdschRepetitions::r2048:
+                    res = 2048;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+    static uint8_t ConvertNumNpdschSubframesPerRepetition2int (DciN1 dci){
+            uint8_t res = 0;
+            switch(dci.numNpdschSubframesPerRepetition){
+                case DciN1::NumNpdschSubframesPerRepetition::s1:
+                    res = 1;
+                    break;
+                case DciN1::NumNpdschSubframesPerRepetition::s2:
+                    res = 2;
+                    break;
+                case DciN1::NumNpdschSubframesPerRepetition::s3:
+                    res = 3;
+                    break;
+                case DciN1::NumNpdschSubframesPerRepetition::s4:
+                    res = 4;
+                    break;
+                case DciN1::NumNpdschSubframesPerRepetition::s5:
+                    res = 5;
+                    break;
+                case DciN1::NumNpdschSubframesPerRepetition::s6:
+                    res = 6;
+                    break;
+                case DciN1::NumNpdschSubframesPerRepetition::s8:
+                    res = 8;
+                    break;
+                case DciN1::NumNpdschSubframesPerRepetition::s10:
+                    res = 10;
+                    break;
+            
+                default:
+                    break;
+             }
             return res;
         }
 
