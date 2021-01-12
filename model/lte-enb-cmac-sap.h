@@ -244,6 +244,8 @@ public:
    * \return true if the random access in connected mode is completed
    */
   virtual bool IsRandomAccessCompleted (uint16_t rnti) = 0;
+
+  virtual NbIotRrcSap::SystemInformationBlockType2Nb GetCurrentSystemInformationBlockType2Nb() = 0;
 };
 
 

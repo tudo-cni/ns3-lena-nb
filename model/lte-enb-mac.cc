@@ -279,7 +279,7 @@ public:
   virtual void SubframeIndication (uint32_t frameNo, uint32_t subframeNo);
   virtual void ReceiveLteControlMessage (Ptr<LteControlMessage> msg);
   virtual void ReceiveRachPreamble (uint32_t prachId);
-  virtual void ReceiveNprachPreamble (uint32_t prachId);
+  virtual void ReceiveNprachPreamble (uint32_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
   virtual void UlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi);
   virtual void UlInfoListElementHarqFeeback (UlInfoListElement_s params);
   virtual void DlInfoListElementHarqFeeback (DlInfoListElement_s params);
@@ -318,9 +318,9 @@ EnbMacMemberLteEnbPhySapUser::ReceiveRachPreamble (uint32_t prachId)
 }
 
 void
-EnbMacMemberLteEnbPhySapUser::ReceiveNprachPreamble (uint32_t prachId)
+EnbMacMemberLteEnbPhySapUser::ReceiveNprachPreamble (uint32_t prachId, uint8_t subcarrierOffset, uint32_t ranti)
 {
-  m_mac->DoReceiveNprachPreamble (prachId);
+  m_mac->DoReceiveNprachPreamble (prachId, subcarrierOffset, ranti);
 }
 void
 EnbMacMemberLteEnbPhySapUser::UlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi)
@@ -402,6 +402,7 @@ m_ccmMacSapUser (0)
   m_cschedSapUser = new EnbMacMemberFfMacCschedSapUser (this);
   m_enbPhySapUser = new EnbMacMemberLteEnbPhySapUser (this);
   m_ccmMacSapProvider = new MemberLteCcmMacSapProvider<LteEnbMac> (this);
+  m_schedulerNb = new NbiotScheduler();
 }
 
 
@@ -520,6 +521,268 @@ LteEnbMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
   m_subframeNo = subframeNo;
 
 
+  // --- DOWNLINK ---
+  // Send Dl-CQI info to the scheduler
+  if (m_dlCqiReceived.size () > 0)
+    {
+      FfMacSchedSapProvider::SchedDlCqiInfoReqParameters dlcqiInfoReq;
+      dlcqiInfoReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
+      dlcqiInfoReq.m_cqiList.insert (dlcqiInfoReq.m_cqiList.begin (), m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
+      m_dlCqiReceived.erase (m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
+      m_schedSapProvider->SchedDlCqiInfoReq (dlcqiInfoReq);
+    }
+
+  if (!m_receivedRachPreambleCount.empty())
+    {
+      // process received RACH preambles and notify the scheduler
+      FfMacSchedSapProvider::SchedDlRachInfoReqParameters rachInfoReqParams;
+      NS_ASSERT (subframeNo > 0 && subframeNo <= 10); // subframe in 1..10
+      for (std::map<uint8_t, uint32_t>::const_iterator it = m_receivedRachPreambleCount.begin ();
+           it != m_receivedRachPreambleCount.end ();
+           ++it)
+        {
+          NS_LOG_INFO (this << " preambleId " << (uint32_t) it->first << ": " << it->second << " received");
+          NS_ASSERT (it->second != 0);
+          if (it->second > 1)
+            {
+              NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": collision");
+              // in case of collision we assume that no preamble is
+              // successfully received, hence no RAR is sent 
+            }
+          else
+            {
+              uint16_t rnti;
+              std::map<uint8_t, NcRaPreambleInfo>::iterator jt = m_allocatedNcRaPreambleMap.find (it->first);
+              if (jt != m_allocatedNcRaPreambleMap.end ())
+                {
+                  rnti = jt->second.rnti;
+                  NS_LOG_INFO ("preambleId previously allocated for NC based RA, RNTI =" << (uint32_t) rnti << ", sending RAR");
+                  
+                }
+              else
+                {
+                  rnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
+                  NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": allocated T-C-RNTI " << (uint32_t) rnti << ", sending RAR");
+                }
+
+              RachListElement_s rachLe;
+              rachLe.m_rnti = rnti;
+              rachLe.m_estimatedSize = 144; // to be confirmed
+              rachInfoReqParams.m_rachList.push_back (rachLe);
+              m_rapIdRntiMap.insert (std::pair <uint16_t, uint32_t> (rnti, it->first));
+            }
+        }
+      m_schedSapProvider->SchedDlRachInfoReq (rachInfoReqParams);
+      m_receivedRachPreambleCount.clear ();
+    }
+  // Get downlink transmission opportunities
+  uint32_t dlSchedFrameNo = m_frameNo;
+  uint32_t dlSchedSubframeNo = m_subframeNo;
+  // NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
+  if (dlSchedSubframeNo + m_macChTtiDelay > 10)
+    {
+      dlSchedFrameNo++;
+      dlSchedSubframeNo = (dlSchedSubframeNo + m_macChTtiDelay) % 10;
+    }
+  else
+    {
+      dlSchedSubframeNo = dlSchedSubframeNo + m_macChTtiDelay;
+    }
+  FfMacSchedSapProvider::SchedDlTriggerReqParameters dlparams;
+  dlparams.m_sfnSf = ((0x3FF & dlSchedFrameNo) << 4) | (0xF & dlSchedSubframeNo);
+
+  // Forward DL HARQ feebacks collected during last TTI
+  if (m_dlInfoListReceived.size () > 0)
+    {
+      dlparams.m_dlInfoList = m_dlInfoListReceived;
+      // empty local buffer
+      m_dlInfoListReceived.clear ();
+    }
+
+  m_schedSapProvider->SchedDlTriggerReq (dlparams);
+
+
+  // --- UPLINK ---
+  // Send UL-CQI info to the scheduler
+  for (uint16_t i = 0; i < m_ulCqiReceived.size (); i++)
+    {
+      if (subframeNo > 1)
+        {        
+          m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & (subframeNo - 1));
+        }
+      else
+        {
+          m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & (frameNo - 1)) << 4) | (0xF & 10);
+        }
+      m_schedSapProvider->SchedUlCqiInfoReq (m_ulCqiReceived.at (i));
+    }
+    m_ulCqiReceived.clear ();
+  
+  // Send BSR reports to the scheduler
+  if (m_ulCeReceived.size () > 0)
+    {
+      FfMacSchedSapProvider::SchedUlMacCtrlInfoReqParameters ulMacReq;
+      ulMacReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
+      ulMacReq.m_macCeList.insert (ulMacReq.m_macCeList.begin (), m_ulCeReceived.begin (), m_ulCeReceived.end ());
+      m_ulCeReceived.erase (m_ulCeReceived.begin (), m_ulCeReceived.end ());
+      m_schedSapProvider->SchedUlMacCtrlInfoReq (ulMacReq);
+    }
+
+
+  // Get uplink transmission opportunities
+  uint32_t ulSchedFrameNo = m_frameNo;
+  uint32_t ulSchedSubframeNo = m_subframeNo;
+  //   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
+  if (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY) > 10)
+    {
+      ulSchedFrameNo++;
+      ulSchedSubframeNo = (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY)) % 10;
+    }
+  else
+    {
+      ulSchedSubframeNo = ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY);
+    }
+  FfMacSchedSapProvider::SchedUlTriggerReqParameters ulparams;
+  ulparams.m_sfnSf = ((0x3FF & ulSchedFrameNo) << 4) | (0xF & ulSchedSubframeNo);
+
+  // Forward DL HARQ feebacks collected during last TTI
+  if (m_ulInfoListReceived.size () > 0)
+    {
+     ulparams.m_ulInfoList = m_ulInfoListReceived;
+      // empty local buffer
+      m_ulInfoListReceived.clear ();
+    }
+
+  m_schedSapProvider->SchedUlTriggerReq (ulparams);
+
+}
+
+void LteEnbMac::CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce){
+  std::map<uint8_t, uint32_t> receivedNprachs;
+  uint8_t subcarrierOffset = NbIotRrcSap::ConvertNprachSubcarrierOffset2int(ce);
+  uint8_t numberPreambles = NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(ce);
+
+  receivedNprachs = m_receivedNprachPreambleCount[subcarrierOffset];
+  for(std::map<uint8_t, uint32_t>::iterator iter= receivedNprachs.begin(); iter != receivedNprachs.end(); ++iter){
+    if(iter->second == numberPreambles){ // sanity check. Actually should be always equal
+
+      std::cout << "Preamble received of offset " << int(subcarrierOffset) << " at Subframe " << (10*(m_frameNo-1)+(m_subframeNo-1)) <<  "\n";
+      NpdcchMessage rar;
+      //int rnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
+
+      rar.npdcchFormat = NpdcchMessage::NpdcchFormat::format1;
+      rar.dciType = NpdcchMessage::DciType::n1;
+      rar.searchSpaceType = NpdcchMessage::SearchSpaceType::type2;
+      // Dci set depending on coverage level.... yet static 
+      rar.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r1;
+      rar.dciN1.m_rapId = subcarrierOffset+iter->first;
+      rar.dciN1.numNpdschSubframesPerRepetition = NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
+      rar.dciN1.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
+      rar.ue.ce = ce;
+      rar.ue.ranti = m_rapIdRntiMap[subcarrierOffset+iter->first];
+      m_schedulerNb->ScheduleNpdcchMessageReq(rar);
+      m_receivedNprachPreambleCount[subcarrierOffset].erase(iter->first);
+
+    }
+  }
+}
+
+void LteEnbMac::VerySimpleNbiotDownlinkScheduler(){
+  //bool isCe0SearchSpace = false;
+  uint32_t searchSpacePeriodicityce0 = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int(m_ce0Parameter) * NbIotRrcSap::ConvertNpdcchStartSfCssRa2double(m_ce0Parameter);
+  uint32_t searchSpaceConditionLeftSidece0 = (10*(m_frameNo -1) + (m_subframeNo-1)) % searchSpacePeriodicityce0;
+  uint32_t searchSpaceConditionRightSidece0 = NbIotRrcSap::ConvertNpdcchOffsetRa2double(m_ce0Parameter) * searchSpacePeriodicityce0;
+  int8_t subcarrieroffset = NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_ce0Parameter);
+  if (searchSpaceConditionLeftSidece0 == searchSpaceConditionRightSidece0){
+    // IS CE1 SEACH SPACE
+    m_SearchSpaceType2C0 = true;
+    m_SearchSpaceType2C0SfBegin = 0;
+
+    if (m_DlDcis[subcarrieroffset].size() > 0){
+        Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage>();
+        msg->SetDci(*(m_DlDcis[subcarrieroffset].begin()));
+        m_enbPhySapProvider->SendLteControlMessage (msg);
+        m_currentRepetitions = R-1;
+    }
+
+  }else if (m_SearchSpaceType2C0 && (m_currentRepetitions >0)){
+    if (m_DlDcis[subcarrieroffset].size() > 0){
+        Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage>();
+        msg->SetDci(*(m_DlDcis[subcarrieroffset].begin()));
+        m_enbPhySapProvider->SendLteControlMessage (msg);
+        m_currentRepetitions--;
+
+    }
+  }
+ // else if ((m_SearchSpaceType2C0SfBegin + R ==  && m_SearchSpaceType2C0 && (m_currentRepetitions==0)){
+ //   m_DlDcis[subcarrieroffset].erase(m_DlDcis[subcarrieroffset].begin());
+ //   if (m_DlDcis[subcarrieroffset].size() > 0){
+ //       Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage>();
+ //       msg->SetDci(*(m_DlDcis[subcarrieroffset].begin()));
+ //       m_enbPhySapProvider->SendLteControlMessage (msg);
+ //       m_currentRepetitions = R-1;
+ //   }else{
+ //     std::cout << "No DCI to send" << std::endl;
+ //   }
+ // }
+  if (m_SearchSpaceType2C0){
+    m_SearchSpaceType2C0SfBegin++;
+  }
+  // CE1 Type2
+  //bool isCe1SearchSpace = false;
+  uint32_t searchSpacePeriodicityce1 = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int(m_ce1Parameter) * NbIotRrcSap::ConvertNpdcchStartSfCssRa2double(m_ce1Parameter);
+  uint32_t searchSpaceConditionLeftSidece1 = (10*(m_frameNo -1) + (m_subframeNo-1)) % searchSpacePeriodicityce1;
+  uint32_t searchSpaceConditionRightSidece1 = NbIotRrcSap::ConvertNpdcchOffsetRa2double(m_ce1Parameter) * searchSpacePeriodicityce1;
+  if (searchSpaceConditionLeftSidece1 == searchSpaceConditionRightSidece1){
+  }
+
+  // CE2 Type 2
+  //bool isCe2SearchSpace = false;
+  uint32_t searchSpacePeriodicityce2 = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int(m_ce2Parameter) * NbIotRrcSap::ConvertNpdcchStartSfCssRa2double(m_ce2Parameter);
+  uint32_t searchSpaceConditionLeftSidece2 = (10*(m_frameNo -1) + (m_subframeNo-1)) % searchSpacePeriodicityce2;
+  uint32_t searchSpaceConditionRightSidece2 = NbIotRrcSap::ConvertNpdcchOffsetRa2double(m_ce2Parameter) * searchSpacePeriodicityce2;
+  if (searchSpaceConditionLeftSidece2 == searchSpaceConditionRightSidece2){
+
+  }
+
+
+}
+
+void
+LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
+{
+  NS_LOG_FUNCTION (this << " EnbMac - frame " << frameNo << " subframe " << subframeNo);
+ 
+  m_frameNo = frameNo;
+  m_subframeNo = subframeNo;
+
+  // Implement NB-IoT DCI Searchspaces Type2-CSS All AL2  Liberg et al. p 282
+  // Find out if current subframe is start of Type2/UE-specific search space
+  // A Tutorial to NB-IoT Design zeugs 
+  m_sib2Nb = m_cmacSapUser->GetCurrentSystemInformationBlockType2Nb();
+  m_ce0Parameter = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0;
+  m_ce1Parameter = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1;
+  m_ce2Parameter = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2;
+  CheckIfPreambleWasReceived(m_ce0Parameter);
+  CheckIfPreambleWasReceived(m_ce1Parameter);
+  CheckIfPreambleWasReceived(m_ce2Parameter);
+  m_schedulerNb->SetCeLevel(m_ce0Parameter, m_ce1Parameter, m_ce2Parameter);
+  std::vector<NpdcchMessage> scheduled = m_schedulerNb->Schedule(frameNo,subframeNo);
+
+  for(std::vector<NpdcchMessage>::iterator it = scheduled.begin(); it != scheduled.end(); ++it){
+    for(size_t i = 0; i < it->dciRepetitionsubframes.size(); ++i){
+      int currentsubframe = 10*(m_frameNo-1)+(m_subframeNo-1);
+      if( it->dciType == NpdcchMessage::DciType::n1){
+      Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage> ();
+      msg->SetDci(it->dciN1);
+      msg->SetRanti(it->ue.ranti);
+      int subframestowait = it->dciRepetitionsubframes[i] - currentsubframe;
+      Simulator::Schedule(MilliSeconds(subframestowait), &LteEnbPhySapProvider::SendLteControlMessage, m_enbPhySapProvider, msg);
+      }
+    }
+  }
+
+  // CE0 Type2
   // --- DOWNLINK ---
   // Send Dl-CQI info to the scheduler
   if (m_dlCqiReceived.size () > 0)
@@ -690,11 +953,13 @@ LteEnbMac::DoReceiveRachPreamble  (uint8_t rapId)
   ++m_receivedRachPreambleCount[rapId]; // will create entry if not exists
 }
 void
-LteEnbMac::DoReceiveNprachPreamble  (uint8_t rapId)
+LteEnbMac::DoReceiveNprachPreamble  (uint8_t rapId, uint8_t subcarrierOffset, uint32_t ranti)
 {
   NS_LOG_FUNCTION (this << (uint32_t) rapId);
   // just record that the preamble has been received; it will be processed later
-  ++m_receivedNprachPreambleCount[rapId]; // will create entry if not exists
+
+  ++(m_receivedNprachPreambleCount[subcarrierOffset][rapId]); // will create entry if not exists
+  m_rapIdRntiMap[subcarrierOffset+rapId]=ranti;
 }
 
 void
