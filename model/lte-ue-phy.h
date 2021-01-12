@@ -651,7 +651,7 @@ private:
    * \param prachId the RACH preamble ID
    * \param raRnti the rnti
    */
-  virtual void DoSendNprachPreamble (uint32_t prachId, uint32_t raRnti);
+  virtual void DoSendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset);
   /**
    * \brief Notify PHY about the successful RRC connection
    * establishment.
