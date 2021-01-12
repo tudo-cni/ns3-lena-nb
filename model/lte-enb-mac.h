@@ -40,6 +40,7 @@
 #include <ns3/packet-burst.h>
 #include <ns3/lte-ccm-mac-sap.h>
 #include "nb-iot-rrc-sap.h"
+#include "nb-iot-scheduler.h"
 
 namespace ns3 {
 
@@ -338,6 +339,12 @@ private:
   */
   void DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo);
   /**
+  * \brief Subrame Indication function
+  * \param frameNo frame number
+  * \param subframeNo subframe number
+  */
+  void DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo);
+  /**
   * \brief Receive RACH Preamble function
   * \param prachId PRACH ID number
   */
@@ -346,7 +353,7 @@ private:
   * \brief Receive RACH Preamble function
   * \param prachId PRACH ID number
   */
-  void DoReceiveNprachPreamble (uint8_t prachId);
+  void DoReceiveNprachPreamble (uint8_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
   // forwarded by LteCcmMacSapProvider
   /**
    * Report MAC CE to scheduler
@@ -365,6 +372,9 @@ private:
     NS_UNUSED (rnti);
   }
   
+  void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
+  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce);
+  void VerySimpleNbiotDownlinkScheduler();
 public:
   /**
    * legacy public for use the Phy callback
@@ -421,6 +431,8 @@ private:
   // Sap For ComponentCarrierManager 'Uplink case'
   LteCcmMacSapProvider* m_ccmMacSapProvider; ///< CCM MAC SAP provider
   LteCcmMacSapUser* m_ccmMacSapUser; ///< CCM MAC SAP user
+
+  NbiotScheduler* m_schedulerNb;
   /**
    * frame number of current subframe indication
    */
@@ -478,13 +490,26 @@ private:
   std::map<uint8_t, NcRaPreambleInfo> m_allocatedNcRaPreambleMap;
  
   std::map<uint8_t, uint32_t> m_receivedRachPreambleCount; ///< received RACH preamble count
-  std::map<uint8_t, uint32_t> m_receivedNprachPreambleCount; 
+  std::map<uint8_t, std::map<uint8_t, uint32_t>> m_receivedNprachPreambleCount;
 
   std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
 
   /// component carrier Id used to address sap
   uint8_t m_componentCarrierId;
- 
+  std::map<uint8_t, std::vector<NbIotRrcSap::DciN1>> m_DlDcis;
+  NbIotRrcSap::SystemInformationBlockType2Nb m_sib2Nb;
+  NbIotRrcSap::NprachParametersNb m_ce0Parameter;
+  NbIotRrcSap::NprachParametersNb m_ce1Parameter;
+  NbIotRrcSap::NprachParametersNb m_ce2Parameter;
+  bool m_SearchSpaceType2C0;
+  bool m_SearchSpaceType2C1;
+  bool m_SearchSpaceType2C2;
+  uint32_t m_SearchSpaceType2C0SfBegin;
+  uint32_t m_SearchSpaceType2C1SfBegin;
+  uint32_t m_SearchSpaceType2C2SfBegin;
+  uint32_t m_currentRepetitions; 
+  uint8_t R;
+  std::vector<Ptr<LteControlMessage>> m_hyperframe;
 };
 
 } // end namespace ns3
