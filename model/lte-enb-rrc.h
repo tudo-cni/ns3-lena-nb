@@ -1468,6 +1468,7 @@ private:
    */
   void SendSystemInformationNb ();
 
+  NbIotRrcSap::SystemInformationBlockType2Nb DoGetCurrentSystemInformationBlockType2Nb();
 
   Callback <void, Ptr<Packet> > m_forwardUpCallback;  ///< forward up callback function
 
@@ -1535,6 +1536,7 @@ private:
   /// The System Information Block Type 1 that is currently broadcasted over BCH.
   std::vector<LteRrcSap::SystemInformationBlockType1> m_sib1;
   std::vector<NbIotRrcSap::SystemInformationBlockType1Nb> m_sib1Nb;
+  std::vector<NbIotRrcSap::SystemInformationBlockType2Nb> m_sib2Nb;
 
   /**
    * The `UeMap` attribute. List of UeManager by C-RNTI.

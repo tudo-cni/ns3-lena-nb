@@ -74,6 +74,7 @@ public:
   virtual void NotifyLcConfigResult (uint16_t rnti, uint8_t lcid, bool success);
   virtual void RrcConfigurationUpdateInd (UeConfig params);
   virtual bool IsRandomAccessCompleted (uint16_t rnti);
+  virtual NbIotRrcSap::SystemInformationBlockType2Nb GetCurrentSystemInformationBlockType2Nb();
 
 private:
   LteEnbRrc* m_rrc; ///< the RRC
@@ -110,6 +111,10 @@ EnbRrcMemberLteEnbCmacSapUser::IsRandomAccessCompleted (uint16_t rnti)
   return m_rrc->IsRandomAccessCompleted (rnti);
 }
 
+NbIotRrcSap::SystemInformationBlockType2Nb
+EnbRrcMemberLteEnbCmacSapUser::GetCurrentSystemInformationBlockType2Nb(){
+  return m_rrc->DoGetCurrentSystemInformationBlockType2Nb();
+}
 
 
 ///////////////////////////////////////////
@@ -2223,7 +2228,6 @@ LteEnbRrc::ConfigureCell (std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> cc
   m_ueMeasConfig.haveMeasGapConfig = false;
   m_ueMeasConfig.haveSmeasure = false;
   m_ueMeasConfig.haveSpeedStatePars = false;
-
   if (m_legacy_lte){
     m_sib1.clear ();
     m_sib1.reserve (ccPhyConf.size ());
@@ -3160,6 +3164,9 @@ LteEnbRrc::SendSystemInformationNb ()
       si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
       si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
       si.sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
+
+      m_sib2Nb.push_back(si.sib2);
+      
       m_rrcSapUser->SendSystemInformationNb (it.second->GetCellId (), si);
     }
 
@@ -3170,6 +3177,60 @@ LteEnbRrc::SendSystemInformationNb ()
   Simulator::Schedule (m_systemInformationPeriodicity, &LteEnbRrc::SendSystemInformationNb, this);
 }
 
+//bool LteEnbRrc::IsSystemInformationBlock2NbAvailable(){
+//  if (m_sib2Nb.size()>0){
+//    return true;
+//  }
+//    return false;
+//}
+NbIotRrcSap::SystemInformationBlockType2Nb LteEnbRrc::DoGetCurrentSystemInformationBlockType2Nb(){
+  if (m_sib2Nb.size() == 0){
+      NbIotRrcSap::NprachParametersNb ce0;
+      ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+      ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+      ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
+      ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
+      ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+      ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+      NbIotRrcSap::NprachParametersNb ce1;
+      ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+      ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
+      ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
+      ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
+      ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
+      ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+
+      NbIotRrcSap::NprachParametersNb ce2;
+      ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
+      ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
+      ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32;
+      ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
+      ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
+      ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+
+      NbIotRrcSap::SystemInformationBlockType2Nb placeholder;
+      placeholder.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
+      placeholder.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
+      placeholder.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
+      m_sib2Nb.push_back(placeholder);
+  }
+  return m_sib2Nb.back();
+}
 
 bool
 LteEnbRrc::IsRandomAccessCompleted (uint16_t rnti)
