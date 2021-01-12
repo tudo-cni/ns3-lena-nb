@@ -371,6 +371,70 @@ NprachPreambleNbiotControlMessage::GetRapId () const
 {
   return m_rapId;
 }
+void
+NprachPreambleNbiotControlMessage::SetSubcarrierOffset (uint8_t subcarrierOffset)
+{
+  m_subcarrierOffset = subcarrierOffset;
+}
+
+uint8_t 
+NprachPreambleNbiotControlMessage::GetSubcarrierOffset() const
+{
+  return m_subcarrierOffset;
+}
+void
+NprachPreambleNbiotControlMessage::SetRanti(uint32_t ranti)
+{
+  m_ranti= ranti;
+}
+
+uint32_t 
+NprachPreambleNbiotControlMessage::GetRanti() const
+{
+  return m_ranti;
+}
+// ----------------------------------------------------------------------------------------------------------
+
+
+DlDciN1NbiotControlMessage::DlDciN1NbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::DL_DCI_NB);
+}
+
+
+DlDciN1NbiotControlMessage::~DlDciN1NbiotControlMessage (void)
+{
+
+}
+
+void
+DlDciN1NbiotControlMessage::SetDci (NbIotRrcSap::DciN1 dci)
+{
+  m_dci = dci;
+
+}
+
+
+NbIotRrcSap::DciN1
+DlDciN1NbiotControlMessage::GetDci (void)
+{
+  return m_dci;
+}
+
+void
+DlDciN1NbiotControlMessage::SetRanti (uint32_t ranti)
+{
+  m_ranti = ranti;
+
+}
+
+
+uint32_t
+DlDciN1NbiotControlMessage::GetRanti (void)
+{
+  return m_ranti;
+}
+
 
 
 

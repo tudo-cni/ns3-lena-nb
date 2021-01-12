@@ -66,6 +66,7 @@ public:
     MIB_NB,
     SIB1_NB,
     SIB2_NB,
+    DL_DCI_NB, UL_DCI_NB, // Downlink/Uplink Data Control Indicator
     NPRACH_PREAMBLE
   };
 
@@ -545,20 +546,48 @@ public:
    * \param rapid the RAPID
    */
   void SetRapId (uint8_t rapid);
+  void SetSubcarrierOffset (uint8_t subcarrierOffset); // used so the eNB knows in which CE-Level the UE is
+  void SetRanti (uint32_t ranti); // used so the eNB knows in which CE-Level the UE is
   
   /** 
    * 
    * \return the RAPID
    */
   uint8_t GetRapId () const;
+  uint8_t GetSubcarrierOffset () const;
+  uint32_t GetRanti() const;
 
 private:
   uint8_t m_rapId; ///< the RAPID
+  uint8_t m_subcarrierOffset;
+  uint32_t m_ranti;
 
 };
 
+class DlDciN1NbiotControlMessage : public LteControlMessage
+{
+public:
+  DlDciN1NbiotControlMessage (void);
+  virtual ~DlDciN1NbiotControlMessage (void);
 
+  /**
+  * \brief add a DCI into the message
+  * \param dci the dci
+  */
+  void SetDci (NbIotRrcSap::DciN1 dci);
+  void SetRanti (uint32_t ranti);
 
+  /**
+  * \brief Get dic information
+  * \return dci messages
+  */
+  NbIotRrcSap::DciN1 GetDci (void);
+  uint32_t GetRanti (void);
+
+private:
+  NbIotRrcSap::DciN1 m_dci; ///< DCI
+  uint32_t m_ranti;
+};
 
 } // namespace ns3
 
