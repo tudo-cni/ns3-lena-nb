@@ -633,13 +633,14 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   m_preambleTransmissionCounterCe = 0;
   // Check CE Level
   double rsrp = m_uePhySapProvider->GetRSRP();
+  std::cout << "RSRP: " << rsrp << "dBm" << "\n";
   if (rsrp < m_nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound){
     m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb2;
   }
-  if (rsrp  < m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+  else if (rsrp  < m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
     m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb1;
   }
-  if (rsrp > m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+  else if (rsrp > m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
     m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb0;
   }
   m_backoffParameter = 0;
