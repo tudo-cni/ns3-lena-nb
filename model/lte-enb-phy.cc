@@ -814,6 +814,33 @@ LteEnbPhy::StartSubFrame (void)
                   QueueUlDci (msg);
                 }
             }
+          else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
+            {
+              Ptr<RarNbiotControlMessage> rarMsg = DynamicCast<RarNbiotControlMessage> (msg);
+              for (std::list<RarNbiotControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
+                {
+                  
+                  NbIotRrcSap::UlGrant ulGrant = it->rarPayload.ulGrant;
+                  // translate the UL grant in a standard UL-DCI and queue it
+                  UlDciListElement_s dci;
+                  dci.m_rnti = it->cellRnti;
+                  dci.m_rbStart = 0;
+                  dci.m_rbLen = 1;
+                  dci.m_tbSize = 11;
+                  dci.m_ndi = 1;
+                  dci.m_mcs = 1;
+                  dci.m_hopping = false;
+                  dci.m_tpc = 20;
+                  dci.m_cqiRequest = false;
+                  UlDciLteControlMessage msg;
+                  msg.SetDci (dci);
+                  int subframetoawait= *(it->rarPayload.ulGrant.subframes.end()-1)-(10*(m_nrFrames-1)+(m_nrSubFrames-1));
+
+                  //std::cout << "Scheduling Expected TBs at " << *(it->rarPayload.ulGrant.subframes.end()-1) << "\n";
+                  Simulator::Schedule(MilliSeconds(subframetoawait+1),&LteEnbPhy::QueueUlDci,this, msg);
+                  QueueUlDci(msg);
+                }
+            }
           it++;
 
         }
