@@ -7,9 +7,10 @@ NS_LOG_COMPONENT_DEFINE ("NbiotScheduler");
 
 NS_OBJECT_ENSURE_REGISTERED (NbiotScheduler);
 
-NbiotScheduler::NbiotScheduler(){
+NbiotScheduler::NbiotScheduler(std::vector<NbIotRrcSap::NprachParametersNb> ces){
   m_DciTimeOffsetRmaxSmall.reserve(8);
   m_DciTimeOffsetRmaxBig.reserve(8);
+  m_Msg3TimeOffset.reserve(4);
 
   m_DciTimeOffsetRmaxSmall.insert(m_DciTimeOffsetRmaxSmall.begin(), {
     NbIotRrcSap::DciN1::NpdcchTimeOffset::ms0,
@@ -31,6 +32,12 @@ NbiotScheduler::NbiotScheduler(){
     NbIotRrcSap::DciN1::NpdcchTimeOffset::ms512,
     NbIotRrcSap::DciN1::NpdcchTimeOffset::ms1024
   });
+  m_Msg3TimeOffset.insert(m_Msg3TimeOffset.begin(),{
+    NbIotRrcSap::UlGrant::SchedulingDelay::ms12,
+    NbIotRrcSap::UlGrant::SchedulingDelay::ms16,
+    NbIotRrcSap::UlGrant::SchedulingDelay::ms32,
+    NbIotRrcSap::UlGrant::SchedulingDelay::ms64
+  });
 
   int numHyperframes = 1024;
   int numFrames = 1024;
@@ -47,7 +54,42 @@ NbiotScheduler::NbiotScheduler(){
       m_downlink[i] = -1; // NSSS
     }
   }
+  if (m_only15KhzSpacing){
+    m_uplink.resize(12, std::vector<int8_t>());
+    for(size_t i = 0; i < m_uplink.size(); ++i){
+      m_uplink[i].resize(numHyperframes*numFrames*numSubframes, 0);
+    }
+    for(std::vector<NbIotRrcSap::NprachParametersNb>::iterator it = ces.begin(); it != ces.end(); ++it){
+      int sendingTime = NbIotRrcSap::ConvertNprachStartTime2int(*it);
+      double ts = 1000.0/(15000.0*2048.0);
+      double preambleSymbolTime = 8192.0*ts;
+      double preambleGroupTimeNoCP = 5.0*preambleSymbolTime; 
+      double preambleGroupTime = 0.266+preambleGroupTimeNoCP;
+      double preambleRepetition = 4.0*preambleGroupTime;
+      double nprachduration = (NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(*it)*preambleRepetition);
+      std::cout << nprachduration << " asdasdfasfasfsf";
+      size_t subcarrierOffset = NbIotRrcSap::ConvertNprachSubcarrierOffset2int(*it);
+      uint8_t numberSubcarriers = NbIotRrcSap::ConvertNprachNumSubcarriers2int(*it);
+      double time_tmp = int(nprachduration)+1;
+
+      for(size_t i = 0; i < m_uplink[0].size()/400; ++i){
+
+        uint16_t window_condition = (i/10) % (NbIotRrcSap::ConvertNprachPeriodicity2int(*it)/10);
+        if(window_condition == 0){
+            i+=sendingTime;
+            for(size_t j = 0; j < time_tmp; ++j){
+              for(size_t k = 0; k < numberSubcarriers/4; ++k){
+                m_uplink[subcarrierOffset/4+k][i+j] = -1;
+              }
+            }
+          i+=time_tmp;
+        }
+      }
+      }
+
+    }
 }
+
 
 void
 NbiotScheduler::DoDispose ()
@@ -58,6 +100,7 @@ NbiotScheduler::DoDispose ()
 void NbiotScheduler::SetCeLevel(NbIotRrcSap::NprachParametersNb ce0, NbIotRrcSap::NprachParametersNb ce1, NbIotRrcSap::NprachParametersNb ce2){
   m_ce0 = ce0;
   m_ce1 = ce1;
+
   m_ce2 = ce2;
 
 }
@@ -74,16 +117,16 @@ bool NbiotScheduler::IsSeachSpaceType2Begin(NbIotRrcSap::NprachParametersNb ce){
 
 void NbiotScheduler::ScheduleRarReq(int rnti, int rapid, NbIotRrcSap::NprachParametersNb ce,NbIotRrcSap::DciN1::DciRepetitions rep){
   NpdcchMessage rar;
-  rar.npdcchFormat = NpdcchMessage::NpdcchFormat::format1;
-  rar.dciType = NpdcchMessage::DciType::n1;
-  rar.searchSpaceType = NpdcchMessage::SearchSpaceType::type2;
-  // Dci set depending on coverage level.... yet static 
-  rar.dciN1.dciRepetitions = rep;
-  rar.dciN1.m_rapId = rapid;
-  rar.dciN1.numNpdschSubframesPerRepetition = NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
-  rar.dciN1.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
-  rar.ue.ce = ce;
-  rar.ue.ranti = rnti;
+//  rar.npdcchFormat = NpdcchMessage::NpdcchFormat::format1;
+//  rar.dciType = NpdcchMessage::DciType::n1;
+//  rar.searchSpaceType = NpdcchMessage::SearchSpaceType::type2;
+//  // Dci set depending on coverage level.... yet static 
+//  rar.dciN1.dciRepetitions = rep;
+//  rar.dciN1.m_rapId = rapid;
+//  rar.dciN1.numNpdschSubframesPerRepetition = NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
+//  rar.dciN1.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
+//  rar.ue.ce = ce;
+//  rar.ue.ranti = rnti;
   m_NpdcchQueue.push_back(rar);
 }
 
@@ -123,30 +166,54 @@ std::vector<NpdcchMessage> NbiotScheduler::ScheduleSearchSpace(NpdcchMessage::Se
   */
   for(std::vector<NpdcchMessage>::iterator it = m_NpdcchQueue.begin(); it != m_NpdcchQueue.end();){
     if(it->searchSpaceType == seachspace){
-      if(it->ue.ce.nprachSubcarrierOffset == ce.nprachSubcarrierOffset){
+      if(it->ce.nprachSubcarrierOffset == ce.nprachSubcarrierOffset){
       std::vector<int> test = GetNextAvailableSearchSpaceCandidate(m_frameNo-1, m_subframeNo-1, R_max, NbIotRrcSap::ConvertDciRepetitions2int(it->dciN1));
       if(test.size()>0){
 
         int subframesNpdsch = NbIotRrcSap::ConvertNumNpdschSubframesPerRepetition2int(it->dciN1)*NbIotRrcSap::ConvertNumNpdschRepetitions2int(it->dciN1);
         std::vector<int> npdschsubframes = GetNextAvailableNpdschCandidate(*(test.end()-1), m_minSchedulingDelayDci2Downlink,subframesNpdsch, R_max);
         if (npdschsubframes.size()>0 ){
-          std::cout << "Scheduling NPDCCH of " << it->ue.ranti << " at ";
-          for(size_t j = 0; j < test.size(); ++j){
-            m_downlink[test[j]] = m_currenthyperindex;
-            std::cout << test[j] << " ";
+          int subframesNpusch;
+          std::pair<NbIotRrcSap::UlGrant, std::pair<int, std::vector<int>>> ulgrant;
+          if (it->isRar){
+            for(std::vector<RarNbiotControlMessage::Rar>::iterator rar = it->rars.begin(); rar != it->rars.end(); ++rar){
+            subframesNpusch = 1*4; // 1 Resource Unit and 4 Repetitions for testing purposes | later ULParts should be implemented here
+            ulgrant = GetNextAvailableMsg3UlGrantCandidate(*(npdschsubframes.end()-1), subframesNpusch);
+            if(ulgrant.first.success){
+              rar->rarPayload.ulGrant = ulgrant.first;
+              rar->rarPayload.ulGrant.subframes = ulgrant.second.second;
+              std::cout << "Scheduling NPUSCH at ";
+              std::cout << " Subcarrier " << ulgrant.second.first << " ";
+              for(size_t i = 0; i < ulgrant.second.second.size(); i++){
+                m_uplink[ulgrant.second.first][ulgrant.second.second[i]] = m_currenthyperindex;
+                std::cout << ulgrant.second.second[i] << " ";
+              }
+              std::cout << "\n";
+            
+            }else{
+              // Stuff if cant schedule npusch
+            }
+            }
           }
-          std::cout << "\n";
-          std::cout << "Scheduling NPDSCH of " << it->ue.ranti << " at ";
-          for(size_t j = 0; j < npdschsubframes.size(); ++j){
-            m_downlink[npdschsubframes[j]] = m_currenthyperindex;
-            std::cout << npdschsubframes[j] << " ";
-          }
-          it->dciRepetitionsubframes = test;
-          it->npdschOpportunity = npdschsubframes;
-          scheduledMessages.push_back(*(it));
-          std::cout << "\n";
+            std::cout << "Scheduling NPDCCH at ";
+            for(size_t j = 0; j < test.size(); ++j){
+              m_downlink[test[j]] = m_currenthyperindex;
+              std::cout << test[j] << " ";
+            }
+            std::cout << "\n";
+            std::cout << "Scheduling NPDSCH at ";
+            for(size_t j = 0; j < npdschsubframes.size(); ++j){
+              m_downlink[npdschsubframes[j]] = m_currenthyperindex;
+              std::cout << npdschsubframes[j] << " ";
+            }
+            
+            it->dciRepetitionsubframes = test;
+            it->npdschOpportunity = npdschsubframes;
+            scheduledMessages.push_back(*(it));
+            std::cout << "\n";
 
-          m_NpdcchQueue.erase(it);
+            m_NpdcchQueue.erase(it);
+          
         }
       }
       }
@@ -159,6 +226,33 @@ std::vector<NpdcchMessage> NbiotScheduler::ScheduleSearchSpace(NpdcchMessage::Se
   return scheduledMessages;
 }
 
+std::vector<int> NbiotScheduler::GetNextAvailableNpuschCandidate(int endSubframeDci, int minSchedulingDelay, int numSubframes){
+  return std::vector<int>();
+}
+
+
+std::pair<NbIotRrcSap::UlGrant, std::pair<int,std::vector<int>>> NbiotScheduler::GetNextAvailableMsg3UlGrantCandidate(int endSubframeMsg2, int numSubframes){
+  for(auto &i : m_Msg3TimeOffset){
+    for(size_t j = 0; j < m_uplink.size(); ++j){
+      int candidate = endSubframeMsg2+NbIotRrcSap::UlGrant::ConvertUlGrantSchedulingDelay2int(i);
+      std::vector<int> subframesOccupied = GetUlSubframeRangeWithoutSystemResources(candidate, numSubframes, j);
+      subframesOccupied = CheckforNContiniousSubframesUl(subframesOccupied,candidate,numSubframes, j);
+      if(subframesOccupied.size()> 0){
+        NbIotRrcSap::UlGrant ret;
+        ret.schedulingDelay = i;
+        ret.msg3Repetitions = NbIotRrcSap::UlGrant::Msg3Repetitions::r4;
+        ret.subcarrierIndication = j;
+        ret.Subcarrierspacing = 1;
+        ret.success = true;
+        return std::make_pair(ret, std::make_pair(j,subframesOccupied));
+      }
+
+    }
+  }
+  NbIotRrcSap::UlGrant ret;
+  ret.success = false;
+  return std::make_pair(ret, std::make_pair(int(),std::vector<int>()));
+}
 std::vector<int> NbiotScheduler::GetNextAvailableNpdschCandidate(int endSubframeDci, int minSchedulingDelay, int numSubframes, int R_max){
 
   int npdschCandidate = endSubframeDci+minSchedulingDelay;
@@ -167,8 +261,8 @@ std::vector<int> NbiotScheduler::GetNextAvailableNpdschCandidate(int endSubframe
       NbIotRrcSap::DciN1 tmp; /// FIX AS SOON AS POSSIBLE 
       tmp.npdcchTimeOffset = i;
       int tmpCandidate = npdschCandidate+NbIotRrcSap::ConvertNpdcchTimeOffset2int(tmp);
-      std::vector<int> subframesOccupied = GetSubframeRangeWithoutSystemResources(tmpCandidate, numSubframes);
-      subframesOccupied = CheckforNContiniousSubframes(subframesOccupied,tmpCandidate,numSubframes);
+      std::vector<int> subframesOccupied = GetDlSubframeRangeWithoutSystemResources(tmpCandidate, numSubframes);
+      subframesOccupied = CheckforNContiniousSubframesDl(subframesOccupied,tmpCandidate,numSubframes);
       if(subframesOccupied.size()> 0){
         return subframesOccupied;
       }
@@ -178,8 +272,8 @@ std::vector<int> NbiotScheduler::GetNextAvailableNpdschCandidate(int endSubframe
       NbIotRrcSap::DciN1 tmp; /// FIX AS SOON AS POSSIBLE 
       tmp.npdcchTimeOffset = i;
       int tmpCandidate = npdschCandidate+NbIotRrcSap::ConvertNpdcchTimeOffset2int(tmp);
-      std::vector<int> subframesOccupied = GetSubframeRangeWithoutSystemResources(tmpCandidate, numSubframes);
-      subframesOccupied = CheckforNContiniousSubframes(subframesOccupied,tmpCandidate,numSubframes);
+      std::vector<int> subframesOccupied = GetDlSubframeRangeWithoutSystemResources(tmpCandidate, numSubframes);
+      subframesOccupied = CheckforNContiniousSubframesDl(subframesOccupied,tmpCandidate,numSubframes);
       if(subframesOccupied.size()> 0){
         return subframesOccupied;
       }
@@ -188,7 +282,7 @@ std::vector<int> NbiotScheduler::GetNextAvailableNpdschCandidate(int endSubframe
   return std::vector<int>();
 }
 
-std::vector<int> NbiotScheduler::GetSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes){
+std::vector<int> NbiotScheduler::GetDlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes){
   std::vector<int> subframeIndexes;
   size_t i = 0;
   m_currenthyperindex = 1;
@@ -203,6 +297,20 @@ std::vector<int> NbiotScheduler::GetSubframeRangeWithoutSystemResources(int over
   return subframeIndexes;
 }
 
+std::vector<int> NbiotScheduler::GetUlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes, int carrier){
+  std::vector<int> subframeIndexes;
+  size_t i = 0;
+  m_currenthyperindex = 1;
+  while(numSubframes > 0){
+    size_t currentindex = overallSubframeNo+i;
+    if((m_uplink[carrier][currentindex] != -1)){
+        subframeIndexes.push_back(currentindex);
+        numSubframes--; 
+    }
+    i++;
+  }
+  return subframeIndexes;
+}
 std::vector<std::pair<int,int>> NbiotScheduler::GetAllPossibleSearchSpaceCandidates(std::vector<int> subframes, int R_max){
   std::vector<std::pair<int,int>> candidates;
   m_currenthyperindex = 1;
@@ -229,7 +337,7 @@ std::vector<std::pair<int,int>> NbiotScheduler::GetAllPossibleSearchSpaceCandida
   return candidates;
 }
 
-std::vector<int> NbiotScheduler::CheckforNContiniousSubframes(std::vector<int> Subframes, int StartSubframe, uint N){
+std::vector<int> NbiotScheduler::CheckforNContiniousSubframesDl(std::vector<int> Subframes, int StartSubframe, uint N){
   int startSubframeIndex = -1;
   std::vector<int> range;
   for(size_t i = 0; i < Subframes.size(); ++i){
@@ -251,13 +359,35 @@ std::vector<int> NbiotScheduler::CheckforNContiniousSubframes(std::vector<int> S
   }
   return range;
 }
+std::vector<int> NbiotScheduler::CheckforNContiniousSubframesUl(std::vector<int> Subframes, int StartSubframe, uint N, uint carrier){
+  int startSubframeIndex = -1;
+  std::vector<int> range;
+  for(size_t i = 0; i < Subframes.size(); ++i){
+    if(Subframes[i] == StartSubframe){
+      startSubframeIndex = i;
+      break;
+    }
+  }
+  if(startSubframeIndex == -1){
+    return std::vector<int>();
+  }
+
+  for(size_t i = 0; i < N; i++){
+    if (m_uplink[carrier][Subframes[startSubframeIndex+i]] == m_currenthyperindex){
+      return std::vector<int>();
+    }else{
+      range.push_back(Subframes[startSubframeIndex+i]);
+    }
+  }
+  return range;
+}
 std::vector<int> NbiotScheduler::GetNextAvailableSearchSpaceCandidate(int SearchSpaceStartFrame, int SearchSpaceStartSubframe, int R_max, int R){
   uint u_max = ((R_max/R)-1);
   int overallSubframe = 10*(SearchSpaceStartFrame)+SearchSpaceStartSubframe;
-  std::vector<int> subframes = GetSubframeRangeWithoutSystemResources(overallSubframe, R_max);
+  std::vector<int> subframes = GetDlSubframeRangeWithoutSystemResources(overallSubframe, R_max);
   for(size_t i =0; i <= u_max; ++i){
     // Calculate start of dci candidate
-    std::vector<int> subframes_to_use = CheckforNContiniousSubframes(subframes, subframes[i*R],R);
+    std::vector<int> subframes_to_use = CheckforNContiniousSubframesDl(subframes, subframes[i*R],R);
     
     if(subframes_to_use.size()> 0){
       return subframes_to_use;

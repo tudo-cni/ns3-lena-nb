@@ -36,10 +36,9 @@ namespace ns3 {
 //   std::vector<> _controlmsgList;
 // };
 
-struct NpdcchUeInformation{
-  NbIotRrcSap::NprachParametersNb ce;
-  int ranti;
-};
+// Overall size of UlGrant = 15 bit
+
+
 struct NpdcchMessage{
   enum SearchSpaceType{
     type1,
@@ -55,22 +54,27 @@ struct NpdcchMessage{
     n1,
     n2
   } dciType;
-  NpdcchUeInformation ue;
+  NbIotRrcSap::NprachParametersNb ce;
   NbIotRrcSap::DciN1 dciN1;
   NbIotRrcSap::DciN0 dciN0;
+  std::vector<RarNbiotControlMessage::Rar> rars;
   std::vector<int> npdschOpportunity;
   std::vector<int> npuschOpportunity;
   std::vector<int> dciRepetitionsubframes;
-};
+  int ranti;
+  bool isRar;
 
 };
 
+struct NpdschMessage{
+  int Tb;
+};
 
 class NbiotScheduler : public Object
 {
 public:
 
-  NbiotScheduler();
+  NbiotScheduler(std::vector<NbIotRrcSap::NprachParametersNb> ces);
 
   //~NbiotScheduler();
 
@@ -86,23 +90,30 @@ void ScheduleNpdcchMessageReq(NpdcchMessage msg);
 std::vector<NpdcchMessage> Schedule(int frameNo, int subframeNo);
 std::vector<NpdcchMessage> ScheduleSearchSpace(NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NprachParametersNb ce);
 std::vector<int> GetNextAvailableSearchSpaceCandidate(int SearchSpaceStartFrame, int SearchSpaceStartSubframe, int R_max, int R);
-std::vector<int> GetSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes);
+std::vector<int> GetDlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes);
+std::vector<int> GetUlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes, int carrier);
 std::vector<std::pair<int,int>> GetAllPossibleSearchSpaceCandidates(std::vector<int> subframes, int R_max);
-std::vector<int> CheckforNContiniousSubframes(std::vector<int> Subframes, int StartSubframe, uint N);
+std::vector<int> CheckforNContiniousSubframesDl(std::vector<int> Subframes, int StartSubframe, uint N);
+std::vector<int> CheckforNContiniousSubframesUl(std::vector<int> Subframes, int StartSubframe, uint N, uint carrier);
 std::vector<int> GetNextAvailableNpdschCandidate(int endSubframeDci, int minSchedulingDelay, int numSubframes, int R_max);
+std::vector<int> GetNextAvailableNpuschCandidate(int endSubframeDci, int minSchedulingDelay, int numSubframes);
+std::pair<NbIotRrcSap::UlGrant, std::pair<int,std::vector<int>>> GetNextAvailableMsg3UlGrantCandidate(int endSubframeMsg2, int numSubframes);
 std::vector<int8_t> m_downlink;
 void SetCeLevel(NbIotRrcSap::NprachParametersNb ce0, NbIotRrcSap::NprachParametersNb ce1, NbIotRrcSap::NprachParametersNb ce2);
 NbIotRrcSap::NprachParametersNb m_ce0;
 protected:
-  std::vector<int8_t> m_uplink;
+  std::vector<std::vector<int8_t>> m_uplink;
+  std::vector<NpdcchMessage> m_rars_to_schedule;
   std::vector<NpdcchMessage> m_NpdcchQueue;
   std::vector<NpdcchMessage> m_NpdschQueue;
   std::vector<NpdcchMessage> m_NpuschQueue;
   std::vector<NbIotRrcSap::DciN1::NpdcchTimeOffset> m_DciTimeOffsetRmaxSmall;
   std::vector<NbIotRrcSap::DciN1::NpdcchTimeOffset> m_DciTimeOffsetRmaxBig;
+  std::vector<NbIotRrcSap::UlGrant::SchedulingDelay> m_Msg3TimeOffset;
   NbIotRrcSap::NprachParametersNb m_ce1;
   NbIotRrcSap::NprachParametersNb m_ce2;
   int m_frameNo;
+  bool m_only15KhzSpacing;
   int m_subframeNo;
   int m_currenthyperindex;
   const int m_minSchedulingDelayDci2Downlink = 4;
