@@ -432,7 +432,7 @@ private:
   LteCcmMacSapProvider* m_ccmMacSapProvider; ///< CCM MAC SAP provider
   LteCcmMacSapUser* m_ccmMacSapUser; ///< CCM MAC SAP user
 
-  NbiotScheduler* m_schedulerNb;
+  NbiotScheduler* m_schedulerNb = nullptr;
   /**
    * frame number of current subframe indication
    */
@@ -493,6 +493,7 @@ private:
   std::map<uint8_t, std::map<uint8_t, uint32_t>> m_receivedNprachPreambleCount;
 
   std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
+  std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
 
   /// component carrier Id used to address sap
   uint8_t m_componentCarrierId;

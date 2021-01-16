@@ -402,7 +402,7 @@ m_ccmMacSapUser (0)
   m_cschedSapUser = new EnbMacMemberFfMacCschedSapUser (this);
   m_enbPhySapUser = new EnbMacMemberLteEnbPhySapUser (this);
   m_ccmMacSapProvider = new MemberLteCcmMacSapProvider<LteEnbMac> (this);
-  m_schedulerNb = new NbiotScheduler();
+
 }
 
 
@@ -663,26 +663,37 @@ void LteEnbMac::CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce){
   uint8_t numberPreambles = NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(ce);
 
   receivedNprachs = m_receivedNprachPreambleCount[subcarrierOffset];
-  for(std::map<uint8_t, uint32_t>::iterator iter= receivedNprachs.begin(); iter != receivedNprachs.end(); ++iter){
-    if(iter->second == numberPreambles){ // sanity check. Actually should be always equal
 
-      std::cout << "Preamble received of offset " << int(subcarrierOffset) << " at Subframe " << (10*(m_frameNo-1)+(m_subframeNo-1)) <<  "\n";
-      NpdcchMessage rar;
+  if (receivedNprachs.size()> 0){
+    NpdcchMessage rar_dci;
       //int rnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
 
-      rar.npdcchFormat = NpdcchMessage::NpdcchFormat::format1;
-      rar.dciType = NpdcchMessage::DciType::n1;
-      rar.searchSpaceType = NpdcchMessage::SearchSpaceType::type2;
-      // Dci set depending on coverage level.... yet static 
-      rar.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r1;
-      rar.dciN1.m_rapId = subcarrierOffset+iter->first;
-      rar.dciN1.numNpdschSubframesPerRepetition = NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
-      rar.dciN1.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
-      rar.ue.ce = ce;
-      rar.ue.ranti = m_rapIdRntiMap[subcarrierOffset+iter->first];
-      m_schedulerNb->ScheduleNpdcchMessageReq(rar);
-      m_receivedNprachPreambleCount[subcarrierOffset].erase(iter->first);
+    for(std::map<uint8_t, uint32_t>::iterator iter= receivedNprachs.begin(); iter != receivedNprachs.end(); ++iter){
+      if(iter->second == numberPreambles ){ // sanity check. Actually should be always equal
 
+        std::cout << "Preamble received of offset " << int(subcarrierOffset) << " at Subframe " << (10*(m_frameNo-1)+(m_subframeNo-1)) <<  "\n";
+        RarNbiotControlMessage::Rar rar;
+        rar.cellRnti =  m_cmacSapUser->AllocateTemporaryCellRnti ();
+        rar.rapId = subcarrierOffset+iter->first;
+        rar.rarPayload.cellRnti = rar.cellRnti;
+        rar_dci.isRar = true;
+        rar_dci.rars.push_back(rar);
+        rar_dci.ranti = m_rapIdRantiMap[subcarrierOffset+iter->first];
+        m_receivedNprachPreambleCount[subcarrierOffset].erase(iter->first);
+
+
+      }
+    }
+    if (rar_dci.rars.size()>0){
+      rar_dci.npdcchFormat = NpdcchMessage::NpdcchFormat::format1;
+      rar_dci.dciType = NpdcchMessage::DciType::n1;
+      rar_dci.searchSpaceType = NpdcchMessage::SearchSpaceType::type2;
+      // Dci set depending on coverage level.... yet static 
+      rar_dci.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r1;
+      rar_dci.dciN1.numNpdschSubframesPerRepetition = NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
+      rar_dci.dciN1.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
+      rar_dci.ce = ce;
+      m_schedulerNb->ScheduleNpdcchMessageReq(rar_dci);
     }
   }
 }
@@ -755,7 +766,14 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
  
   m_frameNo = frameNo;
   m_subframeNo = subframeNo;
+  if (m_schedulerNb == nullptr){
+    m_sib2Nb = m_cmacSapUser->GetCurrentSystemInformationBlockType2Nb();
+    m_ce0Parameter = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0;
+    m_ce1Parameter = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1;
+    m_ce2Parameter = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2;
+    m_schedulerNb = new NbiotScheduler(std::vector<NbIotRrcSap::NprachParametersNb>{m_ce0Parameter});
 
+  }
   // Implement NB-IoT DCI Searchspaces Type2-CSS All AL2  Liberg et al. p 282
   // Find out if current subframe is start of Type2/UE-specific search space
   // A Tutorial to NB-IoT Design zeugs 
@@ -769,153 +787,163 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
   m_schedulerNb->SetCeLevel(m_ce0Parameter, m_ce1Parameter, m_ce2Parameter);
   std::vector<NpdcchMessage> scheduled = m_schedulerNb->Schedule(frameNo,subframeNo);
 
+  int currentsubframe = 10*(m_frameNo-1)+(m_subframeNo-1);
   for(std::vector<NpdcchMessage>::iterator it = scheduled.begin(); it != scheduled.end(); ++it){
-    for(size_t i = 0; i < it->dciRepetitionsubframes.size(); ++i){
-      int currentsubframe = 10*(m_frameNo-1)+(m_subframeNo-1);
       if( it->dciType == NpdcchMessage::DciType::n1){
-      Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage> ();
-      msg->SetDci(it->dciN1);
-      msg->SetRanti(it->ue.ranti);
-      int subframestowait = it->dciRepetitionsubframes[i] - currentsubframe;
-      Simulator::Schedule(MilliSeconds(subframestowait), &LteEnbPhySapProvider::SendLteControlMessage, m_enbPhySapProvider, msg);
-      }
+        Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage> ();
+        msg->SetDci(it->dciN1);
+        msg->SetRanti(it->ranti);
+        int subframestowait = *(it->dciRepetitionsubframes.end()-1) - currentsubframe;
+        std::cout << subframestowait << std::endl;
+        Simulator::Schedule(MilliSeconds(subframestowait), &LteEnbPhySapProvider::SendLteControlMessage, m_enbPhySapProvider, msg);
+    }
+    if(it->isRar){
+        Ptr<RarNbiotControlMessage> msg = Create<RarNbiotControlMessage>();
+        for(std::vector<RarNbiotControlMessage::Rar>::iterator rar = it->rars.begin(); rar != it->rars.end(); ++rar){
+            msg->AddRar(*rar);
+        }
+        msg->SetRaRnti(it->ranti);
+        int subframestowait = *(it->npdschOpportunity.end()-1) - currentsubframe;
+        std::cout << subframestowait << std::endl;
+        Simulator::Schedule(MilliSeconds(subframestowait), &LteEnbPhySapProvider::SendLteControlMessage, m_enbPhySapProvider, msg);
+      
     }
   }
 
-  // CE0 Type2
-  // --- DOWNLINK ---
-  // Send Dl-CQI info to the scheduler
-  if (m_dlCqiReceived.size () > 0)
-    {
-      FfMacSchedSapProvider::SchedDlCqiInfoReqParameters dlcqiInfoReq;
-      dlcqiInfoReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
-      dlcqiInfoReq.m_cqiList.insert (dlcqiInfoReq.m_cqiList.begin (), m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
-      m_dlCqiReceived.erase (m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
-      m_schedSapProvider->SchedDlCqiInfoReq (dlcqiInfoReq);
-    }
+  //// CE0 Type2
+  //// --- DOWNLINK ---
+  //// Send Dl-CQI info to the scheduler
+  //if (m_dlCqiReceived.size () > 0)
+  //  {
+  //    FfMacSchedSapProvider::SchedDlCqiInfoReqParameters dlcqiInfoReq;
+  //    dlcqiInfoReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
+  //    dlcqiInfoReq.m_cqiList.insert (dlcqiInfoReq.m_cqiList.begin (), m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
+  //    m_dlCqiReceived.erase (m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
+  //    m_schedSapProvider->SchedDlCqiInfoReq (dlcqiInfoReq);
+  //  }
 
-  if (!m_receivedRachPreambleCount.empty ())
-    {
-      // process received RACH preambles and notify the scheduler
-      FfMacSchedSapProvider::SchedDlRachInfoReqParameters rachInfoReqParams;
-      NS_ASSERT (subframeNo > 0 && subframeNo <= 10); // subframe in 1..10
-      for (std::map<uint8_t, uint32_t>::const_iterator it = m_receivedRachPreambleCount.begin ();
-           it != m_receivedRachPreambleCount.end ();
-           ++it)
-        {
-          NS_LOG_INFO (this << " preambleId " << (uint32_t) it->first << ": " << it->second << " received");
-          NS_ASSERT (it->second != 0);
-          if (it->second > 1)
-            {
-              NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": collision");
-              // in case of collision we assume that no preamble is
-              // successfully received, hence no RAR is sent 
-            }
-          else
-            {
-              uint16_t rnti;
-              std::map<uint8_t, NcRaPreambleInfo>::iterator jt = m_allocatedNcRaPreambleMap.find (it->first);
-              if (jt != m_allocatedNcRaPreambleMap.end ())
-                {
-                  rnti = jt->second.rnti;
-                  NS_LOG_INFO ("preambleId previously allocated for NC based RA, RNTI =" << (uint32_t) rnti << ", sending RAR");
-                  
-                }
-              else
-                {
-                  rnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
-                  NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": allocated T-C-RNTI " << (uint32_t) rnti << ", sending RAR");
-                }
+  //if (!m_receivedRachPreambleCount.empty ())
+  //  {
+  //    // process received RACH preambles and notify the scheduler
+  //    FfMacSchedSapProvider::SchedDlRachInfoReqParameters rachInfoReqParams;
+  //    NS_ASSERT (subframeNo > 0 && subframeNo <= 10); // subframe in 1..10
+  //    for (std::map<uint8_t, uint32_t>::const_iterator it = m_receivedRachPreambleCount.begin ();
+  //         it != m_receivedRachPreambleCount.end ();
+  //         ++it)
+  //      {
+  //        NS_LOG_INFO (this << " preambleId " << (uint32_t) it->first << ": " << it->second << " received");
+  //        NS_ASSERT (it->second != 0);
+  //        if (it->second > 1)
+  //          {
+  //            NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": collision");
+  //            // in case of collision we assume that no preamble is
+  //            // successfully received, hence no RAR is sent 
+  //          }
+  //        else
+  //          {
+  //            uint16_t rnti;
+  //            std::map<uint8_t, NcRaPreambleInfo>::iterator jt = m_allocatedNcRaPreambleMap.find (it->first);
+  //            if (jt != m_allocatedNcRaPreambleMap.end ())
+  //              {
+  //                rnti = jt->second.rnti;
+  //                NS_LOG_INFO ("preambleId previously allocated for NC based RA, RNTI =" << (uint32_t) rnti << ", sending RAR");
+  //                
+  //              }
+  //            else
+  //              {
+  //                rnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
+  //                NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": allocated T-C-RNTI " << (uint32_t) rnti << ", sending RAR");
+  //              }
 
-              RachListElement_s rachLe;
-              rachLe.m_rnti = rnti;
-              rachLe.m_estimatedSize = 144; // to be confirmed
-              rachInfoReqParams.m_rachList.push_back (rachLe);
-              m_rapIdRntiMap.insert (std::pair <uint16_t, uint32_t> (rnti, it->first));
-            }
-        }
-      m_schedSapProvider->SchedDlRachInfoReq (rachInfoReqParams);
-      m_receivedRachPreambleCount.clear ();
-    }
-  // Get downlink transmission opportunities
-  uint32_t dlSchedFrameNo = m_frameNo;
-  uint32_t dlSchedSubframeNo = m_subframeNo;
-  //   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
-  if (dlSchedSubframeNo + m_macChTtiDelay > 10)
-    {
-      dlSchedFrameNo++;
-      dlSchedSubframeNo = (dlSchedSubframeNo + m_macChTtiDelay) % 10;
-    }
-  else
-    {
-      dlSchedSubframeNo = dlSchedSubframeNo + m_macChTtiDelay;
-    }
-  FfMacSchedSapProvider::SchedDlTriggerReqParameters dlparams;
-  dlparams.m_sfnSf = ((0x3FF & dlSchedFrameNo) << 4) | (0xF & dlSchedSubframeNo);
+  //            RachListElement_s rachLe;
+  //            rachLe.m_rnti = rnti;
+  //            rachLe.m_estimatedSize = 144; // to be confirmed
+  //            rachInfoReqParams.m_rachList.push_back (rachLe);
+  //            m_rapIdRntiMap.insert (std::pair <uint16_t, uint32_t> (rnti, it->first));
+  //          }
+  //      }
+  //    m_schedSapProvider->SchedDlRachInfoReq (rachInfoReqParams);
+  //    m_receivedRachPreambleCount.clear ();
+  //  }
+  //// Get downlink transmission opportunities
+  //uint32_t dlSchedFrameNo = m_frameNo;
+  //uint32_t dlSchedSubframeNo = m_subframeNo;
+  ////   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
+  //if (dlSchedSubframeNo + m_macChTtiDelay > 10)
+  //  {
+  //    dlSchedFrameNo++;
+  //    dlSchedSubframeNo = (dlSchedSubframeNo + m_macChTtiDelay) % 10;
+  //  }
+  //else
+  //  {
+  //    dlSchedSubframeNo = dlSchedSubframeNo + m_macChTtiDelay;
+  //  }
+  //FfMacSchedSapProvider::SchedDlTriggerReqParameters dlparams;
+  //dlparams.m_sfnSf = ((0x3FF & dlSchedFrameNo) << 4) | (0xF & dlSchedSubframeNo);
 
-  // Forward DL HARQ feebacks collected during last TTI
-  if (m_dlInfoListReceived.size () > 0)
-    {
-      dlparams.m_dlInfoList = m_dlInfoListReceived;
-      // empty local buffer
-      m_dlInfoListReceived.clear ();
-    }
+  //// Forward DL HARQ feebacks collected during last TTI
+  //if (m_dlInfoListReceived.size () > 0)
+  //  {
+  //    dlparams.m_dlInfoList = m_dlInfoListReceived;
+  //    // empty local buffer
+  //    m_dlInfoListReceived.clear ();
+  //  }
 
-  m_schedSapProvider->SchedDlTriggerReq (dlparams);
+  //m_schedSapProvider->SchedDlTriggerReq (dlparams);
 
 
-  // --- UPLINK ---
-  // Send UL-CQI info to the scheduler
-  for (uint16_t i = 0; i < m_ulCqiReceived.size (); i++)
-    {
-      if (subframeNo > 1)
-        {        
-          m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & (subframeNo - 1));
-        }
-      else
-        {
-          m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & (frameNo - 1)) << 4) | (0xF & 10);
-        }
-      m_schedSapProvider->SchedUlCqiInfoReq (m_ulCqiReceived.at (i));
-    }
-    m_ulCqiReceived.clear ();
+  //// --- UPLINK ---
+  //// Send UL-CQI info to the scheduler
+  //for (uint16_t i = 0; i < m_ulCqiReceived.size (); i++)
+  //  {
+  //    if (subframeNo > 1)
+  //      {        
+  //        m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & (subframeNo - 1));
+  //      }
+  //    else
+  //      {
+  //        m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & (frameNo - 1)) << 4) | (0xF & 10);
+  //      }
+  //    m_schedSapProvider->SchedUlCqiInfoReq (m_ulCqiReceived.at (i));
+  //  }
+  //  m_ulCqiReceived.clear ();
   
-  // Send BSR reports to the scheduler
-  if (m_ulCeReceived.size () > 0)
-    {
-      FfMacSchedSapProvider::SchedUlMacCtrlInfoReqParameters ulMacReq;
-      ulMacReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
-      ulMacReq.m_macCeList.insert (ulMacReq.m_macCeList.begin (), m_ulCeReceived.begin (), m_ulCeReceived.end ());
-      m_ulCeReceived.erase (m_ulCeReceived.begin (), m_ulCeReceived.end ());
-      m_schedSapProvider->SchedUlMacCtrlInfoReq (ulMacReq);
-    }
+  //// Send BSR reports to the scheduler
+  //if (m_ulCeReceived.size () > 0)
+  //  {
+  //    FfMacSchedSapProvider::SchedUlMacCtrlInfoReqParameters ulMacReq;
+  //    ulMacReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
+  //    ulMacReq.m_macCeList.insert (ulMacReq.m_macCeList.begin (), m_ulCeReceived.begin (), m_ulCeReceived.end ());
+  //    m_ulCeReceived.erase (m_ulCeReceived.begin (), m_ulCeReceived.end ());
+  //    m_schedSapProvider->SchedUlMacCtrlInfoReq (ulMacReq);
+  //  }
 
 
-  // Get uplink transmission opportunities
-  uint32_t ulSchedFrameNo = m_frameNo;
-  uint32_t ulSchedSubframeNo = m_subframeNo;
-  //   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
-  if (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY) > 10)
-    {
-      ulSchedFrameNo++;
-      ulSchedSubframeNo = (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY)) % 10;
-    }
-  else
-    {
-      ulSchedSubframeNo = ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY);
-    }
-  FfMacSchedSapProvider::SchedUlTriggerReqParameters ulparams;
-  ulparams.m_sfnSf = ((0x3FF & ulSchedFrameNo) << 4) | (0xF & ulSchedSubframeNo);
+  //// Get uplink transmission opportunities
+  //uint32_t ulSchedFrameNo = m_frameNo;
+  //uint32_t ulSchedSubframeNo = m_subframeNo;
+  ////   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
+  //if (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY) > 10)
+  //  {
+  //    ulSchedFrameNo++;
+  //    ulSchedSubframeNo = (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY)) % 10;
+  //  }
+  //else
+  //  {
+  //    ulSchedSubframeNo = ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY);
+  //  }
+  //FfMacSchedSapProvider::SchedUlTriggerReqParameters ulparams;
+  //ulparams.m_sfnSf = ((0x3FF & ulSchedFrameNo) << 4) | (0xF & ulSchedSubframeNo);
 
-  // Forward DL HARQ feebacks collected during last TTI
-  if (m_ulInfoListReceived.size () > 0)
-    {
-     ulparams.m_ulInfoList = m_ulInfoListReceived;
-      // empty local buffer
-      m_ulInfoListReceived.clear ();
-    }
+  //// Forward DL HARQ feebacks collected during last TTI
+  //if (m_ulInfoListReceived.size () > 0)
+  //  {
+  //   ulparams.m_ulInfoList = m_ulInfoListReceived;
+  //    // empty local buffer
+  //    m_ulInfoListReceived.clear ();
+  //  }
 
-  m_schedSapProvider->SchedUlTriggerReq (ulparams);
+  //m_schedSapProvider->SchedUlTriggerReq (ulparams);
 
 }
 
@@ -959,7 +987,7 @@ LteEnbMac::DoReceiveNprachPreamble  (uint8_t rapId, uint8_t subcarrierOffset, ui
   // just record that the preamble has been received; it will be processed later
 
   ++(m_receivedNprachPreambleCount[subcarrierOffset][rapId]); // will create entry if not exists
-  m_rapIdRntiMap[subcarrierOffset+rapId]=ranti;
+  m_rapIdRantiMap[subcarrierOffset+rapId]=ranti;
 }
 
 void
