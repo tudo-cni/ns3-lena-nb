@@ -720,6 +720,7 @@ private:
 
   /// \todo Can be removed.
   uint8_t m_subframeNo;
+  uint m_frameNo;
 
   bool m_rsReceivedPowerUpdated; ///< RS receive power updated?
   SpectrumValue m_rsReceivedPower; ///< RS receive power

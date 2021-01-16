@@ -1028,7 +1028,7 @@ LteUePhy::DoSendNprachPreamble (uint32_t raPreambleId, uint32_t raRnti, uint8_t 
    msg->SetRapId (raPreambleId);
    msg->SetSubcarrierOffset(subcarrieroffset);
    msg->SetRanti(raRnti);
-   m_raPreambleId = raPreambleId;
+   m_raPreambleId = raPreambleId+subcarrieroffset;
    m_raRnti = raRnti;
    m_controlMessagesQueue.at (0).push_back (msg);
 }
@@ -1215,12 +1215,49 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
         {
           Ptr<DlDciN1NbiotControlMessage> msg2 = DynamicCast<DlDciN1NbiotControlMessage> (msg);
           if (msg2->GetRanti() == m_raRnti){
-            std::cout << "Received my dci "<< std::endl;
+            std::cout << "Received my dci at " << 10*(m_frameNo-1) +(m_subframeNo-1)<< std::endl;
           }
           //NS_LOG_INFO ("received SIB1_NB");
           //NS_ASSERT (m_cellId > 0);
           //Ptr<Sib1NbiotControlMessage> msg2 = DynamicCast<Sib1NbiotControlMessage> (msg);
           //m_ueCphySapUser->RecvSystemInformationBlockType1Nb (m_cellId, msg2->GetSib1());
+        }
+      else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
+        {
+          Ptr<RarNbiotControlMessage> rarMsg = DynamicCast<RarNbiotControlMessage> (msg);
+          if (rarMsg->GetRaRnti () == m_raRnti)
+            {
+
+              for (std::list<RarNbiotControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
+                {
+                  if (it->rapId != m_raPreambleId)
+                    {
+                      // UL grant not for me
+                      continue;
+                    }
+                  else
+                    {
+
+                      std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n";
+                      NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
+                      // set the uplink bandwidth according to the UL grant
+                      //std::vector <int> ulRb;
+                      //for (int i = 0; i < it->rarPayload.m_grant.m_rbLen; i++)
+                      //  {
+                      //    ulRb.push_back (i + it->rarPayload.m_grant.m_rbStart);
+                      //  }
+
+                      //Simulator::Schedule() QueueSubChannelsForTransmission (std::vector<int>{0});
+                      // pass the info to the MACo
+                      int subframes = *(it->rarPayload.ulGrant.subframes.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
+                      Simulator::Schedule (MilliSeconds(subframes), &LteUePhy::QueueSubChannelsForTransmission, this, std::vector<int>{0});
+                      m_uePhySapUser->ReceiveLteControlMessage (msg);
+                      // reset RACH variables with out of range values
+                      m_raPreambleId = 255;
+                      m_raRnti = 11;
+                    }
+                }
+            }
         }
       else
         {
@@ -1294,9 +1331,9 @@ LteUePhy::QueueSubChannelsForTransmission (std::vector <int> rbMap)
 
 
 void
-LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
-{
+LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo){
   NS_LOG_FUNCTION (this << frameNo << subframeNo);
+  m_frameNo = frameNo;
 
   NS_ASSERT_MSG (frameNo > 0, "the SRS index check code assumes that frameNo starts at 1");
 
