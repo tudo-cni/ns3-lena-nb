@@ -29,6 +29,7 @@
 #include <ns3/lte-mac-sap.h>
 #include <ns3/lte-ue-cmac-sap.h>
 #include <ns3/lte-ue-phy-sap.h>
+#include "lte-control-messages.h"
 #include <ns3/nstime.h>
 #include <ns3/event-id.h>
 #include <vector>
@@ -249,13 +250,19 @@ private:
   *
   * \param raResponse RA response received
   */
-  void RecvRaResponseNb (BuildRarListElement_s raResponse);
+  void RecvRaResponseNb (RarNbiotControlMessage::RarPayload raResponse);
  /**
   * RA response timeout function
   *
   * \param contention if true randomly select and send the RA preamble
   */
   void RaResponseTimeout (bool contention);
+ /**
+  * RA response timeout function
+  *
+  * \param contention if true randomly select and send the RA preamble
+  */
+  void RaResponseTimeoutNb (bool contention);
   /// Send report buffer status
   void SendReportBufferStatus (void);
   /// Refresh HARQ processes packet buffer function
@@ -315,6 +322,7 @@ private:
   bool m_waitingForRaResponse; ///< waiting for RA response
 
   NbIotRrcSap::NprachParametersNb m_CeLevel;
+  bool m_simplifiedNprach;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
    * Exporting IMSI, contention flag, preamble transmission counter

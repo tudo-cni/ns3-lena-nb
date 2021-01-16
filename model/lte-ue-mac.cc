@@ -492,25 +492,28 @@ LteUeMac::SendRaPreambleNb (bool contention)
   m_raRnti = 1+floor(m_frameNo/4);
 
   //m_uePhySapProvider->SendRachPreamble (m_raPreambleId, m_raRnti);
+  m_nprachConfig.nprachCpLength = NbIotRrcSap::NprachConfig::NprachCpLength::us266dot7;
   int sendingTime = NbIotRrcSap::ConvertNprachStartTime2int(m_CeLevel);
-  std::cout << sendingTime << "\n";
   double ts = 1000.0/(15000.0*2048.0);
-  double preambleSymbolTime = 2048.0*ts;
+  double preambleSymbolTime = 8192.0*ts;
   double preambleGroupTimeNoCP = 5.0*preambleSymbolTime; 
   double preambleGroupTime = NbIotRrcSap::ConvertNprachCpLenght2double(m_nprachConfig)+preambleGroupTimeNoCP;
   double preambleRepetition = 4.0*preambleGroupTime;
+
   for(size_t i = 0; i < NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(m_CeLevel); i++){
-    double time = sendingTime+(i*preambleRepetition);
-    std::cout << "Scheduling Preamble "<< i << " at "<< time << " Milliseconds \n";
-    Simulator::Schedule(MilliSeconds(time), &LteUePhySapProvider::SendNprachPreamble, m_uePhySapProvider, m_raPreambleId,m_raRnti);
+      double time = sendingTime+(i*preambleRepetition);
+      Simulator::Schedule(MilliSeconds(time), &LteUePhySapProvider::SendNprachPreamble, m_uePhySapProvider, m_raPreambleId,m_raRnti,NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_CeLevel));
   }
+  
   NS_LOG_INFO (this << " sent preamble id " << (uint32_t) m_raPreambleId << ", RA-RNTI " << (uint32_t) m_raRnti);
   // 3GPP 36.321 5.1.4 
 
   Time raWindowBegin = MilliSeconds (4); 
-  Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
+  Time raWindowEnd = MilliSeconds (4 + 8*10240);
+  //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
-  m_noRaResponseReceivedEvent = Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeout, this, contention);
+  // TODO RESPONSE WINDOW 
+  m_noRaResponseReceivedEvent = Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeoutNb, this, contention);
 }
 void 
 LteUeMac::StartWaitingForRaResponse ()
@@ -569,6 +572,50 @@ LteUeMac::RecvRaResponse (BuildRarListElement_s raResponse)
 }
 
 void 
+LteUeMac::RecvRaResponseNb (RarNbiotControlMessage::RarPayload raResponse)
+{
+  NS_LOG_FUNCTION (this);
+  m_waitingForRaResponse = false;
+  m_noRaResponseReceivedEvent.Cancel ();
+  NS_LOG_INFO ("got RAR for RAPID " << (uint32_t) m_raPreambleId << ", setting T-C-RNTI = " << raResponse.cellRnti);
+  m_rnti = raResponse.cellRnti;
+  m_cmacSapUser->SetTemporaryCellRnti (m_rnti);
+  // in principle we should wait for contention resolution,
+  // but in the current LTE model when two or more identical
+  // preambles are sent no one is received, so there is no need
+  // for contention resolution
+  m_cmacSapUser->NotifyRandomAccessSuccessful ();
+  // trigger tx opportunity for Message 3 over LC 0
+  // this is needed since Message 3's UL GRANT is in the RAR, not in UL-DCIs
+  const uint8_t lc0Lcid = 0;
+  std::map <uint8_t, LcInfo>::iterator lc0InfoIt = m_lcInfoMap.find (lc0Lcid);
+  NS_ASSERT (lc0InfoIt != m_lcInfoMap.end ());
+  std::map <uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator lc0BsrIt
+    = m_ulBsrReceived.find (lc0Lcid);
+  if ((lc0BsrIt != m_ulBsrReceived.end ())
+      && (lc0BsrIt->second.txQueueSize > 0))
+    {
+      // NS_ASSERT_MSG (raResponse.m_grant.m_tbSize > lc0BsrIt->second.txQueueSize, 
+      //               "segmentation of Message 3 is not allowed");
+      // this function can be called only from primary carrier
+      if (m_componentCarrierId > 0)
+        {
+          NS_FATAL_ERROR ("Function called on wrong componentCarrier");
+        }
+      LteMacSapUser::TxOpportunityParameters txOpParams;
+      txOpParams.bytes = 11;
+      txOpParams.layer = 0;
+      txOpParams.harqId = 0;
+      txOpParams.componentCarrierId = m_componentCarrierId;
+      txOpParams.rnti = m_rnti;
+      txOpParams.lcid = lc0Lcid;
+      int subframes = *(raResponse.ulGrant.subframes.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
+      Simulator::Schedule (MilliSeconds(subframes), &LteMacSapUser::NotifyTxOpportunity, lc0InfoIt->second.macSapUser, txOpParams);
+      lc0BsrIt->second.txQueueSize = 0;
+    }
+}
+
+void 
 LteUeMac::RaResponseTimeout (bool contention)
 {
   NS_LOG_FUNCTION (this << contention);
@@ -593,6 +640,35 @@ LteUeMac::RaResponseTimeout (bool contention)
       else
         {
           SendRaPreamble (contention);
+        }
+    }
+}
+
+void 
+LteUeMac::RaResponseTimeoutNb (bool contention)
+{
+  NS_LOG_FUNCTION (this << contention);
+  m_waitingForRaResponse = false;
+  // 3GPP 36.321 5.1.4
+  ++m_preambleTransmissionCounter;
+  //fire RA response timeout trace
+  m_raResponseTimeoutTrace (m_imsi, contention, m_preambleTransmissionCounter,
+                            m_rachConfig.preambleTransMax + 1);
+  if (m_preambleTransmissionCounter == NbIotRrcSap::ConvertMaxNumPreambleAttemptCE2int(m_CeLevel)+1)
+    {
+      NS_LOG_INFO ("RAR timeout, preambleTransMax reached => giving up");
+      m_cmacSapUser->NotifyRandomAccessFailed ();
+    }
+  else
+    {
+      NS_LOG_INFO ("RAR timeout, re-send preamble");
+      if (contention)
+        {
+          RandomlySelectAndSendRaPreambleNb ();
+        }
+      else
+        {
+          SendRaPreambleNb (contention);
         }
     }
 }
@@ -954,6 +1030,30 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                   if (it->rapId == m_raPreambleId) // RAR is for me
                     {
                       RecvRaResponse (it->rarPayload);
+                      /// \todo RRC generates the RecvRaResponse messaged
+                      /// for avoiding holes in transmission at PHY layer
+                      /// (which produce erroneous UL CQI evaluation)
+                    }
+                }
+            }
+        }
+    }
+  else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
+    {
+      if (m_waitingForRaResponse)
+        {
+          Ptr<RarNbiotControlMessage> rarMsg = DynamicCast<RarNbiotControlMessage> (msg);
+          uint16_t raRnti = rarMsg->GetRaRnti ();
+          NS_LOG_LOGIC (this << "got RAR with RA-RNTI " << (uint32_t) raRnti << ", expecting " << (uint32_t) m_raRnti);
+          if (raRnti == m_raRnti) // RAR corresponds to TX subframe of preamble
+            {
+              for (std::list<RarNbiotControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin ();
+                   it != rarMsg->RarListEnd ();
+                   ++it)
+                {
+                  if (it->rapId == NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_CeLevel)+m_raPreambleId) // RAR is for me
+                    {
+                      RecvRaResponseNb (it->rarPayload);
                       /// \todo RRC generates the RecvRaResponse messaged
                       /// for avoiding holes in transmission at PHY layer
                       /// (which produce erroneous UL CQI evaluation)
