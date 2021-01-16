@@ -67,7 +67,8 @@ public:
     SIB1_NB,
     SIB2_NB,
     DL_DCI_NB, UL_DCI_NB, // Downlink/Uplink Data Control Indicator
-    NPRACH_PREAMBLE
+    NPRACH_PREAMBLE,
+    RAR_NB
   };
 
   LteControlMessage (void);
@@ -588,6 +589,74 @@ private:
   NbIotRrcSap::DciN1 m_dci; ///< DCI
   uint32_t m_ranti;
 };
+
+// ---------------------------------------------------------------------------
+
+/**
+ * \ingroup lte
+ *
+ * abstract model for the MAC Random Access Response message
+ */
+class RarNbiotControlMessage : public LteControlMessage
+{
+public:
+  RarNbiotControlMessage (void);
+
+  /** 
+   * 
+   * \param raRnti the RA-RNTI, see 3GPP TS 36.321 5.1.4
+   */
+  void SetRaRnti (uint16_t raRnti);
+
+  /** 
+   * 
+   * \return  the RA-RNTI, see 3GPP TS 36.321 5.1.4
+   */
+  uint16_t GetRaRnti () const;
+
+  /**
+   * a MAC RAR and the corresponding RAPID subheader 
+   * 
+   */
+  struct RarPayload{
+    uint16_t cellRnti;
+    NbIotRrcSap::UlGrant ulGrant;
+  }; 
+  struct Rar
+
+  {
+    uint8_t rapId; ///< RAPID
+    uint16_t cellRnti;
+    //BuildRarListElement_s rarPayload; ///< RAR payload
+    RarPayload rarPayload;
+  };
+
+
+  /** 
+   * add a RAR to the MAC PDU, see 3GPP TS 36.321 6.2.3
+   * 
+   * \param rar the rar
+   */
+  void AddRar (Rar rar);
+
+  /** 
+   * 
+   * \return a const iterator to the beginning of the RAR list
+   */
+  std::list<Rar>::const_iterator RarListBegin () const;
+  
+  /** 
+   * 
+   * \return a const iterator to the end of the RAR list
+   */
+  std::list<Rar>::const_iterator RarListEnd () const;
+
+private:
+  std::list<Rar> m_rarList; ///< RAR list
+  uint16_t m_raRnti; ///< RA RNTI
+
+};
+
 
 } // namespace ns3
 

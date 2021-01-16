@@ -435,7 +435,45 @@ DlDciN1NbiotControlMessage::GetRanti (void)
   return m_ranti;
 }
 
+// ----------------------------------------------------------------------------------------------------------
 
+
+RarNbiotControlMessage::RarNbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::RAR_NB);
+}
+
+
+void
+RarNbiotControlMessage::SetRaRnti (uint16_t raRnti)
+{
+  m_raRnti = raRnti;
+}
+
+uint16_t 
+RarNbiotControlMessage::GetRaRnti () const
+{
+  return m_raRnti;
+}
+
+
+void
+RarNbiotControlMessage::AddRar (Rar rar)
+{
+  m_rarList.push_back (rar);
+}
+
+std::list<RarNbiotControlMessage::Rar>::const_iterator 
+RarNbiotControlMessage::RarListBegin () const
+{
+  return m_rarList.begin ();
+}
+
+std::list<RarNbiotControlMessage::Rar>::const_iterator 
+RarNbiotControlMessage::RarListEnd () const
+{
+  return m_rarList.end ();
+}
 
 
 
