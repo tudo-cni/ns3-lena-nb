@@ -555,11 +555,64 @@ class NbIotRrcSap{
                 twelve
             } mCS;
             bool NDI;
-            uint8_t m_rapId;
             HarqAckResource harqAckResource; 
         };
 
-
+        struct UlGrant{
+        bool Subcarrierspacing; // True = 15khz, false = 3.75khz
+        
+           
+            // More inputs for 3.75 spacing or Multitone ETSI 136.213 16.5.1.1
+            //currently limited to singletone 15 khz
+        uint8_t subcarrierIndication;
+        enum SchedulingDelay { //where NB-IoT DL subframe n is the last subframe in which the NPDSCH associated with the Narrowband Random Access Response Grant is transmitted 
+        //16.5.1 with k0 = 12 for IDelay = 0
+            ms12, // IDelay 0
+            ms16, // IDelay 1 
+            ms32, // IDelay 2  
+            ms64  // IDelay 3
+        } schedulingDelay;
+        enum Msg3Repetitions{
+        // 16.5.1.1
+            r1,
+            r2,
+            r4,
+            r8,
+            r16,
+            r32,
+            r64,
+            r128
+        } msg3Repetitions;
+        enum McsIndex {
+            mcs0, // Number RUs = 4 | TBS = 88 bits 
+            mcs1, // Number RUs = 2 | TBS = 88 bits 
+            mcs2  // Number RUs = 1 | TBS = 88 bits 
+        } mcsIndex;
+        bool success;
+        std::vector<int> subframes;
+        static uint8_t ConvertUlGrantSchedulingDelay2int (UlGrant::SchedulingDelay delay)
+        {
+            uint8_t res = 0;
+            switch (delay)
+            {
+            case UlGrant::SchedulingDelay::ms12:
+                res = 12;
+                break;
+            case UlGrant::SchedulingDelay::ms16:
+                res = 16;
+                break;
+            case UlGrant::SchedulingDelay::ms32:
+                res = 32;
+                break;
+            case UlGrant::SchedulingDelay::ms64:
+                res = 64;
+                break;
+            default:
+                break;
+            }
+            return res;
+        }
+        };
         struct DciN0{
         };
 
