@@ -3114,7 +3114,28 @@ LteEnbRrc::SendSystemInformationNb ()
       si.sib2.freqInfo.ulCarrierFreq = it.second->GetUlEarfcn ();
       si.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower = m_cphySapProvider.at (ccId)->GetReferenceSignalPower ();
 
-      LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
+      //LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
+      NbIotRrcSap::RachInfo rachce0;
+      rachce0.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp10;
+      rachce0.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachInfo rachce1;
+      rachce1.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+      rachce1.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachInfo rachce2;
+      rachce2.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+      rachce2.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachConfigCommon rc;
+      rc.preambleTransMaxCE = 10;
+      rc.powerRampingParameters.powerRampingStep = NbIotRrcSap::PowerRampingParameters::PowerRampingStep::dB4;
+      rc.powerRampingParameters.preambleInitialReceivedTargetPower = NbIotRrcSap::PowerRampingParameters::PreambleInitialReceivedTargetPower::dbm_110;
+      rc.connEstFailOffset = 0;
+      rc.rachInfoList.rachInfo1 = rachce0;
+      rc.rachInfoList.rachInfo2 = rachce1;
+      rc.rachInfoList.rachInfo3 = rachce2;
+
       si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
       NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
       // From Vodafone wireshark
