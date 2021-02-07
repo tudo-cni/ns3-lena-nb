@@ -159,6 +159,7 @@ public:
   // inherited from LteMacSapProvider
   virtual void TransmitPdu (TransmitPduParameters params);
   virtual void ReportBufferStatus (ReportBufferStatusParameters params);
+  virtual void ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
 private:
   LteUeMac* m_mac; ///< the UE MAC
@@ -183,6 +184,12 @@ UeMemberLteMacSapProvider::ReportBufferStatus (ReportBufferStatusParameters para
   m_mac->DoReportBufferStatus (params);
 }
 
+void
+UeMemberLteMacSapProvider::ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+{
+  m_mac->DoReportBufferStatus (params);
+}
+
 
 
 /**
@@ -202,6 +209,7 @@ public:
   virtual void ReceivePhyPdu (Ptr<Packet> p);
   virtual void SubframeIndication (uint32_t frameNo, uint32_t subframeNo);
   virtual void ReceiveLteControlMessage (Ptr<LteControlMessage> msg);
+  virtual void NotifyAboutHarqOpportunity(std::vector<std::pair<int, std::vector<int>>> subframes);
 
 private:
   LteUeMac* m_mac; ///< the UE MAC
@@ -232,6 +240,9 @@ UeMemberLteUePhySapUser::ReceiveLteControlMessage (Ptr<LteControlMessage> msg)
 }
 
 
+void UeMemberLteUePhySapUser::NotifyAboutHarqOpportunity(std::vector<std::pair<int, std::vector<int>>> subframes){
+  m_mac->DoNotifyAboutHarqOpportunity(subframes);
+}
 
 
 //////////////////////////////////////////////////////////
@@ -500,16 +511,14 @@ LteUeMac::SendRaPreambleNb (bool contention)
   double preambleGroupTime = NbIotRrcSap::ConvertNprachCpLenght2double(m_nprachConfig)+preambleGroupTimeNoCP;
   double preambleRepetition = 4.0*preambleGroupTime;
 
-  for(size_t i = 0; i < NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(m_CeLevel); i++){
-      double time = sendingTime+(i*preambleRepetition);
-      Simulator::Schedule(MilliSeconds(time), &LteUePhySapProvider::SendNprachPreamble, m_uePhySapProvider, m_raPreambleId,m_raRnti,NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_CeLevel));
-  }
-  
+  double time = sendingTime +(NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(m_CeLevel)-1)*preambleRepetition;
+  Simulator::Schedule(MilliSeconds(time), &LteUePhySapProvider::SendNprachPreamble, m_uePhySapProvider, m_raPreambleId,m_raRnti,NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_CeLevel));
   NS_LOG_INFO (this << " sent preamble id " << (uint32_t) m_raPreambleId << ", RA-RNTI " << (uint32_t) m_raRnti);
   // 3GPP 36.321 5.1.4 
 
   Time raWindowBegin = MilliSeconds (4); 
-  Time raWindowEnd = MilliSeconds (4 + 8*10240);
+  //Time raWindowEnd = MilliSeconds (4 + 8*10240);
+  Time raWindowEnd = MilliSeconds (4 + 8*100);
   //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
   // TODO RESPONSE WINDOW 
@@ -572,7 +581,7 @@ LteUeMac::RecvRaResponse (BuildRarListElement_s raResponse)
 }
 
 void 
-LteUeMac::RecvRaResponseNb (RarNbiotControlMessage::RarPayload raResponse)
+LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
 {
   NS_LOG_FUNCTION (this);
   m_waitingForRaResponse = false;
@@ -609,10 +618,11 @@ LteUeMac::RecvRaResponseNb (RarNbiotControlMessage::RarPayload raResponse)
       txOpParams.componentCarrierId = m_componentCarrierId;
       txOpParams.rnti = m_rnti;
       txOpParams.lcid = lc0Lcid;
-      int subframes = *(raResponse.ulGrant.subframes.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
+      int subframes = *(raResponse.ulGrant.subframes.second.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
       Simulator::Schedule (MilliSeconds(subframes), &LteMacSapUser::NotifyTxOpportunity, lc0InfoIt->second.macSapUser, txOpParams);
       lc0BsrIt->second.txQueueSize = 0;
     }
+  
 }
 
 void 
@@ -818,6 +828,14 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
           rxPduParams.rnti = m_rnti;
           rxPduParams.lcid = tag.GetLcid ();
           it->second.macSapUser->ReceivePdu (rxPduParams);
+          // NB-IOT Specific Send HARQ at advertised Subframe
+          if (m_nextPossibleHarqOpportunity.size() > 0){ 
+          int currentsubframe = 10*(m_frameNo-1)+(m_subframeNo-1);
+          int subframestowait = *(m_nextPossibleHarqOpportunity[0].second.end()-1) - currentsubframe;
+          std::cout << "Sending HARQ Response at " << currentsubframe+subframestowait << std::endl;
+          Simulator::Schedule(MilliSeconds(subframestowait), &LteUePhySapProvider::SendHarqAckResponse, m_uePhySapProvider, true);
+          std::cout << m_rnti << " Got to MSG4-HARQ \n";
+          }
         }
       else
         {
@@ -1047,7 +1065,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
           NS_LOG_LOGIC (this << "got RAR with RA-RNTI " << (uint32_t) raRnti << ", expecting " << (uint32_t) m_raRnti);
           if (raRnti == m_raRnti) // RAR corresponds to TX subframe of preamble
             {
-              for (std::list<RarNbiotControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin ();
+              for (std::list<NbIotRrcSap::Rar>::const_iterator it = rarMsg->RarListBegin ();
                    it != rarMsg->RarListEnd ();
                    ++it)
                 {
@@ -1066,6 +1084,9 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
     {
       NS_LOG_WARN (this << " LteControlMessage not recognized");
     }
+}
+void LteUeMac::DoNotifyAboutHarqOpportunity(std::vector<std::pair<int, std::vector<int>>> subframes){
+  m_nextPossibleHarqOpportunity = subframes;
 }
 
 void

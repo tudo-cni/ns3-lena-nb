@@ -141,6 +141,7 @@ private:
   * \param params LteMacSapProvider::ReportBufferStatusParameters
   */
   void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
   // forwarded from UE CMAC SAP
  /**
@@ -220,6 +221,8 @@ private:
   * \param msg the LTE control message
   */
   void DoReceiveLteControlMessage (Ptr<LteControlMessage> msg);
+
+  void DoNotifyAboutHarqOpportunity (std::vector<std::pair<int,std::vector<int>>> subframes);
   
   // internal methods
   /// Randomly select and send RA preamble function
@@ -250,7 +253,7 @@ private:
   *
   * \param raResponse RA response received
   */
-  void RecvRaResponseNb (RarNbiotControlMessage::RarPayload raResponse);
+  void RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse);
  /**
   * RA response timeout function
   *
@@ -322,6 +325,7 @@ private:
   bool m_waitingForRaResponse; ///< waiting for RA response
 
   NbIotRrcSap::NprachParametersNb m_CeLevel;
+  std::vector<std::pair<int, std::vector<int>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
   bool m_simplifiedNprach;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
