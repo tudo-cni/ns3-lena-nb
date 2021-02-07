@@ -24,7 +24,7 @@
 
 #include <ns3/object.h>
 #include "nb-iot-rrc-sap.h"
-#include "lte-control-messages.h"
+#include "lte-mac-sap.h"
 #include <algorithm>
 #include <unordered_map>
 
@@ -39,32 +39,7 @@ namespace ns3 {
 // Overall size of UlGrant = 15 bit
 
 
-struct NpdcchMessage{
-  enum SearchSpaceType{
-    type1,
-    type2,
-    ueSpecific
-  } searchSpaceType;
-  enum NpdcchFormat {
-    format1,
-    format2
-  } npdcchFormat;
-  enum DciType{
-    n0,
-    n1,
-    n2
-  } dciType;
-  NbIotRrcSap::NprachParametersNb ce;
-  NbIotRrcSap::DciN1 dciN1;
-  NbIotRrcSap::DciN0 dciN0;
-  std::vector<RarNbiotControlMessage::Rar> rars;
-  std::vector<int> npdschOpportunity;
-  std::vector<int> npuschOpportunity;
-  std::vector<int> dciRepetitionsubframes;
-  int ranti;
-  bool isRar;
 
-};
 
 struct NpdschMessage{
   int Tb;
