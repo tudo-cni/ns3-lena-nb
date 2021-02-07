@@ -26,6 +26,7 @@
 #include <ns3/lte-enb-component-carrier-manager.h>
 #include <ns3/lte-ccm-rrc-sap.h>
 #include <ns3/lte-rrc-sap.h>
+#include "nb-iot-scheduler.h"
 #include <map>
 
 namespace ns3 {
@@ -99,6 +100,12 @@ protected:
    * \param params the report buffer status parameters
    */
   virtual void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+  /**
+   * \brief Notify transmit opportunity.
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
+  virtual void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
   /**
    * \brief Notify transmit opportunity.
    *

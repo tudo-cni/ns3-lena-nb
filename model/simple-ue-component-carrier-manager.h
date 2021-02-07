@@ -88,6 +88,7 @@ protected:
    * \param params LteMacSapProvider::ReportBufferStatusParameters
    */
   virtual void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+  virtual void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
   /// Notify HARQ deliver failure
   void DoNotifyHarqDeliveryFailure ();
   // forwarded from LteMacSapUser

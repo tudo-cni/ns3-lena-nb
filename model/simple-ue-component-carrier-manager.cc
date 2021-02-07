@@ -51,6 +51,7 @@ public:
   // inherited from LteMacSapProvider
   virtual void TransmitPdu (LteMacSapProvider::TransmitPduParameters params);
   virtual void ReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+  virtual void ReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
 private:
   SimpleUeComponentCarrierManager* m_mac; ///< the component carrier manager
@@ -73,7 +74,11 @@ SimpleUeCcmMacSapProvider::ReportBufferStatus (ReportBufferStatusParameters para
 {
   m_mac->DoReportBufferStatus (params);
 }
-
+void
+SimpleUeCcmMacSapProvider::ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+{
+  m_mac->DoReportBufferStatus (params);
+}
 ///////////////////////////////////////////////////////////
 // MAC SAP USER SAP forwarders
 /////////////// ////////////////////////////////////////////
@@ -200,6 +205,28 @@ SimpleUeComponentCarrierManager::DoTransmitPdu (LteMacSapProvider::TransmitPduPa
 
 void
 SimpleUeComponentCarrierManager::DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("BSR from RLC for LCID = " << (uint16_t)params.lcid);
+  std::map <uint8_t, LteMacSapProvider*>::iterator it =  m_macSapProvidersMap.find (0);
+  NS_ABORT_MSG_IF (it == m_macSapProvidersMap.end (), "could not find Sap for ComponentCarrier");
+
+  NS_LOG_DEBUG ("Size of component carrier LC map "<< m_componentCarrierLcMap.size());
+
+  for (std::map <uint8_t, std::map<uint8_t, LteMacSapProvider*> >::iterator ccLcMapIt = m_componentCarrierLcMap.begin();
+                                                                   ccLcMapIt != m_componentCarrierLcMap.end(); ccLcMapIt++)
+    {
+      NS_LOG_DEBUG ("BSR from RLC for CC id = "<< (uint16_t)ccLcMapIt->first);
+      std::map <uint8_t, LteMacSapProvider*>::iterator it = ccLcMapIt->second.find (params.lcid);
+      if (it !=ccLcMapIt->second.end())
+        {
+          it->second->ReportBufferStatus (params);
+        }
+    }
+}
+
+void
+SimpleUeComponentCarrierManager::DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_DEBUG ("BSR from RLC for LCID = " << (uint16_t)params.lcid);
