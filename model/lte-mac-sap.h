@@ -22,7 +22,7 @@
 #define LTE_MAC_SAP_H
 
 #include <ns3/packet.h>
-
+#include "nb-iot-rrc-sap.h"
 namespace ns3 {
 
 
@@ -81,6 +81,7 @@ public:
    * \param params ReportBufferStatusParameters
    */
   virtual void ReportBufferStatus (ReportBufferStatusParameters params) = 0;
+  virtual void ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace) = 0;
 
 
 };
@@ -200,6 +201,7 @@ public:
   // inherited from LteMacSapProvider
   virtual void TransmitPdu (TransmitPduParameters params);
   virtual void ReportBufferStatus (ReportBufferStatusParameters params);
+  virtual void ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
 private:
   C* m_mac; ///< the MAC class
@@ -223,6 +225,12 @@ void EnbMacMemberLteMacSapProvider<C>::ReportBufferStatus (ReportBufferStatusPar
 {
   m_mac->DoReportBufferStatus (params);
 }
+template <class C>
+void EnbMacMemberLteMacSapProvider<C>::ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+{
+  m_mac->DoReportBufferStatusNb (params, searchspace);
+}
+
 
 
 } // namespace ns3

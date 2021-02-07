@@ -23,6 +23,7 @@
 #define LTE_RLC_TM_H
 
 #include "ns3/lte-rlc.h"
+#include "nb-iot-scheduler.h"
 
 #include <ns3/event-id.h>
 #include <map>
@@ -72,6 +73,7 @@ private:
   void ExpireRbsTimer (void);
   /// Report buffer status
   void DoReportBufferStatus ();
+  void DoReportBufferStatusNb (NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
 private:
   /**

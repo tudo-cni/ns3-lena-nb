@@ -96,7 +96,8 @@ LteRlcTm::DoTransmitPdcpPdu (Ptr<Packet> p)
     }
 
   /** Report Buffer Status */
-  DoReportBufferStatus ();
+  //DoReportBufferStatus ();
+  DoReportBufferStatusNb (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
   m_rbsTimer.Cancel ();
 }
 
@@ -201,6 +202,33 @@ LteRlcTm::DoReportBufferStatus (void)
   NS_LOG_LOGIC ("Send ReportBufferStatus = " << r.txQueueSize << ", " << r.txQueueHolDelay );
   m_macSapProvider->ReportBufferStatus (r);
 }
+
+void
+LteRlcTm::DoReportBufferStatusNb (NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+{
+  Time holDelay (0);
+  uint32_t queueSize = 0;
+
+  if (! m_txBuffer.empty ())
+    {
+      holDelay = Simulator::Now () - m_txBuffer.front ().m_waitingSince;
+
+      queueSize = m_txBufferSize; // just data in tx queue (no header overhead for RLC TM)
+    }
+
+  LteMacSapProvider::ReportBufferStatusParameters r;
+  r.rnti = m_rnti;
+  r.lcid = m_lcid;
+  r.txQueueSize = queueSize;
+  r.txQueueHolDelay = holDelay.GetMilliSeconds () ;
+  r.retxQueueSize = 0;
+  r.retxQueueHolDelay = 0;
+  r.statusPduSize = 0;
+
+  NS_LOG_LOGIC ("Send ReportBufferStatus = " << r.txQueueSize << ", " << r.txQueueHolDelay );
+  m_macSapProvider->ReportBufferStatusNb (r, searchspace);
+}
+
 
 void
 LteRlcTm::ExpireRbsTimer (void)
