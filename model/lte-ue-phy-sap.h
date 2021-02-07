@@ -76,6 +76,8 @@ public:
   virtual void NotifyConnectionSuccessful () = 0;
 
   virtual double GetRSRP() = 0;
+  
+  virtual void SendHarqAckResponse(bool ack) = 0;
 
 };
 
@@ -116,6 +118,7 @@ public:
    */
   virtual void ReceiveLteControlMessage (Ptr<LteControlMessage> msg) = 0;
 
+  virtual void NotifyAboutHarqOpportunity(std::vector<std::pair<int, std::vector<int>>> subframes) = 0;
 };
 
 

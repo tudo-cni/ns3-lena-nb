@@ -91,6 +91,7 @@ public:
   virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset);
   virtual void NotifyConnectionSuccessful ();
   virtual double GetRSRP();
+  virtual void SendHarqAckResponse(bool ack);
 
 private:
   LteUePhy* m_phy; ///< the Phy
@@ -131,6 +132,10 @@ UeMemberLteUePhySapProvider::NotifyConnectionSuccessful ()
 double UeMemberLteUePhySapProvider::GetRSRP()
 {
   return m_phy->DoGetRSRP();
+}
+
+void UeMemberLteUePhySapProvider::SendHarqAckResponse(bool ack){
+  m_phy->DoSendHarqResponse(ack);
 }
 
 ////////////////////////////////////////
@@ -1214,13 +1219,33 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
       else if (msg->GetMessageType () == LteControlMessage::DL_DCI_NB)
         {
           Ptr<DlDciN1NbiotControlMessage> msg2 = DynamicCast<DlDciN1NbiotControlMessage> (msg);
-          if (msg2->GetRanti() == m_raRnti){
-            std::cout << "Received my dci at " << 10*(m_frameNo-1) +(m_subframeNo-1)<< std::endl;
-          }
-          //NS_LOG_INFO ("received SIB1_NB");
-          //NS_ASSERT (m_cellId > 0);
-          //Ptr<Sib1NbiotControlMessage> msg2 = DynamicCast<Sib1NbiotControlMessage> (msg);
-          //m_ueCphySapUser->RecvSystemInformationBlockType1Nb (m_cellId, msg2->GetSib1());
+
+          NbIotRrcSap::DciN1 dci = msg2->GetDci ();
+          if (msg2->GetRnti() != m_rnti)
+            {
+              // DCI not for me
+              continue;
+            }
+
+          // send TB info to LteSpectrumPhy
+          //NS_LOG_DEBUG (this << " UE " << m_rnti << " DL-DCI " << dci.m_rnti << " bitmap "  << dci.m_rbBitmap);
+          /*
+          Calculate corret TBS
+          */
+          
+          int currentsubframe =  10*(m_frameNo-1)+(m_subframeNo-1);
+          int subframes_to_wait = *(dci.npdschOpportunity.end()-1)-currentsubframe;
+          m_uePhySapUser->NotifyAboutHarqOpportunity(dci.npuschOpportunity);
+          //m_downlinkSpectrumPhy->AddExpectedTb (msg2->GetRnti(),dci.NDI, 192, 0, std::vector<int>({0}), 0, 0, 0, true /* DL */);
+          //AddNbiotExpectedTb(msg2->GetRnti(),dci.NDI, 192, 0, std::vector<int>({0}), 0, 0, 0, true /* DL */);
+
+          Simulator::Schedule (MilliSeconds(subframes_to_wait), &LteUePhy::AddNbiotExpectedTb, this);
+//                                      (short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool), 
+ //                      ns3::LteUePhy*, unsigned int, bool&, int, int, std::vector<int>, int, int, int, bool)’
+//                       short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool
+//       ns3::LteUePhy*, short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool
+
+          SetSubChannelsForReception (std::vector<int>({0}));
         }
       else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
         {
@@ -1228,7 +1253,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           if (rarMsg->GetRaRnti () == m_raRnti)
             {
 
-              for (std::list<RarNbiotControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
+              for (std::list<NbIotRrcSap::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
                 {
                   if (it->rapId != m_raPreambleId)
                     {
@@ -1249,8 +1274,9 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
 
                       //Simulator::Schedule() QueueSubChannelsForTransmission (std::vector<int>{0});
                       // pass the info to the MACo
-                      int subframes = *(it->rarPayload.ulGrant.subframes.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
-                      Simulator::Schedule (MilliSeconds(subframes), &LteUePhy::QueueSubChannelsForTransmission, this, std::vector<int>{0});
+                      int subframes = *(it->rarPayload.ulGrant.subframes.second.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
+                      int subcarrier =it->rarPayload.ulGrant.subframes.first;
+                      Simulator::Schedule (MilliSeconds(subframes), &LteUePhy::QueueSubChannelsForTransmission, this, std::vector<int>{subcarrier});
                       m_uePhySapUser->ReceiveLteControlMessage (msg);
                       // reset RACH variables with out of range values
                       m_raPreambleId = 255;
@@ -1269,7 +1295,17 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
 
 
 }
+void LteUePhy::AddNbiotExpectedTb(){
+          //m_downlinkSpectrumPhy->AddExpectedTb (rnti,ndi, size, mcs, map, layer, harqId, rv, downlink/* DL */);
+          m_downlinkSpectrumPhy->AddExpectedTb (m_rnti,1, 192, 0, std::vector<int>{0}, 0, 1, 0, true/* DL */);
+}
 
+void LteUePhy::DoSendHarqResponse(bool ack){
+  Ptr<DlHarqFeedbackNbiotControlMessage> msg = Create<DlHarqFeedbackNbiotControlMessage>();
+  msg->SetAcknowledgement(ack);
+  msg->SetRnti(m_rnti);
+  m_controlMessagesQueue.at(0).push_back(msg);
+}
 
 void
 LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
@@ -1535,7 +1571,7 @@ LteUePhy::DoSetDlBandwidth (uint16_t dlBandwidth)
   NS_LOG_FUNCTION (this << (uint32_t) dlBandwidth);
   if (m_dlBandwidth != dlBandwidth or !m_dlConfigured)
     {
-      m_dlBandwidth = dlBandwidth;
+      m_dlBandwidth = 1;
 
       static const int Type0AllocationRbg[4] = {
         10,     // RGB size 1
@@ -1552,7 +1588,7 @@ LteUePhy::DoSetDlBandwidth (uint16_t dlBandwidth)
             }
         }
 
-      m_noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_dlEarfcn, m_dlBandwidth, m_noiseFigure);
+      m_noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_dlEarfcn, 1, m_noiseFigure);
       m_downlinkSpectrumPhy->SetNoisePowerSpectralDensity (m_noisePsd);
       m_downlinkSpectrumPhy->GetChannel ()->AddRx (m_downlinkSpectrumPhy);
     }

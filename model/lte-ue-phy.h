@@ -659,6 +659,10 @@ private:
   virtual void DoNotifyConnectionSuccessful ();
 
   virtual double DoGetRSRP();
+
+  virtual void DoSendHarqResponse(bool ack);
+
+  void AddNbiotExpectedTb();
   /// A list of sub channels to use in TX.
   std::vector <int> m_subChannelsForTransmission;
   /// A list of sub channels to use in RX.
