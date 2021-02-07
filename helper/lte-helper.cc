@@ -27,7 +27,6 @@
 #include <ns3/abort.h>
 #include <ns3/pointer.h>
 #include <ns3/lte-enb-rrc.h>
-#include <ns3/epc-ue-nas.h>
 #include <ns3/epc-enb-application.h>
 #include <ns3/lte-ue-rrc.h>
 #include <ns3/lte-ue-mac.h>
@@ -65,7 +64,7 @@
 #include <ns3/epc-x2.h>
 #include <ns3/object-map.h>
 #include <ns3/object-factory.h>
-
+//#include <ns3/epc-ue-nas.h>
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteHelper");
@@ -152,7 +151,7 @@ TypeId LteHelper::GetTypeId (void)
     .AddAttribute ("UseIdealRrc",
                    "If true, LteRrcProtocolIdeal will be used for RRC signaling. "
                    "If false, LteRrcProtocolReal will be used.",
-                   BooleanValue (true), 
+                   BooleanValue (false), 
                    MakeBooleanAccessor (&LteHelper::m_useIdealRrc),
                    MakeBooleanChecker ())
     .AddAttribute ("AnrEnabled",
@@ -987,15 +986,55 @@ LteHelper::Attach (Ptr<NetDevice> ueDevice)
   Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas ();
   NS_ASSERT (ueNas != 0);
   uint32_t dlEarfcn = ueLteDevice->GetDlEarfcn ();
-  ueNas->StartCellSelection (dlEarfcn);
+  //ueNas->StartCellSelection (dlEarfcn);
 
   // instruct UE to immediately enter CONNECTED mode after camping
-  ueNas->Connect ();
+  //ueNas->Connect ();
+  Simulator::Schedule(MilliSeconds(8000), &EpcUeNas::StartCellSelection, ueNas, dlEarfcn);
+  Simulator::Schedule(MilliSeconds(8000), &EpcUeNas::ConnectSchedule, ueNas);
 
   // activate default EPS bearer
   m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (),
                                   EpcTft::Default (),
                                   EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+}
+void
+LteHelper::AttachAtTime (Ptr<NetDevice> ueDevice, uint64_t delay)
+{
+  NS_LOG_FUNCTION (this);
+
+  if (m_epcHelper == 0)
+    {
+      NS_FATAL_ERROR ("This function is not valid without properly configured EPC");
+    }
+
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  if (ueLteDevice == 0)
+    {
+      NS_FATAL_ERROR ("The passed NetDevice must be an LteUeNetDevice");
+    }
+
+  // initiate cell selection
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas ();
+  NS_ASSERT (ueNas != 0);
+  uint32_t dlEarfcn = ueLteDevice->GetDlEarfcn ();
+  //ueNas->StartCellSelection (dlEarfcn);
+
+  // instruct UE to immediately enter CONNECTED mode after camping
+  //ueNas->Connect ();
+  Simulator::Schedule(MilliSeconds(delay), &EpcUeNas::StartCellSelection, ueNas, dlEarfcn);
+  //Simulator::Schedule(MilliSeconds(delay), &EpcUeNas::ConnectSchedule, ueNas);
+
+
+  // activate default EPS bearer
+  m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (),
+                                  EpcTft::Default (),
+                                  EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+}
+void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas();
+  ueNas->Connect();
 }
 
 void

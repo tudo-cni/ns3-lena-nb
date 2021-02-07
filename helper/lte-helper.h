@@ -41,6 +41,7 @@
 #include <ns3/mobility-model.h>
 #include <ns3/component-carrier-enb.h>
 #include <ns3/cc-helper.h>
+#include <ns3/epc-ue-nas.h>
 #include <map>
 
 namespace ns3 {
@@ -383,7 +384,11 @@ public:
    *
    * Note that this function can only be used in EPC-enabled simulation.
    */
+
   void Attach (Ptr<NetDevice> ueDevice);
+  void AttachAtTime (Ptr<NetDevice> ueDevice, uint64_t delay);
+  void ScheduleConnect(Ptr<NetDevice> ueDevice);
+
 
   /**
    * \brief Manual attachment of a set of UE devices to the network via a given
