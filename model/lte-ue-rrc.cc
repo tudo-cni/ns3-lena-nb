@@ -38,7 +38,7 @@
 #include <ns3/lte-rlc-am.h>
 #include <ns3/lte-pdcp.h>
 #include <ns3/lte-radio-bearer-info.h>
-
+#include <fstream>
 #include <cmath>
 
 namespace ns3 {
@@ -576,8 +576,16 @@ LteUeRrc::InitializeSap (void)
         }
     }
 }
+void LteUeRrc::LogRA(bool success){
+        std::ofstream logfile;
+        logfile.open(m_logfile, std::ios_base::app);
+        logfile << success << "\n";
+        logfile.close();
+}
 
-
+void LteUeRrc::SetLogFile(std::string filename){
+  m_logfile = filename;
+}
 void
 LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
 {
@@ -716,6 +724,10 @@ LteUeRrc::DoNotifyRandomAccessFailed ()
       {
         SwitchToState (IDLE_CAMPED_NORMALLY);
         m_asSapUser->NotifyConnectionFailed ();
+        //std::cout << "I'm dead" << std::endl;
+        LogRA(false);
+
+
       }
       break;
 
@@ -1107,7 +1119,7 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
         case CONNECTED_REESTABLISHING:
           m_hasReceivedSib2Nb = true;
           m_ulEarfcn = msg.sib2.freqInfo.ulCarrierFreq;
-          m_ulBandwidth = 1;
+          m_ulBandwidth = 12;
           m_sib2ReceivedTrace (m_imsi, m_cellId, m_rnti);
           NbIotRrcSap::NprachConfig rc;
           rc = msg.sib2.radioResourceConfigCommon.nprachConfig;
@@ -1150,11 +1162,15 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
         m_connectionTimeout.Cancel ();
         SwitchToState (CONNECTED_NORMALLY);
         m_leaveConnectedMode = false;
-        LteRrcSap::RrcConnectionSetupCompleted msg2;
-        msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
-        m_rrcSapUser->SendRrcConnectionSetupCompleted (msg2);
-        m_asSapUser->NotifyConnectionSuccessful ();
-        m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
+        //LteRrcSap::RrcConnectionSetupCompleted msg2;
+        //msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
+        //m_rrcSapUser->SendRrcConnectionSetupCompleted (msg2);
+        //m_asSapUser->NotifyConnectionSuccessful ();
+        //m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
+        std::cout << "CONNECTION COMPLETE" << std::endl;
+        LogRA(true);
+        m_asSapUser->NotifyMessage4();
+        SwitchToState(IDLE_START);
         m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);
         NS_ABORT_MSG_IF (m_noOfSyncIndications > 0, "Sync indications should be zero "
                          "when a new RRC connection is established. Current value = " << (uint16_t) m_noOfSyncIndications);
@@ -3258,8 +3274,8 @@ void
 LteUeRrc::StartConnection ()
 {
   NS_LOG_FUNCTION (this << m_imsi);
-  NS_ASSERT (m_hasReceivedMib);
-  NS_ASSERT (m_hasReceivedSib2);
+  //NS_ASSERT (m_hasReceivedMib);
+  //NS_ASSERT (m_hasReceivedSib2);
   m_connectionPending = false; // reset the flag
   SwitchToState (IDLE_RANDOM_ACCESS);
   m_cmacSapProvider.at (0)->StartContentionBasedRandomAccessProcedure ();
@@ -3309,6 +3325,7 @@ LteUeRrc::LeaveConnectedMode ()
       m_cphySapProvider.at (i)->ResetPhyAfterRlf ();  //reset the PHY
     }
   SwitchToState (IDLE_START);
+  // COMMENTED OUT FOR FIRST EVALUATION OF RANDOM ACCESS
   DoStartCellSelection (m_dlEarfcn);
   //Save the cell id UE was attached to
   StorePreviousCellId (m_cellId);

@@ -33,7 +33,7 @@
 #include "lte-enb-net-device.h"
 #include "lte-ue-net-device.h"
 
-#include <ns3/lte-enb-mac.h>
+#include "ns3/lte-enb-mac.h"
 #include <ns3/lte-radio-bearer-tag.h>
 #include <ns3/lte-ue-phy.h>
 
@@ -41,7 +41,7 @@
 #include "ns3/lte-enb-cmac-sap.h"
 #include <ns3/lte-common.h>
 
-
+#include <algorithm>
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteEnbMac");
@@ -302,7 +302,7 @@ EnbMacMemberLteEnbPhySapUser::ReceivePhyPdu (Ptr<Packet> p)
 void
 EnbMacMemberLteEnbPhySapUser::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
 {
-  m_mac->DoSubframeIndication (frameNo, subframeNo);
+  m_mac->DoSubframeIndicationNb (frameNo, subframeNo);
 }
 
 void
@@ -402,6 +402,7 @@ m_ccmMacSapUser (0)
   m_cschedSapUser = new EnbMacMemberFfMacCschedSapUser (this);
   m_enbPhySapUser = new EnbMacMemberLteEnbPhySapUser (this);
   m_ccmMacSapProvider = new MemberLteCcmMacSapProvider<LteEnbMac> (this);
+  m_dropPreambleCollision=true;
 
 }
 

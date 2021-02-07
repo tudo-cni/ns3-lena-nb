@@ -34,7 +34,7 @@
 #include <ns3/lte-control-messages.h>
 #include <ns3/simulator.h>
 #include <ns3/lte-common.h>
-
+#include <fstream>
 
 
 namespace ns3 {
@@ -454,6 +454,7 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
   NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
   // assume that there is no Random Access Preambles group B
   m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, NbIotRrcSap::ConvertNprachNumSubcarriers2int(m_CeLevel) -1 );
+  std::cout << NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_CeLevel)<<"\n";
   bool contention = true;
   SendRaPreambleNb(contention);
 }  

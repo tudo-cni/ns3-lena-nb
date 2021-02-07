@@ -168,6 +168,7 @@ public:
    * 
    */
   virtual void NotifyRandomAccessFailed () = 0;
+
 };
 
 

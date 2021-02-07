@@ -945,6 +945,7 @@ void
 UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
 {
   NS_LOG_FUNCTION (this);
+  std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl;
   switch (m_state)
     {
     case INITIAL_RANDOM_ACCESS:
@@ -956,16 +957,17 @@ UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
             m_imsi = msg.ueIdentity;
 
             // send RRC CONNECTION SETUP to UE
+            //commented out for RA testing
             LteRrcSap::RrcConnectionSetup msg2;
             msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
             msg2.radioResourceConfigDedicated = BuildRadioResourceConfigDedicated ();
             m_rrc->m_rrcSapUser->SendRrcConnectionSetup (m_rnti, msg2);
 
             RecordDataRadioBearersToBeStarted ();
-            m_connectionSetupTimeout = Simulator::Schedule (
-                m_rrc->m_connectionSetupTimeoutDuration,
-                &LteEnbRrc::ConnectionSetupTimeout, m_rrc, m_rnti);
-            SwitchToState (CONNECTION_SETUP);
+            //m_connectionSetupTimeout = Simulator::Schedule (
+            //    m_rrc->m_connectionSetupTimeoutDuration,
+            //    &LteEnbRrc::ConnectionSetupTimeout, m_rrc, m_rnti);
+            //SwitchToState (CONNECTION_SETUP);
           }
         else
           {
@@ -1718,7 +1720,7 @@ LteEnbRrc::GetTypeId (void)
     // SRS related attributes
     .AddAttribute ("SrsPeriodicity",
                    "The SRS periodicity in milliseconds",
-                   UintegerValue (40),
+                   UintegerValue (320),
                    MakeUintegerAccessor (&LteEnbRrc::SetSrsPeriodicity, 
                                          &LteEnbRrc::GetSrsPeriodicity),
                    MakeUintegerChecker<uint32_t> ())
@@ -1730,9 +1732,9 @@ LteEnbRrc::GetTypeId (void)
                    "Must account for reception of RAR and transmission of "
                    "RRC CONNECTION REQUEST over UL GRANT. The value of this"
                    "timer should not be greater than T300 timer at UE RRC",
-                   TimeValue (MilliSeconds (15)),
+                   TimeValue (MilliSeconds (50000)),
                    MakeTimeAccessor (&LteEnbRrc::m_connectionRequestTimeoutDuration),
-                   MakeTimeChecker (MilliSeconds (1), MilliSeconds (15)))
+                   MakeTimeChecker (MilliSeconds (1), MilliSeconds (50000)))
     .AddAttribute ("ConnectionSetupTimeoutDuration",
                    "After accepting connection request, if no RRC CONNECTION "
                    "SETUP COMPLETE is received before this time, the UE "
@@ -2987,52 +2989,52 @@ LteEnbRrc::GetSrsPeriodicity () const
 uint16_t
 LteEnbRrc::GetNewSrsConfigurationIndex ()
 {
-  NS_LOG_FUNCTION (this << m_ueSrsConfigurationIndexSet.size ());
-  // SRS
-  NS_ASSERT (m_srsCurrentPeriodicityId > 0);
-  NS_ASSERT (m_srsCurrentPeriodicityId < SRS_ENTRIES);
-  NS_LOG_DEBUG (this << " SRS p " << g_srsPeriodicity[m_srsCurrentPeriodicityId] << " set " << m_ueSrsConfigurationIndexSet.size ());
-  if (m_ueSrsConfigurationIndexSet.size () >= g_srsPeriodicity[m_srsCurrentPeriodicityId])
-    {
-      NS_FATAL_ERROR ("too many UEs (" << m_ueSrsConfigurationIndexSet.size () + 1 
-                                       << ") for current SRS periodicity "
-                                       <<  g_srsPeriodicity[m_srsCurrentPeriodicityId]
-                                       << ", consider increasing the value of ns3::LteEnbRrc::SrsPeriodicity");
-    }
+  //NS_LOG_FUNCTION (this << m_ueSrsConfigurationIndexSet.size ());
+  //// SRS
+  //NS_ASSERT (m_srsCurrentPeriodicityId > 0);
+  //NS_ASSERT (m_srsCurrentPeriodicityId < SRS_ENTRIES);
+  //NS_LOG_DEBUG (this << " SRS p " << g_srsPeriodicity[m_srsCurrentPeriodicityId] << " set " << m_ueSrsConfigurationIndexSet.size ());
+  //if (m_ueSrsConfigurationIndexSet.size () >= g_srsPeriodicity[m_srsCurrentPeriodicityId])
+  //  {
+  //    NS_FATAL_ERROR ("too many UEs (" << m_ueSrsConfigurationIndexSet.size () + 1 
+  //                                     << ") for current SRS periodicity "
+  //                                     <<  g_srsPeriodicity[m_srsCurrentPeriodicityId]
+  //                                     << ", consider increasing the value of ns3::LteEnbRrc::SrsPeriodicity");
+  //  }
 
-  if (m_ueSrsConfigurationIndexSet.empty ())
-    {
-      // first entry
-      m_lastAllocatedConfigurationIndex = g_srsCiLow[m_srsCurrentPeriodicityId];
-      m_ueSrsConfigurationIndexSet.insert (m_lastAllocatedConfigurationIndex);
-    }
-  else
-    {
-      // find a CI from the available ones
-      std::set<uint16_t>::reverse_iterator rit = m_ueSrsConfigurationIndexSet.rbegin ();
-      NS_ASSERT (rit != m_ueSrsConfigurationIndexSet.rend ());
-      NS_LOG_DEBUG (this << " lower bound " << (*rit) << " of " << g_srsCiHigh[m_srsCurrentPeriodicityId]);
-      if ((*rit) < g_srsCiHigh[m_srsCurrentPeriodicityId])
-        {
-          // got it from the upper bound
-          m_lastAllocatedConfigurationIndex = (*rit) + 1;
-          m_ueSrsConfigurationIndexSet.insert (m_lastAllocatedConfigurationIndex);
-        }
-      else
-        {
-          // look for released ones
-          for (uint16_t srcCi = g_srsCiLow[m_srsCurrentPeriodicityId]; srcCi < g_srsCiHigh[m_srsCurrentPeriodicityId]; srcCi++) 
-            {
-              std::set<uint16_t>::iterator it = m_ueSrsConfigurationIndexSet.find (srcCi);
-              if (it == m_ueSrsConfigurationIndexSet.end ())
-                {
-                  m_lastAllocatedConfigurationIndex = srcCi;
-                  m_ueSrsConfigurationIndexSet.insert (srcCi);
-                  break;
-                }
-            }
-        } 
-    }
+  //if (m_ueSrsConfigurationIndexSet.empty ())
+  //  {
+  //    // first entry
+  //    m_lastAllocatedConfigurationIndex = g_srsCiLow[m_srsCurrentPeriodicityId];
+  //    m_ueSrsConfigurationIndexSet.insert (m_lastAllocatedConfigurationIndex);
+  //  }
+  //else
+  //  {
+  //    // find a CI from the available ones
+  //    std::set<uint16_t>::reverse_iterator rit = m_ueSrsConfigurationIndexSet.rbegin ();
+  //    NS_ASSERT (rit != m_ueSrsConfigurationIndexSet.rend ());
+  //    NS_LOG_DEBUG (this << " lower bound " << (*rit) << " of " << g_srsCiHigh[m_srsCurrentPeriodicityId]);
+  //    if ((*rit) < g_srsCiHigh[m_srsCurrentPeriodicityId])
+  //      {
+  //        // got it from the upper bound
+  //        m_lastAllocatedConfigurationIndex = (*rit) + 1;
+  //        m_ueSrsConfigurationIndexSet.insert (m_lastAllocatedConfigurationIndex);
+  //      }
+  //    else
+  //      {
+  //        // look for released ones
+  //        for (uint16_t srcCi = g_srsCiLow[m_srsCurrentPeriodicityId]; srcCi < g_srsCiHigh[m_srsCurrentPeriodicityId]; srcCi++) 
+  //          {
+  //            std::set<uint16_t>::iterator it = m_ueSrsConfigurationIndexSet.find (srcCi);
+  //            if (it == m_ueSrsConfigurationIndexSet.end ())
+  //              {
+  //                m_lastAllocatedConfigurationIndex = srcCi;
+  //                m_ueSrsConfigurationIndexSet.insert (srcCi);
+  //                break;
+  //              }
+  //          }
+  //      } 
+  //  }
   return m_lastAllocatedConfigurationIndex;
 
 }

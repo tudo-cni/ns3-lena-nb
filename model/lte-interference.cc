@@ -97,7 +97,7 @@ LteInterference::StartRx (Ptr<const SpectrumValue> rxPsd)
       // receiving multiple simultaneous signals, make sure they are synchronized
       NS_ASSERT (m_lastChangeTime == Now ());
       // make sure they use orthogonal resource blocks
-      NS_ASSERT (Sum ((*rxPsd) * (*m_rxSignal)) == 0.0);
+     // NS_ASSERT (Sum ((*rxPsd) * (*m_rxSignal)) == 0.0);
       (*m_rxSignal) += (*rxPsd);
     }
 }

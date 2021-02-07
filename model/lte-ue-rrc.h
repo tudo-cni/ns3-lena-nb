@@ -1373,11 +1373,15 @@ private:
    */
   void ResetRlfParams ();
 
+  // Temporary Logging method for successful random access
+  void LogRA(bool success);
+  std::string m_logfile;
 public:
   /** 
    * The number of component carriers.
    */
   uint16_t m_numberOfComponentCarriers;
+  void SetLogFile(std::string filename);
 
 }; // end of class LteUeRrc
 

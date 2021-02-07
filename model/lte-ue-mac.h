@@ -201,6 +201,7 @@ private:
    * establishment.
    */
   void DoNotifyConnectionSuccessful ();
+
   /**
    * Set IMSI
    *

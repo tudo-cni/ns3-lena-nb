@@ -25,9 +25,11 @@
 #include "ns3/applications-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/config-store-module.h"
+#include "ns3/random-variable-stream.h"
 #include "ns3/lte-module.h"
 //#include "ns3/gtk-config-store.h"
-
+#include <chrono>
+#include <ctime>    
 using namespace ns3;
 
 /**
@@ -41,9 +43,10 @@ NS_LOG_COMPONENT_DEFINE ("LenaSimpleEpc");
 int
 main (int argc, char *argv[])
 {
-  uint16_t numNodePairs = 2;
-  Time simTime = MilliSeconds (1100);
-  double distance = 60.0;
+  uint16_t numNodePairs = 1;
+  Time simTime = MilliSeconds (500000);
+  //double distance = 50000.0;
+  double distance = 30000.0;
   Time interPacketInterval = MilliSeconds (100);
   bool useCa = false;
   bool disableDl = false;
@@ -81,6 +84,7 @@ main (int argc, char *argv[])
 
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
 
+
    // Create a single RemoteHost
   NodeContainer remoteHostContainer;
   remoteHostContainer.Create (1);
@@ -107,13 +111,16 @@ main (int argc, char *argv[])
   NodeContainer ueNodes;
   NodeContainer enbNodes;
   enbNodes.Create (numNodePairs);
-  ueNodes.Create (numNodePairs);
+  ueNodes.Create (1000);
 
   // Install Mobility Model
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < numNodePairs; i++)
+
+  positionAlloc->Add (Vector (0, 0, 0));
+  int positions = 3;
+  for (uint16_t i = 1; i <= ueNodes.GetN(); i++)
     {
-      positionAlloc->Add (Vector (distance * i, 0, 0));
+      positionAlloc->Add (Vector (distance*(i%positions)+1000, 0, 0));
     }
   MobilityHelper mobility;
   mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -137,15 +144,39 @@ main (int argc, char *argv[])
       Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ueNode->GetObject<Ipv4> ());
       ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
     }
-
   // Attach one UE per eNodeB
-  for (uint16_t i = 0; i < numNodePairs; i++)
+
+  Ptr<UniformRandomVariable> RaUeUniformVariable = CreateObject<UniformRandomVariable> ();
+
+  for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
-      lteHelper->Attach (ueLteDevs.Get(i), enbLteDevs.Get(i));
+
+      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds());
+      std::cout << access << "\n";
+      lteHelper->AttachAtTime (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
+      //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
       // side effect: the default EPS bearer will be activated
     }
 
+  std::string logfile = "logs/";
+  //auto start = std::chrono::system_clock::now();
 
+  logfile += "RA_";
+  logfile += std::to_string(ueNodes.GetN());
+  logfile += "_";
+  logfile += std::to_string(simTime.GetInteger());
+  logfile += "_";
+  logfile += std::to_string(positions);
+  logfile += "_";
+  logfile += std::to_string(int(distance));
+  logfile += ".log";
+  std::cout << logfile << "\n";
+  for (uint16_t i = 0; i < ueNodes.GetN(); i++){
+
+    Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
+    Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+    ueRrc->SetLogFile(logfile);
+  }
   // Install and start applications on UEs and remote host
   uint16_t dlPort = 1100;
   uint16_t ulPort = 2000;
@@ -197,11 +228,17 @@ main (int argc, char *argv[])
   //p2ph.EnablePcapAll("lena-simple-epc");
 
   Simulator::Stop (simTime);
+  auto start = std::chrono::system_clock::now(); 
+  std::time_t start_time = std::chrono::system_clock::to_time_t(start);
+  std::cout << "started computation at " << std::ctime(&start_time);
   Simulator::Run ();
-
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::time_t end_time = std::chrono::system_clock::to_time_t(end);
   /*GtkConfigStore config;
   config.ConfigureAttributes();*/
-
+  std::cout << "finished computation at " << std::ctime(&end_time)
+              << "elapsed time: " << elapsed_seconds.count() << "s\n";
   Simulator::Destroy ();
   return 0;
 }

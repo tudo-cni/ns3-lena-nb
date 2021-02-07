@@ -192,6 +192,8 @@ private:
   void DoNotifyConnectionFailed ();
   /// Notify connection released
   void DoNotifyConnectionReleased ();
+
+  void DoNotifyMessage4();
   /**
    * Receive data
    * \param packet the packet
