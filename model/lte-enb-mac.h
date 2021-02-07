@@ -281,6 +281,8 @@ private:
   */
   void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
 
+  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+
 
   // forwarded from FfMacCchedSapUser
   /**
@@ -494,7 +496,8 @@ private:
 
   std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
   std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
-
+  std::map<uint16_t, bool> m_rapIdCollisionMap; // Used when contention resolution is involved
+  bool m_dropPreambleCollision;
   /// component carrier Id used to address sap
   uint8_t m_componentCarrierId;
   std::map<uint8_t, std::vector<NbIotRrcSap::DciN1>> m_DlDcis;
