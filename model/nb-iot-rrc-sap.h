@@ -473,7 +473,30 @@ class NbIotRrcSap{
                 seventeen,
                 eighteen
             } timeOffset;
+            static uint8_t ConvertHarqTimeOffset2int (HarqAckResource::TimeOffset delay)
+            {
+                uint8_t res = 0;
+                switch (delay)
+                {
+                case HarqAckResource::TimeOffset::thirteen:
+                    res = 13;
+                    break;
+                case HarqAckResource::TimeOffset::fifteen:
+                  res = 15;
+                  break;
+                case HarqAckResource::TimeOffset::seventeen:
+                  res = 17;
+                  break;
+                case HarqAckResource::TimeOffset::eighteen:
+                  res = 18;
+                  break;
+                default:
+                    break;
+                }
+                return res;
+            }
             enum class SubcarrierIndex {
+                zero,
                 one,
                 two,
                 three, 
@@ -491,7 +514,7 @@ class NbIotRrcSap{
 
         // Liberg et al. p285
         struct DciN1{
-            bool format = 0;
+            bool format = 1;
             bool npdcchOrderIndication;
             enum class NpdcchTimeOffset{
                 ms0,
@@ -556,6 +579,61 @@ class NbIotRrcSap{
             } mCS;
             bool NDI;
             HarqAckResource harqAckResource; 
+            // Parameters to reduce simulation complexity
+            std::vector<int> npdschOpportunity;
+            std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
+        };
+        struct DciN0{
+            bool format = 0;           
+            uint8_t subframeIndication;
+            enum class NpuschSchedulingDelay{
+                ms8,
+                ms16,
+                ms32,
+                ms64
+            } npuschSchedulingDelay;
+            enum class DciRepetitions{
+                r1,
+                r2,
+                r4,
+                r8 // not sure about this value
+            } dciRepetitions; 
+            enum class NumResourceUnits{
+                ru1,
+                ru2,
+                ru3,
+                ru4,
+                ru5,
+                ru6,
+                ru8,
+                ru10
+            } numResourceUnits;
+            enum class NumNpuschRepetitions{
+                r1,
+                r2,
+                r4,
+                r8,
+                r16,
+                r32,
+                r64,
+                r128
+            } numNpuschRepetitions;
+            enum class MCS{
+                one,
+                two,
+                three,
+                four,
+                five,
+                six,
+                seven,
+                eight,
+                nine,
+                ten,
+                eleven,
+                twelve
+            } mCS;
+            bool redundandyVersion;
+            bool NDI;
         };
 
         struct UlGrant{
@@ -589,7 +667,7 @@ class NbIotRrcSap{
             mcs2  // Number RUs = 1 | TBS = 88 bits 
         } mcsIndex;
         bool success;
-        std::vector<int> subframes;
+        std::pair<uint8_t, std::vector<int>> subframes;
         static uint8_t ConvertUlGrantSchedulingDelay2int (UlGrant::SchedulingDelay delay)
         {
             uint8_t res = 0;
@@ -613,9 +691,49 @@ class NbIotRrcSap{
             return res;
         }
         };
-        struct DciN0{
+        
+        struct RarPayload{
+            uint16_t cellRnti;
+            NbIotRrcSap::UlGrant ulGrant;
+        }; 
+        struct Rar
+
+        {
+            uint8_t rapId; ///< RAPID
+            uint16_t cellRnti;
+            //BuildRarListElement_s rarPayload; ///< RAR payload
+            RarPayload rarPayload;
         };
 
+
+        struct NpdcchMessage{
+        enum SearchSpaceType{
+            type1,
+            type2,
+            ueSpecific
+        } searchSpaceType;
+        enum NpdcchFormat {
+            format1,
+            format2
+        } npdcchFormat;
+        enum DciType{
+            n0,
+            n1,
+            n2
+        } dciType;
+        NbIotRrcSap::NprachParametersNb ce;
+        NbIotRrcSap::DciN1 dciN1;
+        NbIotRrcSap::DciN0 dciN0;
+        std::vector<Rar> rars;
+        std::vector<int> npdschOpportunity;
+        std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
+        std::vector<int> dciRepetitionsubframes;
+        int ranti;
+        int rnti;
+        int tbs; // in bit
+        bool isRar;
+
+        };
         static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)
         {
             double res = 0;
