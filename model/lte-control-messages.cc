@@ -422,17 +422,17 @@ DlDciN1NbiotControlMessage::GetDci (void)
 }
 
 void
-DlDciN1NbiotControlMessage::SetRanti (uint32_t ranti)
+DlDciN1NbiotControlMessage::SetRnti (uint32_t rnti)
 {
-  m_ranti = ranti;
+  m_rnti = rnti;
 
 }
 
 
 uint32_t
-DlDciN1NbiotControlMessage::GetRanti (void)
+DlDciN1NbiotControlMessage::GetRnti (void)
 {
-  return m_ranti;
+  return m_rnti;
 }
 
 // ----------------------------------------------------------------------------------------------------------
@@ -458,25 +458,43 @@ RarNbiotControlMessage::GetRaRnti () const
 
 
 void
-RarNbiotControlMessage::AddRar (Rar rar)
+RarNbiotControlMessage::AddRar (NbIotRrcSap::Rar rar)
 {
   m_rarList.push_back (rar);
 }
 
-std::list<RarNbiotControlMessage::Rar>::const_iterator 
+std::list<NbIotRrcSap::Rar>::const_iterator 
 RarNbiotControlMessage::RarListBegin () const
 {
   return m_rarList.begin ();
 }
 
-std::list<RarNbiotControlMessage::Rar>::const_iterator 
+std::list<NbIotRrcSap::Rar>::const_iterator 
 RarNbiotControlMessage::RarListEnd () const
 {
   return m_rarList.end ();
 }
 
+//-------------------------------------------------------------------------------------------
 
+DlHarqFeedbackNbiotControlMessage::DlHarqFeedbackNbiotControlMessage(void){
+  SetMessageType(LteControlMessage::DL_HARQ_NB);
+}
 
+DlHarqFeedbackNbiotControlMessage::~DlHarqFeedbackNbiotControlMessage(void){
 
+}
+void DlHarqFeedbackNbiotControlMessage::SetAcknowledgement(bool ack){
+  m_ack = ack;
+}
+void DlHarqFeedbackNbiotControlMessage::SetRnti(int16_t rnti){
+  m_rnti = rnti;
+}
+bool DlHarqFeedbackNbiotControlMessage::GetAcknowledgement(void){
+  return m_ack;
+}
+int16_t DlHarqFeedbackNbiotControlMessage::GetRnti(void){
+  return m_rnti;
+}
 } // namespace ns3
 

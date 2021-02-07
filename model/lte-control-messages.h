@@ -68,7 +68,8 @@ public:
     SIB2_NB,
     DL_DCI_NB, UL_DCI_NB, // Downlink/Uplink Data Control Indicator
     NPRACH_PREAMBLE,
-    RAR_NB
+    RAR_NB,
+    DL_HARQ_NB
   };
 
   LteControlMessage (void);
@@ -576,18 +577,18 @@ public:
   * \param dci the dci
   */
   void SetDci (NbIotRrcSap::DciN1 dci);
-  void SetRanti (uint32_t ranti);
+  void SetRnti (uint32_t rnti);
 
   /**
   * \brief Get dic information
   * \return dci messages
   */
   NbIotRrcSap::DciN1 GetDci (void);
-  uint32_t GetRanti (void);
+  uint32_t GetRnti (void);
 
 private:
   NbIotRrcSap::DciN1 m_dci; ///< DCI
-  uint32_t m_ranti;
+  uint m_rnti;
 };
 
 // ---------------------------------------------------------------------------
@@ -618,18 +619,7 @@ public:
    * a MAC RAR and the corresponding RAPID subheader 
    * 
    */
-  struct RarPayload{
-    uint16_t cellRnti;
-    NbIotRrcSap::UlGrant ulGrant;
-  }; 
-  struct Rar
-
-  {
-    uint8_t rapId; ///< RAPID
-    uint16_t cellRnti;
-    //BuildRarListElement_s rarPayload; ///< RAR payload
-    RarPayload rarPayload;
-  };
+  
 
 
   /** 
@@ -637,23 +627,52 @@ public:
    * 
    * \param rar the rar
    */
-  void AddRar (Rar rar);
+  void AddRar (NbIotRrcSap::Rar rar);
 
   /** 
    * 
    * \return a const iterator to the beginning of the RAR list
    */
-  std::list<Rar>::const_iterator RarListBegin () const;
+  std::list<NbIotRrcSap::Rar>::const_iterator RarListBegin () const;
   
   /** 
    * 
    * \return a const iterator to the end of the RAR list
    */
-  std::list<Rar>::const_iterator RarListEnd () const;
+  std::list<NbIotRrcSap::Rar>::const_iterator RarListEnd () const;
 
 private:
-  std::list<Rar> m_rarList; ///< RAR list
+  std::list<NbIotRrcSap::Rar> m_rarList; ///< RAR list
   uint16_t m_raRnti; ///< RA RNTI
+
+
+};
+
+class DlHarqFeedbackNbiotControlMessage : public LteControlMessage
+{
+public:
+  DlHarqFeedbackNbiotControlMessage (void);
+  virtual ~DlHarqFeedbackNbiotControlMessage (void);
+
+  /**
+  * \brief add a DL HARQ feedback record into the message.
+  * \param m the DL HARQ feedback
+  */
+
+  /**
+  * \brief Get DL HARQ information
+  * \return DL HARQ message
+  */
+
+void SetAcknowledgement(bool ack);
+bool GetAcknowledgement(void);
+
+void SetRnti(int16_t rnti);
+int16_t GetRnti(void);
+
+private:
+  bool m_ack; // true = ACK, false = NACK
+  int16_t m_rnti;
 
 };
 
