@@ -160,7 +160,10 @@ EpcUeNas::Connect ()
   // tell RRC to go into connected mode
   m_asSapProvider->Connect ();
 }
-
+void 
+EpcUeNas::ConnectSchedule(){
+  Connect();
+}
 void
 EpcUeNas::Connect (uint16_t cellId, uint32_t dlEarfcn)
 {
@@ -248,7 +251,8 @@ EpcUeNas::DoNotifyConnectionFailed ()
   NS_LOG_FUNCTION (this);
 
   // immediately retry the connection
-  Simulator::ScheduleNow (&LteAsSapProvider::Connect, m_asSapProvider);
+  // TEMP DISCONNECT
+  //Simulator::ScheduleNow (&LteAsSapProvider::Connect, m_asSapProvider);
 }
 
 void
@@ -290,6 +294,10 @@ EpcUeNas::GetState () const
   return m_state;
 }
 
+void
+EpcUeNas::DoNotifyMessage4(){
+  Disconnect();
+}
 void 
 EpcUeNas::SwitchToState (State newState)
 {

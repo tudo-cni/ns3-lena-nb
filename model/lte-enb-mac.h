@@ -514,6 +514,8 @@ private:
   uint32_t m_currentRepetitions; 
   uint8_t R;
   std::vector<Ptr<LteControlMessage>> m_hyperframe;
+  std::map<uint16_t, bool> m_connectionSuccessful;
+
 };
 
 } // end namespace ns3

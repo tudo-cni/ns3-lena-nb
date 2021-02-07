@@ -115,7 +115,7 @@ public:
    * The end result is equivalent with EMM Registered + ECM Connected states.
    */
   void Connect ();
-
+  void ConnectSchedule();
   /**
    * \brief Causes NAS to tell AS to camp to a specific cell and go to ACTIVE
    *        state.
