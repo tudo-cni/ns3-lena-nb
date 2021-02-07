@@ -134,7 +134,8 @@ def build(bld):
         'helper/cc-helper.cc',
         'model/component-carrier-ue.cc',
         'model/component-carrier-enb.cc',
-        'model/nb-iot-rrc-sap.cc'
+        'model/nb-iot-rrc-sap.cc',
+        'model/nb-iot-scheduler.cc'
         ]
 
     module_test = bld.create_ns3_module_test_library('lte')
@@ -334,7 +335,8 @@ def build(bld):
         'model/component-carrier.h',
         'model/component-carrier-ue.h',
         'model/component-carrier-enb.h',
-        'model/nb-iot-rrc-sap.h'
+        'model/nb-iot-rrc-sap.h',
+        'model/nb-iot-scheduler.h'
         ]
 
     if (bld.env['ENABLE_EMU']):
@@ -344,4 +346,4 @@ def build(bld):
     if (bld.env['ENABLE_EXAMPLES']):
       bld.recurse('examples')
 
-    bld.ns3_python_bindings()
+    #bld.ns3_python_bindings()
