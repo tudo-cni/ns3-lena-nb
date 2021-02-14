@@ -226,9 +226,9 @@ LteUeRrc::GetTypeId (void)
                    "Timer for the RRC Connection Establishment procedure "
                    "(i.e., the procedure is deemed as failed if it takes longer than this). "
                    "Standard values: 100ms, 200ms, 300ms, 400ms, 600ms, 1000ms, 1500ms, 2000ms",
-                   TimeValue (MilliSeconds (100)), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   TimeValue (MilliSeconds (60000)), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
                    MakeTimeAccessor (&LteUeRrc::m_t300),
-                   MakeTimeChecker (MilliSeconds (100), MilliSeconds (2000)))
+                   MakeTimeChecker (MilliSeconds (2500), MilliSeconds (60000)))
     .AddAttribute ("T310",
                    "Timer for detecting the Radio link failure "
                    "(i.e., the radio link is deemed as failed if this timer expires). "
