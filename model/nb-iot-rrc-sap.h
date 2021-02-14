@@ -311,6 +311,11 @@ class NbIotRrcSap{
         };
 
         struct NprachParametersNb{
+           enum class CoverageEnhancementLevel{
+               zero,
+               one,
+               two
+           } coverageEnhancementLevel;
            enum class NprachPeriodicity{
                ms40,
                ms80,
@@ -530,10 +535,19 @@ class NbIotRrcSap{
                 ms1024 // Only for R_max >= 128
             } npdcchTimeOffset;
             enum class DciRepetitions{
-                r1,
-                r2,
-                r4,
-                r8 // not sure about this value
+               r1,
+               r2,
+               r4,
+               r8,
+               r16,
+               r32,
+               r64,
+               r128,
+               r256,
+               r512,
+               r1024,
+               r2048,
+
             } dciRepetitions; 
             enum class NumNpdschSubframesPerRepetition{
                 s1,
@@ -593,10 +607,18 @@ class NbIotRrcSap{
                 ms64
             } npuschSchedulingDelay;
             enum class DciRepetitions{
-                r1,
-                r2,
-                r4,
-                r8 // not sure about this value
+               r1,
+               r2,
+               r4,
+               r8,
+               r16,
+               r32,
+               r64,
+               r128,
+               r256,
+               r512,
+               r1024,
+               r2048,
             } dciRepetitions; 
             enum class NumResourceUnits{
                 ru1,
@@ -1200,8 +1222,8 @@ class NbIotRrcSap{
              }
             return res;
         }
-        static uint8_t ConvertDciRepetitions2int (DciN1 dci){
-            uint8_t res = 0;
+        static uint16_t ConvertDciRepetitions2int (DciN1 dci){
+            uint16_t res = 0;
             switch(dci.dciRepetitions){
                 case DciN1::DciRepetitions::r1:
                     res = 1;
@@ -1213,7 +1235,31 @@ class NbIotRrcSap{
                     res = 4;
                     break;
                 case DciN1::DciRepetitions::r8:
-                    res = 4;
+                    res = 8;
+                    break;
+                case DciN1::DciRepetitions::r16:
+                    res = 16;
+                    break;
+                case DciN1::DciRepetitions::r32:
+                    res = 32;
+                    break;
+                case DciN1::DciRepetitions::r64:
+                    res = 64;
+                    break;
+                case DciN1::DciRepetitions::r128:
+                    res = 128;
+                    break;
+                case DciN1::DciRepetitions::r256:
+                    res = 256;
+                    break;
+                case DciN1::DciRepetitions::r512:
+                    res = 512;
+                    break;
+                case DciN1::DciRepetitions::r1024:
+                    res = 1024;
+                    break;
+                case DciN1::DciRepetitions::r2048:
+                    res = 2048;
                     break;
                 default:
                     break;
