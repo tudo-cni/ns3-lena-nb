@@ -492,14 +492,42 @@ private:
   std::map<uint8_t, NcRaPreambleInfo> m_allocatedNcRaPreambleMap;
  
   std::map<uint8_t, uint32_t> m_receivedRachPreambleCount; ///< received RACH preamble count
-  std::map<uint8_t, std::map<uint8_t, uint32_t>> m_receivedNprachPreambleCount;
 
   std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
-  std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
-  std::map<uint16_t, bool> m_rapIdCollisionMap; // Used when contention resolution is involved
-  bool m_dropPreambleCollision;
   /// component carrier Id used to address sap
   uint8_t m_componentCarrierId;
+  
+
+  /*
+  Nb-Iot Specific methods and members
+  */
+
+  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+
+  /**
+  * \brief Subrame Indication function
+  * \param frameNo frame number
+  * \param subframeNo subframe number
+  */
+  void DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo);
+
+  // Temp, might not be needed later
+  void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
+  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce);
+  void VerySimpleNbiotDownlinkScheduler();
+  /**
+  * \brief Receive RACH Preamble function
+  * \param prachId PRACH ID number
+  */
+  void DoReceiveNprachPreamble (uint8_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
+  void DoUlCqiReportNb (std::vector<double> cqi);
+
+  NbiotScheduler* m_schedulerNb = nullptr;
+  std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
+  std::map<uint32_t, NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel> m_RntiCeMap;
+  std::map<uint16_t, bool> m_rapIdCollisionMap; // Used when contention resolution is involved
+  std::map<uint8_t, std::map<uint8_t, uint32_t>> m_receivedNprachPreambleCount;
+  bool m_dropPreambleCollision;
   std::map<uint8_t, std::vector<NbIotRrcSap::DciN1>> m_DlDcis;
   NbIotRrcSap::SystemInformationBlockType2Nb m_sib2Nb;
   NbIotRrcSap::NprachParametersNb m_ce0Parameter;
