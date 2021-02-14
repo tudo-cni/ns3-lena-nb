@@ -3147,6 +3147,7 @@ LteEnbRrc::SendSystemInformationNb ()
       si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
       // Values from Vodafone Cell / temporary
       NbIotRrcSap::NprachParametersNb ce0;
+      ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
       ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
       ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
       ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
@@ -3159,6 +3160,7 @@ LteEnbRrc::SendSystemInformationNb ()
       ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
       NbIotRrcSap::NprachParametersNb ce1;
+      ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
       ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
       ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
       ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
@@ -3172,6 +3174,7 @@ LteEnbRrc::SendSystemInformationNb ()
 
 
       NbIotRrcSap::NprachParametersNb ce2;
+      ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
       ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
       ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
       ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
@@ -3208,7 +3211,41 @@ LteEnbRrc::SendSystemInformationNb ()
 //}
 NbIotRrcSap::SystemInformationBlockType2Nb LteEnbRrc::DoGetCurrentSystemInformationBlockType2Nb(){
   if (m_sib2Nb.size() == 0){
+      NbIotRrcSap::SystemInformationNb si;
+      si.haveSib2 = true;
+
+      //LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
+      NbIotRrcSap::RachInfo rachce0;
+      rachce0.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp10;
+      rachce0.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachInfo rachce1;
+      rachce1.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+      rachce1.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachInfo rachce2;
+      rachce2.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+      rachce2.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachConfigCommon rc;
+      rc.preambleTransMaxCE = 10;
+      rc.powerRampingParameters.powerRampingStep = NbIotRrcSap::PowerRampingParameters::PowerRampingStep::dB4;
+      rc.powerRampingParameters.preambleInitialReceivedTargetPower = NbIotRrcSap::PowerRampingParameters::PreambleInitialReceivedTargetPower::dbm_110;
+      rc.connEstFailOffset = 0;
+      rc.rachInfoList.rachInfo1 = rachce0;
+      rc.rachInfoList.rachInfo2 = rachce1;
+      rc.rachInfoList.rachInfo3 = rachce2;
+
+      si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
+      NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
+      // From Vodafone wireshark
+      rsrpprachinfolist.ce1_lowerbound = -115.5;
+      rsrpprachinfolist.ce2_lowerbound = -127.5;
+
+      si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
+      // Values from Vodafone Cell / temporary
       NbIotRrcSap::NprachParametersNb ce0;
+      ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
       ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
       ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
       ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
@@ -3221,6 +3258,7 @@ NbIotRrcSap::SystemInformationBlockType2Nb LteEnbRrc::DoGetCurrentSystemInformat
       ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
       NbIotRrcSap::NprachParametersNb ce1;
+      ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
       ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
       ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
       ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
@@ -3234,6 +3272,7 @@ NbIotRrcSap::SystemInformationBlockType2Nb LteEnbRrc::DoGetCurrentSystemInformat
 
 
       NbIotRrcSap::NprachParametersNb ce2;
+      ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
       ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
       ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
       ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
@@ -3245,12 +3284,13 @@ NbIotRrcSap::SystemInformationBlockType2Nb LteEnbRrc::DoGetCurrentSystemInformat
       ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
       ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
+      si.sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
 
-      NbIotRrcSap::SystemInformationBlockType2Nb placeholder;
-      placeholder.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
-      placeholder.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
-      placeholder.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
-      m_sib2Nb.push_back(placeholder);
+
+      m_sib2Nb.push_back(si.sib2);
   }
   return m_sib2Nb.back();
 }
