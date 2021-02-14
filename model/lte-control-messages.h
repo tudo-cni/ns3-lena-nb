@@ -163,7 +163,7 @@ class DlCqiLteControlMessage : public LteControlMessage
 public:
   DlCqiLteControlMessage (void);
   virtual ~DlCqiLteControlMessage (void);
-
+  double rsrp; // TEMPORARY
   /**
   * \brief add a DL-CQI feedback record into the message.
   * \param dlcqi the DL cqi feedback

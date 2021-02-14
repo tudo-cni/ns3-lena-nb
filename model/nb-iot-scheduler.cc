@@ -1,13 +1,19 @@
 #include "nb-iot-scheduler.h"
-
+#include <istream>
+#include <fstream>
+#include <string>
+#include <vector>
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("NbiotScheduler");
 
 NS_OBJECT_ENSURE_REGISTERED (NbiotScheduler);
 
-NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces)
+NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces, NbIotRrcSap::SystemInformationBlockType2Nb sib2)
 {
+  m_Amc = NbiotAmc();
+  m_sib2config = sib2;
+  std::cout <<  "ASDASDasdASDas " << m_Amc.getNpdschParameters(-143.3, 560, "inband").NRep << "\n";
   m_DciTimeOffsetRmaxSmall.reserve (8);
   m_DciTimeOffsetRmaxBig.reserve (8);
   m_Msg3TimeOffset.reserve (4);
@@ -116,7 +122,6 @@ NbiotScheduler::SetCeLevel (NbIotRrcSap::NprachParametersNb ce0,
 {
   m_ce0 = ce0;
   m_ce1 = ce1;
-
   m_ce2 = ce2;
 }
 bool
@@ -133,6 +138,9 @@ NbiotScheduler::IsSeachSpaceType2Begin (NbIotRrcSap::NprachParametersNb ce)
       return true;
     }
   return false;
+}
+void NbiotScheduler::SetRntiRsrpMap(std::map<uint16_t, double> map){
+  m_rntiRsrpMap = map;
 }
 
 void
@@ -156,8 +164,22 @@ NbiotScheduler::ScheduleRarReq (int rnti, int rapid, NbIotRrcSap::NprachParamete
 void
 NbiotScheduler::ScheduleNpdcchMessageReq (NbIotRrcSap::NpdcchMessage msg)
 {
+  // NPDCCH Parameters taken from Liberg, Olof, et al. The Cellular Internet of Things 2017 p.305, In-Band-Deployment Table 8.9
+  if(msg.ce.nprachSubcarrierOffset == m_ce0.nprachSubcarrierOffset){
+    msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
+    msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
+  }
+  else if(msg.ce.nprachSubcarrierOffset == m_ce1.nprachSubcarrierOffset){
+    msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r32;
+    msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r32;
+  }
+  else if(msg.ce.nprachSubcarrierOffset == m_ce2.nprachSubcarrierOffset){
+    msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r256;
+    msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r256;
+  }
   m_NpdcchQueue.push_back (msg);
 }
+
 
 std::vector<NbIotRrcSap::NpdcchMessage>
 NbiotScheduler::Schedule (int frameNo, int subframeNo)
@@ -230,9 +252,33 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                               for (std::vector<NbIotRrcSap::Rar>::iterator rar = it->rars.begin ();
                                    rar != it->rars.end (); )
                                 {
-                                  subframesNpusch =
-                                      1 *
-                                      4; // 1 Resource Unit and 4 Repetitions for testing purposes | later ULParts should be implemented here
+                                  // MSG3 SIZE 
+                                  // See Joerke NBIoT_UE.py 
+                                  /*
+                                  The MAC PDU consists of the following (ref. ETSI TS 136 321 V13.9.0 Fig. 6.1.6-4):
+                                  |-----------------------------------------MAC-Header-----------------------------------------|--MAC-CE--|...|--MAC-SDU--|--Padding(opt)--|
+                                  |--R/F2/E/LCID subheader--|...|--R/F2/E/LCID/F/K subheader--|--R/R/E/LCID padding subheader--|
+                                  In Msg3 the UE should transmit a Buffer Status Report MAC CE in order to inform the eNodeB about its UL buffer status
+                                  Since RRCConnectionResumeComplete-NB is transmitted in RLC TM, TMD PDU consists only of a data field and doesn't consists of any RLC headers (Ref. ETSI TS 136 331 V13.15.0 p.522 "RRCConnectionResumeRequest-NB" and ETSI TS 136 322 V13.4.0, 6.2.1.2)
+                                  RRCConnectionResumeRequest-NB ist transmitted using SRB0 (ref. ETSI TS 136 331 V13.15.0 p.522 "RRCConnectionResumeRequest-NB" and therefore does not go through PDCP (ref. ETSI TS 136 323 V13.6.0, 4.2.1: "Each RB (i.e. DRB, SLRB and SRB, except for SRB0 and SRB1bis) is associated with one PDCP entity"))
+                                  */
+
+                                  int size_rrc_conn_resume_req = 59; // 40 bits resumeID +16 bits shortResumeMAC-I +3 bits resumeCause ref. ETSI TS 136 331 V13.15.0 p.522 RRCConnectionResumeRequest-NB
+                                  size_rrc_conn_resume_req += (8-size_rrc_conn_resume_req %8); // Fill to full byte
+                                  int size_rlc_pdu = size_rrc_conn_resume_req;
+                                  //MAC_SUBHEADER_CE__R_F2_E_LCID = 8           # R/F2/E/LCID sub-header for MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-2)
+                                  //MAC_SUBHEADER_SDU__R_F2_E_LCID_F_7L = 16    # R/F2/E/LCID/F/L sub-headerfor MAC SDU with 7-bits L field (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-1)
+                                  //MAC_CE_sBSR = 8                             # Short BSR and Truncated BSR MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.3.1-1)
+                                  int size_mac_pdu = 8+16+8+size_rlc_pdu;
+                                  int couplingloss;
+                                  if(rar->rapId < 24){
+                                    couplingloss = 159;
+                                  }else if(rar->rapId < 36){
+                                    couplingloss = 149;
+                                  }else if(rar->rapId < 48){
+                                    couplingloss = 139;
+                                  }
+                                  subframesNpusch = m_Amc.getMsg3Subframes(couplingloss,size_mac_pdu, 15000,15);
                                   ulgrant = GetNextAvailableMsg3UlGrantCandidate (
                                       *(npdschsubframes.end () - 1), subframesNpusch);
                                   if (ulgrant.first.success) // WE GOT AN UPLINK MSG3 CANDIDATE
@@ -275,7 +321,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                                           [npuschharqsubframes[0].second[i]] = m_currenthyperindex;
                                   std::cout << npuschharqsubframes[0].second[i] << " ";
                                 }
-
+                                std::cout << "\n";
                               it->dciN1.npuschOpportunity = npuschharqsubframes;
                               }
                             }
@@ -611,20 +657,37 @@ NbiotScheduler::ScheduleDlRlcBufferReq (LteMacSapProvider::ReportBufferStatusPar
   /*
   Magic for defining modulation and coding scheme etc
  */
-  NbIotRrcSap::DciN1 dci;
-  dci.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r2; // Has to be determined
+  std::cout << "MCL of " << params.rnti << " is " << m_rntiRsrpMap[params.rnti]-30 << "\n";
+
+  std::pair<NbIotRrcSap::DciN1, int> dci_tbs = m_Amc.getBareboneDci(m_rntiRsrpMap[params.rnti]-30.0, params.txQueueSize*8,"inband");
+  
+
+  NbIotRrcSap::DciN1 dci = dci_tbs.first;
   dci.mCS = NbIotRrcSap::DciN1::MCS::one;
   dci.NDI = true;
-  dci.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r4;
-  dci.numNpdschSubframesPerRepetition =
-      NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s5; // Has to be determined by TBS
+     
+  NbIotRrcSap::NprachParametersNb ceLevel; 
 
+  if (m_rntiRsrpMap[params.rnti] < m_sib2config.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound){
+    dci.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r256;
+    ceLevel = m_ce2;
+  }
+  else if (m_rntiRsrpMap[params.rnti] < m_sib2config.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+    dci.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r32;
+    ceLevel = m_ce1;
+  }
+  else if (m_rntiRsrpMap[params.rnti] > m_sib2config.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+    dci.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
+    ceLevel = m_ce0;
+  }
+
+  
   NbIotRrcSap::NpdcchMessage msg;
   msg.dciType = NbIotRrcSap::NpdcchMessage::DciType::n1;
   msg.isRar = false;
   msg.rnti = params.rnti;
   msg.dciN1 = dci;
-  msg.ce = m_ce0;
+  msg.ce = ceLevel;
   msg.searchSpaceType = searchspace;
   m_NpdcchQueue.push_back (msg);
 }
@@ -650,4 +713,7 @@ NbiotScheduler::ScheduleMsg5Req (int rnti)
 
   m_NpdcchQueue.push_back (msg);
 }
+
 } // namespace ns3
+
+

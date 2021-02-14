@@ -27,7 +27,7 @@
 #include "lte-mac-sap.h"
 #include <algorithm>
 #include <unordered_map>
-
+#include "nb-iot-amc.h"
 
 namespace ns3 {
 
@@ -38,9 +38,6 @@ namespace ns3 {
 
 // Overall size of UlGrant = 15 bit
 
-
-
-
 struct NpdschMessage{
   int Tb;
 };
@@ -49,7 +46,7 @@ class NbiotScheduler : public Object
 {
 public:
 
-  NbiotScheduler(std::vector<NbIotRrcSap::NprachParametersNb> ces);
+  NbiotScheduler(std::vector<NbIotRrcSap::NprachParametersNb> ces, NbIotRrcSap::SystemInformationBlockType2Nb sib2);
 
   //~NbiotScheduler();
 
@@ -65,6 +62,7 @@ void ScheduleNpdcchMessageReq(NbIotRrcSap::NpdcchMessage msg);
 void ScheduleDlRlcBufferReq(LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 void ScheduleMsg5Req(int rnti);
 void SetCeLevel(NbIotRrcSap::NprachParametersNb ce0, NbIotRrcSap::NprachParametersNb ce1, NbIotRrcSap::NprachParametersNb ce2);
+void SetRntiRsrpMap(std::map<uint16_t, double> map);
 
 std::vector<int> GetNextAvailableSearchSpaceCandidate(int SearchSpaceStartFrame, int SearchSpaceStartSubframe, int R_max, int R);
 std::vector<int> GetDlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes);
@@ -77,7 +75,6 @@ std::vector<NbIotRrcSap::NpdcchMessage> Schedule(int frameNo, int subframeNo);
 std::vector<NbIotRrcSap::NpdcchMessage> ScheduleSearchSpace(NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NprachParametersNb ce);
 std::vector<std::pair<int, std::vector<int>>> GetNextAvailableNpuschCandidate(int endSubframeNpdsch, int minSchedulingDelay, int numSubframes, bool isHarq);
 std::pair<NbIotRrcSap::UlGrant, std::pair<int,std::vector<int>>> GetNextAvailableMsg3UlGrantCandidate(int endSubframeMsg2, int numSubframes);
-
 std::vector<int8_t> m_downlink;
 NbIotRrcSap::NprachParametersNb m_ce0;
 protected:
@@ -100,6 +97,10 @@ protected:
   const int m_minSchedulingDelayDci2Downlink = 4;
   const int m_minSchedulingDelayDci2Uplink = 8;
   bool m_log;
+  std::map<uint16_t,double> m_rntiRsrpMap;
+  NbiotAmc m_Amc;
+  NbIotRrcSap::SystemInformationBlockType2Nb m_sib2config;
+
 };
 
 }  // namespace ns3
