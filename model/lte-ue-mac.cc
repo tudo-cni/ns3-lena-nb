@@ -519,7 +519,7 @@ LteUeMac::SendRaPreambleNb (bool contention)
 
   Time raWindowBegin = MilliSeconds (4); 
   //Time raWindowEnd = MilliSeconds (4 + 8*10240);
-  Time raWindowEnd = MilliSeconds (4 + 8*100);
+  Time raWindowEnd = MilliSeconds (4 + 8*10240);
   //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
   // TODO RESPONSE WINDOW 
@@ -594,7 +594,10 @@ LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
   // but in the current LTE model when two or more identical
   // preambles are sent no one is received, so there is no need
   // for contention resolution
+
+  // To be comented in
   m_cmacSapUser->NotifyRandomAccessSuccessful ();
+
   // trigger tx opportunity for Message 3 over LC 0
   // this is needed since Message 3's UL GRANT is in the RAR, not in UL-DCIs
   const uint8_t lc0Lcid = 0;
@@ -668,6 +671,7 @@ LteUeMac::RaResponseTimeoutNb (bool contention)
   if (m_preambleTransmissionCounter == NbIotRrcSap::ConvertMaxNumPreambleAttemptCE2int(m_CeLevel)+1)
     {
       NS_LOG_INFO ("RAR timeout, preambleTransMax reached => giving up");
+
       m_cmacSapUser->NotifyRandomAccessFailed ();
     }
   else

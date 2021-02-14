@@ -222,7 +222,7 @@ LteUePhy::GetTypeId (void)
     .AddConstructor<LteUePhy> ()
     .AddAttribute ("TxPower",
                    "Transmission power in dBm",
-                   DoubleValue (10.0),
+                   DoubleValue (20.0),
                    MakeDoubleAccessor (&LteUePhy::SetTxPower, 
                                        &LteUePhy::GetTxPower),
                    MakeDoubleChecker<double> ())
@@ -606,6 +606,8 @@ LteUePhy::GenerateCqiRsrpRsrq (const SpectrumValue& sinr)
                        << " ms. Last reported at : " << m_p10CqiLast.GetMilliSeconds() << " ms");
           Ptr<LteUeNetDevice> thisDevice = GetDevice ()->GetObject<LteUeNetDevice> ();
           Ptr<DlCqiLteControlMessage> msg = CreateDlCqiFeedbackMessage (sinr);
+          // ONLY FOR NOW
+          msg->rsrp = DoGetRSRP();
           if (msg)
             {
               DoSendLteControlMessage (msg);

@@ -383,6 +383,7 @@ LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::Sys
         }
     } 
 }
+
 void 
 LteEnbRrcProtocolIdeal::DoSendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg)
 {

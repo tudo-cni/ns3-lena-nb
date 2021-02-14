@@ -281,7 +281,6 @@ private:
   */
   void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
 
-  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
 
   // forwarded from FfMacCchedSapUser
@@ -340,22 +339,12 @@ private:
   * \param subframeNo subframe number
   */
   void DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo);
-  /**
-  * \brief Subrame Indication function
-  * \param frameNo frame number
-  * \param subframeNo subframe number
-  */
-  void DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo);
-  /**
+    /**
   * \brief Receive RACH Preamble function
   * \param prachId PRACH ID number
   */
   void DoReceiveRachPreamble (uint8_t prachId);
-  /**
-  * \brief Receive RACH Preamble function
-  * \param prachId PRACH ID number
-  */
-  void DoReceiveNprachPreamble (uint8_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
+  
   // forwarded by LteCcmMacSapProvider
   /**
    * Report MAC CE to scheduler
@@ -374,9 +363,6 @@ private:
     NS_UNUSED (rnti);
   }
   
-  void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
-  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce);
-  void VerySimpleNbiotDownlinkScheduler();
 public:
   /**
    * legacy public for use the Phy callback
@@ -434,7 +420,6 @@ private:
   LteCcmMacSapProvider* m_ccmMacSapProvider; ///< CCM MAC SAP provider
   LteCcmMacSapUser* m_ccmMacSapUser; ///< CCM MAC SAP user
 
-  NbiotScheduler* m_schedulerNb = nullptr;
   /**
    * frame number of current subframe indication
    */
@@ -543,8 +528,9 @@ private:
   uint8_t R;
   std::vector<Ptr<LteControlMessage>> m_hyperframe;
   std::map<uint16_t, bool> m_connectionSuccessful;
-
-};
+  std::map<uint16_t, double> m_ulRsrpReceivedNb;
+  std::vector<std::vector<double>> m_ulCqiReceivedNb;
+  };
 
 } // end namespace ns3
 

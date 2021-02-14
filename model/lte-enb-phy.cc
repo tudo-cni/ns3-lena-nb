@@ -553,6 +553,7 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
           {
             Ptr<DlCqiLteControlMessage> dlcqiMsg = DynamicCast<DlCqiLteControlMessage> (*it);
             CqiListElement_s dlcqi = dlcqiMsg->GetDlCqi ();
+            
             // check whether the UE is connected
             if (m_ueAttached.find (dlcqi.m_rnti) != m_ueAttached.end ())
               {
@@ -733,6 +734,8 @@ LteEnbPhy::StartSubFrame (void)
             {
               rbMap.push_back (i);
             }
+
+          //std::cout << "Scheduling Expected TBs at " << (10*m_nrFrames)+(m_nrSubFrames-1)<< "\n";
           m_uplinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_ndi, (*dciIt).GetDci ().m_tbSize, (*dciIt).GetDci ().m_mcs, rbMap, 0 /* always SISO*/, 0 /* no HARQ proc id in UL*/, 0 /*evaluated by LteSpectrumPhy*/, false /* UL*/);
           if ((*dciIt).GetDci ().m_ndi==1)
             {
@@ -955,6 +958,12 @@ LteEnbPhy::GenerateDataCqiReport (const SpectrumValue& sinr)
 }
 
 void
+LteEnbPhy::GenerateCqiReportNb (const SpectrumValue& sinr)
+{
+  NS_LOG_FUNCTION (this << sinr);
+  m_enbPhySapUser->UlCqiReportNb (CreateNpuschCqiReport (sinr));
+}
+void
 LteEnbPhy::ReportInterference (const SpectrumValue& interf)
 {
   NS_LOG_FUNCTION (this << interf);
@@ -995,7 +1004,22 @@ LteEnbPhy::CreatePuschCqiReport (const SpectrumValue& sinr)
   return (ulcqi);
 	
 }
-
+std::vector<double>
+LteEnbPhy::CreateNpuschCqiReport (const SpectrumValue& sinr)
+{
+  std::vector<double> ulcqi;
+  NS_LOG_FUNCTION (this << sinr);
+  Values::const_iterator it;
+  for (it = sinr.ConstValuesBegin (); it != sinr.ConstValuesEnd (); it++)
+    {
+      double sinrdb = 10 * std::log10 ((*it));
+//       NS_LOG_DEBUG ("ULCQI RB " << i << " value " << sinrdb);
+      // convert from double to fixed point notation Sxxxxxxxxxxx.xxx
+      ulcqi.push_back (sinrdb);
+    }
+  return (ulcqi);
+	
+}
 
 void
 LteEnbPhy::DoSetBandwidth (uint16_t ulBandwidth, uint16_t dlBandwidth)
