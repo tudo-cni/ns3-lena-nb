@@ -112,13 +112,13 @@ TypeId LteEnbNetDevice::GetTypeId (void)
     .AddAttribute ("DlEarfcn",
                    "Downlink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (100),
+                   UintegerValue (6300),
                    MakeUintegerAccessor (&LteEnbNetDevice::m_dlEarfcn),
                    MakeUintegerChecker<uint32_t> (0, 262143))
     .AddAttribute ("UlEarfcn",
                    "Uplink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (18100),
+                   UintegerValue (24300),
                    MakeUintegerAccessor (&LteEnbNetDevice::m_ulEarfcn),
                    MakeUintegerChecker<uint32_t> (0, 262143))
     .AddAttribute ("CsgId",

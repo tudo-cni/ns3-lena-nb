@@ -52,14 +52,14 @@ TypeId ComponentCarrier::GetTypeId (void)
     .AddAttribute ("DlEarfcn",
                    "Downlink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (100),
+                   UintegerValue (6300),
                    MakeUintegerAccessor (&ComponentCarrier::SetDlEarfcn,
                                          &ComponentCarrier::GetDlEarfcn),
                    MakeUintegerChecker<uint32_t> (0, 262143))
     .AddAttribute ("UlEarfcn",
                    "Uplink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (18100),
+                   UintegerValue (24300),
                    MakeUintegerAccessor (&ComponentCarrier::SetUlEarfcn,
                                          &ComponentCarrier::GetUlEarfcn),
                    MakeUintegerChecker<uint32_t> (18000, 262143))
