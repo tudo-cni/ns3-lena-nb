@@ -62,7 +62,7 @@ public:
    *
    * \param rc the RACH config
    */
-  virtual void ConfigureNprach (NbIotRrcSap::NprachConfig rc) = 0;
+  virtual void ConfigureRadioResourceConfig(NbIotRrcSap::RadioResourceConfigCommonNb rc) = 0;
   /** 
    * tell the MAC to start a contention-based random access procedure,
    * e.g., to perform RRC connection establishment 

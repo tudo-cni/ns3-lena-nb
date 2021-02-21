@@ -556,6 +556,9 @@ LteHelper::InstallSingleEnbDevice (Ptr<Node> n)
 
       Ptr<LteChunkProcessor> pData = Create<LteChunkProcessor> ();
       pData->AddCallback (MakeCallback (&LteEnbPhy::GenerateDataCqiReport, phy));
+
+      //Change for NB-Iot
+      //pData->AddCallback (MakeCallback (&LteEnbPhy::GenerateCqiReportNb, phy));
       pData->AddCallback (MakeCallback (&LteSpectrumPhy::UpdateSinrPerceived, ulPhy));
       ulPhy->AddDataSinrChunkProcessor (pData);   // for evaluating PUSCH UL-CQI
 

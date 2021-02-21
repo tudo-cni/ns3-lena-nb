@@ -238,12 +238,12 @@ LteSpectrumPhy::GetTypeId (void)
                      "ns3::Packet::TracedCallback")
     .AddAttribute ("DataErrorModelEnabled",
                     "Activate/Deactivate the error model of data (TBs of PDSCH and PUSCH) [by default is active].",
-                    BooleanValue (true),
+                    BooleanValue (false),
                    MakeBooleanAccessor (&LteSpectrumPhy::m_dataErrorModelEnabled),
                     MakeBooleanChecker ())
     .AddAttribute ("CtrlErrorModelEnabled",
                     "Activate/Deactivate the error model of control (PCFICH-PDCCH decodification) [by default is active].",
-                    BooleanValue (true),
+                    BooleanValue (false),
                     MakeBooleanAccessor (&LteSpectrumPhy::m_ctrlErrorModelEnabled),
                     MakeBooleanChecker ())
     .AddTraceSource ("DlPhyReception",

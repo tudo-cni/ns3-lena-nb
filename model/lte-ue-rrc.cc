@@ -40,6 +40,7 @@
 #include <ns3/lte-radio-bearer-info.h>
 #include <fstream>
 #include <cmath>
+#include <ns3/build-profile.h>
 
 namespace ns3 {
 
@@ -576,10 +577,14 @@ LteUeRrc::InitializeSap (void)
         }
     }
 }
-void LteUeRrc::LogRA(bool success){
+void LteUeRrc::LogRA(bool success, Time timetillconnection){
         std::ofstream logfile;
         logfile.open(m_logfile, std::ios_base::app);
-        logfile << success << "\n";
+        if(success){
+          logfile << success << ", " << timetillconnection.GetMilliSeconds() << "\n";
+        }else{
+          logfile << success << ", " << -1 << "\n";
+        } 
         logfile.close();
 }
 
@@ -667,7 +672,7 @@ void
 LteUeRrc::DoNotifyRandomAccessSuccessful ()
 {
   NS_LOG_FUNCTION (this << m_imsi << ToString (m_state));
-  m_randomAccessSuccessfulTrace (m_imsi, m_cellId, m_rnti);
+  //m_randomAccessSuccessfulTrace (m_imsi, m_cellId, m_rnti);
 
   switch (m_state)
     {
@@ -725,7 +730,7 @@ LteUeRrc::DoNotifyRandomAccessFailed ()
         SwitchToState (IDLE_CAMPED_NORMALLY);
         m_asSapUser->NotifyConnectionFailed ();
         //std::cout << "I'm dead" << std::endl;
-        LogRA(false);
+        LogRA(false, m_connectStartTime);
 
 
       }
@@ -816,7 +821,7 @@ void
 LteUeRrc::DoConnect ()
 {
   NS_LOG_FUNCTION (this << m_imsi);
-
+  m_connectStartTime = Simulator::Now();
   switch (m_state)
     {
     case IDLE_START:
@@ -1121,8 +1126,8 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
           m_ulEarfcn = msg.sib2.freqInfo.ulCarrierFreq;
           m_ulBandwidth = 12;
           m_sib2ReceivedTrace (m_imsi, m_cellId, m_rnti);
-          NbIotRrcSap::NprachConfig rc;
-          rc = msg.sib2.radioResourceConfigCommon.nprachConfig;
+          NbIotRrcSap::RadioResourceConfigCommonNb rc;
+          rc = msg.sib2.radioResourceConfigCommon;
           //rc.numberOfRaPreambles = msg.sib2.radioResourceConfigCommon.rachConfigCommon.preambleInfo.numberOfRaPreambles;
           //rc.preambleTransMax = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.preambleTransMax;
           //rc.raResponseWindowSize = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.raResponseWindowSize;
@@ -1131,7 +1136,7 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
           //NS_ASSERT_MSG (m_connEstFailCountLimit > 0 && m_connEstFailCountLimit < 5,
           //               "SIB2 msg contains wrong value "
           //               << m_connEstFailCountLimit << "of connEstFailCount");
-          m_cmacSapProvider.at (0)->ConfigureNprach (rc);
+          m_cmacSapProvider.at (0)->ConfigureRadioResourceConfig(rc);
           m_cphySapProvider.at (0)->ConfigureUplink (m_ulEarfcn, m_ulBandwidth);
           m_cphySapProvider.at (0)->ConfigureReferenceSignalPower (msg.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower);
           if (m_state == IDLE_WAIT_SIB2)
@@ -1167,8 +1172,9 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
         //m_rrcSapUser->SendRrcConnectionSetupCompleted (msg2);
         //m_asSapUser->NotifyConnectionSuccessful ();
         //m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
-        std::cout << "CONNECTION COMPLETE" << std::endl;
-        LogRA(true);
+        NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
+
+        LogRA(true, Simulator::Now()-m_connectStartTime);
         m_asSapUser->NotifyMessage4();
         SwitchToState(IDLE_START);
         m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);

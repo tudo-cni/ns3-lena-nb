@@ -26,6 +26,7 @@
 #include <ns3/packet.h>
 #include <ns3/packet-burst.h>
 #include <ns3/random-variable-stream.h>
+#include <ns3/build-profile.h>
 
 #include "lte-ue-mac.h"
 #include "lte-ue-net-device.h"
@@ -61,7 +62,7 @@ public:
 
   // inherited from LteUeCmacSapProvider
   virtual void ConfigureRach (RachConfig rc);
-  virtual void ConfigureNprach (NbIotRrcSap::NprachConfig rc);
+  virtual void ConfigureRadioResourceConfig (NbIotRrcSap::RadioResourceConfigCommonNb rc);
   virtual void StartContentionBasedRandomAccessProcedure ();
   virtual void StartRandomAccessProcedureNb ();
   virtual void StartNonContentionBasedRandomAccessProcedure (uint16_t rnti, uint8_t preambleId, uint8_t prachMask);
@@ -88,9 +89,9 @@ UeMemberLteUeCmacSapProvider::ConfigureRach (RachConfig rc)
   m_mac->DoConfigureRach (rc);
 }
 void 
-UeMemberLteUeCmacSapProvider::ConfigureNprach (NbIotRrcSap::NprachConfig rc)
+UeMemberLteUeCmacSapProvider::ConfigureRadioResourceConfig (NbIotRrcSap::RadioResourceConfigCommonNb rc)
 {
-  m_mac->DoConfigureNprach (rc);
+  m_mac->DoConfigureRadioResourceConfig(rc);
 }
   void 
 UeMemberLteUeCmacSapProvider::StartContentionBasedRandomAccessProcedure ()
@@ -454,7 +455,6 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
   NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
   // assume that there is no Random Access Preambles group B
   m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, NbIotRrcSap::ConvertNprachNumSubcarriers2int(m_CeLevel) -1 );
-  std::cout << NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_CeLevel)<<"\n";
   bool contention = true;
   SendRaPreambleNb(contention);
 }  
@@ -474,10 +474,10 @@ LteUeMac::SendRaPreamble (bool contention)
   m_uePhySapProvider->SendRachPreamble (m_raPreambleId, m_raRnti);
   NS_LOG_INFO (this << " sent preamble id " << (uint32_t) m_raPreambleId << ", RA-RNTI " << (uint32_t) m_raRnti);
   // 3GPP 36.321 5.1.4 
-  Time raWindowBegin = MilliSeconds (3); 
-  Time raWindowEnd = MilliSeconds (3 + m_rachConfig.raResponseWindowSize);
-  Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
-  m_noRaResponseReceivedEvent = Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeout, this, contention);
+  //Time raWindowBegin = MilliSeconds (3); 
+  //Time raWindowEnd = MilliSeconds (3 + m_rachConfig.raResponseWindowSize);
+  //Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
+  //m_noRaResponseReceivedEvent = Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeout, this, contention);
 }
 void
 LteUeMac::SendRaPreambleNb (bool contention)
@@ -504,23 +504,34 @@ LteUeMac::SendRaPreambleNb (bool contention)
   m_raRnti = 1+floor(m_frameNo/4);
 
   //m_uePhySapProvider->SendRachPreamble (m_raPreambleId, m_raRnti);
-  m_nprachConfig.nprachCpLength = NbIotRrcSap::NprachConfig::NprachCpLength::us266dot7;
+  m_radioResourceConfig.nprachConfig.nprachCpLength = NbIotRrcSap::NprachConfig::NprachCpLength::us266dot7;
   int sendingTime = NbIotRrcSap::ConvertNprachStartTime2int(m_CeLevel);
   double ts = 1000.0/(15000.0*2048.0);
   double preambleSymbolTime = 8192.0*ts;
   double preambleGroupTimeNoCP = 5.0*preambleSymbolTime; 
-  double preambleGroupTime = NbIotRrcSap::ConvertNprachCpLenght2double(m_nprachConfig)+preambleGroupTimeNoCP;
+  double preambleGroupTime = NbIotRrcSap::ConvertNprachCpLenght2double(m_radioResourceConfig.nprachConfig)+preambleGroupTimeNoCP;
   double preambleRepetition = 4.0*preambleGroupTime;
-
-  double time = sendingTime +(NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(m_CeLevel)-1)*preambleRepetition;
+  double time = sendingTime +NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(m_CeLevel)*preambleRepetition;
   Simulator::Schedule(MilliSeconds(time), &LteUePhySapProvider::SendNprachPreamble, m_uePhySapProvider, m_raPreambleId,m_raRnti,NbIotRrcSap::ConvertNprachSubcarrierOffset2int(m_CeLevel));
   NS_LOG_INFO (this << " sent preamble id " << (uint32_t) m_raPreambleId << ", RA-RNTI " << (uint32_t) m_raRnti);
   // 3GPP 36.321 5.1.4 
+  Time raWindowBegin;
+  Time raWindowEnd; 
+  uint32_t npdcchPeriod = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (m_CeLevel) * NbIotRrcSap::ConvertNpdcchStartSfCssRa2double (m_CeLevel);
 
-  Time raWindowBegin = MilliSeconds (4); 
+  if(NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int(m_CeLevel)>= 64) {
+    raWindowBegin = MilliSeconds (41); 
+    std::cout << (m_frameNo-1)*10 + (m_subframeNo-1)+time+41+ NbIotRrcSap::ConvertRaResponseWindowSize2int(m_rachConfigCe)*npdcchPeriod << std::endl;
+    raWindowEnd = MilliSeconds (time+41 + NbIotRrcSap::ConvertRaResponseWindowSize2int(m_rachConfigCe)*npdcchPeriod);
+  }
+  else{
+    raWindowBegin = MilliSeconds (4); 
+    std::cout << (m_frameNo-1)*10 + (m_subframeNo-1)+time+4+ NbIotRrcSap::ConvertRaResponseWindowSize2int(m_rachConfigCe)*npdcchPeriod << std::endl;
+    raWindowEnd = MilliSeconds (time+4+ NbIotRrcSap::ConvertRaResponseWindowSize2int(m_rachConfigCe)*npdcchPeriod);
+  }
   //Time raWindowEnd = MilliSeconds (4 + 8*10240);
-  Time raWindowEnd = MilliSeconds (4 + 8*10240);
   //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
+  std::cout << (m_frameNo-1)*10 + (m_subframeNo-1)+time << std::endl;
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
   // TODO RESPONSE WINDOW 
   m_noRaResponseReceivedEvent = Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeoutNb, this, contention);
@@ -663,6 +674,7 @@ LteUeMac::RaResponseTimeoutNb (bool contention)
 {
   NS_LOG_FUNCTION (this << contention);
   m_waitingForRaResponse = false;
+  std::cout << "Window End" << std::endl;
   // 3GPP 36.321 5.1.4
   ++m_preambleTransmissionCounter;
   //fire RA response timeout trace
@@ -696,10 +708,10 @@ LteUeMac::DoConfigureRach (LteUeCmacSapProvider::RachConfig rc)
   m_rachConfigured = true;
 }
 void 
-LteUeMac::DoConfigureNprach (NbIotRrcSap::NprachConfig rc)
+LteUeMac::DoConfigureRadioResourceConfig(NbIotRrcSap::RadioResourceConfigCommonNb rc)
 {
   NS_LOG_FUNCTION (this);
-  m_nprachConfig = rc;
+  m_radioResourceConfig = rc;
   m_nprachConfigured = true;
 }
 void 
@@ -724,15 +736,18 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   m_preambleTransmissionCounterCe = 0;
   // Check CE Level
   double rsrp = m_uePhySapProvider->GetRSRP();
-  std::cout << "RSRP: " << rsrp << "dBm" << "\n";
-  if (rsrp < m_nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound){
-    m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb2;
+  NS_BUILD_DEBUG(std::cout << "RSRP: " << rsrp << "dBm" << "\n");
+  if (rsrp < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound){
+    m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb2;
+    m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo3;
   }
-  else if (rsrp  < m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
-    m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb1;
+  else if (rsrp  < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+    m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb1;
+    m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo2;
   }
-  else if (rsrp > m_nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
-    m_CeLevel = m_nprachConfig.nprachParametersList.nprachParametersNb0;
+  else if (rsrp > m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound){
+    m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb0;
+    m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo1;
   }
   m_backoffParameter = 0;
   RandomlySelectAndSendRaPreambleNb ();
@@ -837,9 +852,9 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
           if (m_nextPossibleHarqOpportunity.size() > 0){ 
           int currentsubframe = 10*(m_frameNo-1)+(m_subframeNo-1);
           int subframestowait = *(m_nextPossibleHarqOpportunity[0].second.end()-1) - currentsubframe;
-          std::cout << "Sending HARQ Response at " << currentsubframe+subframestowait << std::endl;
+          NS_BUILD_DEBUG(std::cout << "Sending HARQ Response at " << currentsubframe+subframestowait << std::endl);
           Simulator::Schedule(MilliSeconds(subframestowait), &LteUePhySapProvider::SendHarqAckResponse, m_uePhySapProvider, true);
-          std::cout << m_rnti << " Got to MSG4-HARQ \n";
+          NS_BUILD_DEBUG(std::cout << m_rnti << " Got to MSG4-HARQ \n");
           }
         }
       else

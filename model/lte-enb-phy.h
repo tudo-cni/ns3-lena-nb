@@ -564,6 +564,7 @@ private:
   bool m_sib1NbPeriod; // No NB-IoT
   uint8_t m_mibNbRepetitionsCounter;
   uint8_t m_sib1NbRepetitions;
+  std::vector<int> m_controlmessagescount;
 }; // end of `class LteEnbPhy`
 
 

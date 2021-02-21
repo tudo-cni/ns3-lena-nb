@@ -585,8 +585,7 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
           break;
         case LteControlMessage::DL_HARQ_NB:
           {
-            int currentsubframe = 10*(m_nrFrames-1)+(m_nrSubFrames-1);
-            std::cout << currentsubframe << std::endl;
+            //int currentsubframe = 10*(m_nrFrames-1)+(m_nrSubFrames-1);
             Ptr<DlHarqFeedbackNbiotControlMessage> dlharqMsg = DynamicCast<DlHarqFeedbackNbiotControlMessage> (*it);
             if (m_ueAttached.find (dlharqMsg->GetRnti()) != m_ueAttached.end ())
               {

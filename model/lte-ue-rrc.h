@@ -1374,7 +1374,7 @@ private:
   void ResetRlfParams ();
 
   // Temporary Logging method for successful random access
-  void LogRA(bool success);
+  void LogRA(bool success, Time timetillconnection);
   std::string m_logfile;
 public:
   /** 
@@ -1382,6 +1382,7 @@ public:
    */
   uint16_t m_numberOfComponentCarriers;
   void SetLogFile(std::string filename);
+  Time m_connectStartTime;
 
 }; // end of class LteUeRrc
 

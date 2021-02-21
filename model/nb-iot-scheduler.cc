@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <ns3/build-profile.h>
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("NbiotScheduler");
@@ -13,7 +14,6 @@ NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces
 {
   m_Amc = NbiotAmc();
   m_sib2config = sib2;
-  std::cout <<  "ASDASDasdASDas " << m_Amc.getNpdschParameters(-143.3, 560, "inband").NRep << "\n";
   m_DciTimeOffsetRmaxSmall.reserve (8);
   m_DciTimeOffsetRmaxBig.reserve (8);
   m_Msg3TimeOffset.reserve (4);
@@ -82,7 +82,6 @@ NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces
           double preambleRepetition = 4.0 * preambleGroupTime;
           double nprachduration =
               (NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int (*it) * preambleRepetition);
-          std::cout << nprachduration << " asdasdfasfasfsf";
           size_t subcarrierOffset = NbIotRrcSap::ConvertNprachSubcarrierOffset2int (*it);
           uint8_t numberSubcarriers = NbIotRrcSap::ConvertNprachNumSubcarriers2int (*it);
           double time_tmp = int (nprachduration) + 1;
@@ -286,15 +285,15 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                                       scheduleSuccessful = true;
                                       rar->rarPayload.ulGrant = ulgrant.first;
                                       rar->rarPayload.ulGrant.subframes = ulgrant.second;
-                                      std::cout << "Scheduling NPUSCH at ";
-                                      std::cout << " Subcarrier " << ulgrant.second.first << " ";
+                                      NS_BUILD_DEBUG(std::cout << "Scheduling NPUSCH at ");
+                                      NS_BUILD_DEBUG(std::cout << " Subcarrier " << ulgrant.second.first << " ");
                                       for (size_t i = 0; i < ulgrant.second.second.size (); i++)
                                         {
                                           m_uplink[ulgrant.second.first][ulgrant.second.second[i]] =
                                               m_currenthyperindex;
-                                          std::cout << ulgrant.second.second[i] << " ";
+                                          NS_BUILD_DEBUG(std::cout << ulgrant.second.second[i] << " ");
                                         }
-                                      std::cout << "\n";
+                                      NS_BUILD_DEBUG(std::cout << "\n");
                                       ++rar;
                                     }
                                   else
@@ -313,40 +312,40 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                                   GetNextAvailableNpuschCandidate (*(npdschsubframes.end () - 1), 0,
                                                                    subframesNpuschHarq, true);
                               if(npuschharqsubframes.size() > 0){
-                              std::cout << "Scheduling NPUSCH HARQ at ";
+                              NS_BUILD_DEBUG(std::cout << "Scheduling NPUSCH HARQ at ");
                               scheduleSuccessful = true;
                               for (size_t i = 0; i < npuschharqsubframes[0].second.size (); i++)
                                 {
                                   m_uplink[npuschharqsubframes[0].first]
                                           [npuschharqsubframes[0].second[i]] = m_currenthyperindex;
-                                  std::cout << npuschharqsubframes[0].second[i] << " ";
+                                  NS_BUILD_DEBUG(std::cout << npuschharqsubframes[0].second[i] << " ");
                                 }
-                                std::cout << "\n";
+                                NS_BUILD_DEBUG(std::cout << "\n");
                               it->dciN1.npuschOpportunity = npuschharqsubframes;
                               }
                             }
                           if(scheduleSuccessful){
-                            std::cout << "Scheduling NPDCCH at ";
+                            NS_BUILD_DEBUG(std::cout << "Scheduling NPDCCH at ");
 
                             for (size_t j = 0; j < test.size (); ++j)
                               {
                                 m_downlink[test[j]] = m_currenthyperindex;
-                                std::cout << test[j] << " ";
+                                NS_BUILD_DEBUG(std::cout << test[j] << " ");
                               }
 
-                            std::cout << "\n";
-                            std::cout << "Scheduling NPDSCH at ";
+                            NS_BUILD_DEBUG(std::cout << "\n");
+                            NS_BUILD_DEBUG(std::cout << "Scheduling NPDSCH at ");
 
                             for (size_t j = 0; j < npdschsubframes.size (); ++j)
                               {
                                 m_downlink[npdschsubframes[j]] = m_currenthyperindex;
-                                std::cout << npdschsubframes[j] << " ";
+                                NS_BUILD_DEBUG(std::cout << npdschsubframes[j] << " ");
                               }
 
                             it->dciRepetitionsubframes = test;
                             it->dciN1.npdschOpportunity = npdschsubframes;
                             scheduledMessages.push_back (*(it));
-                            std::cout << "\n";
+                            NS_BUILD_DEBUG(std::cout << "\n");
 
                             m_NpdcchQueue.erase (it);
                             continue;
@@ -374,7 +373,6 @@ NbiotScheduler::GetNextAvailableNpuschCandidate (int endSubframeNpdsch, int minS
                                                  int numSubframes, bool isHarq)
 {
   std::vector<std::pair<int, std::vector<int>>> allocation;
-  std::cout << "Scheduled Downlink" << std::endl;
   if (isHarq)
     {
 
@@ -657,7 +655,7 @@ NbiotScheduler::ScheduleDlRlcBufferReq (LteMacSapProvider::ReportBufferStatusPar
   /*
   Magic for defining modulation and coding scheme etc
  */
-  std::cout << "MCL of " << params.rnti << " is " << m_rntiRsrpMap[params.rnti]-30 << "\n";
+  NS_BUILD_DEBUG(std::cout << "MCL of " << params.rnti << " is " << m_rntiRsrpMap[params.rnti]-30 << "\n");
 
   std::pair<NbIotRrcSap::DciN1, int> dci_tbs = m_Amc.getBareboneDci(m_rntiRsrpMap[params.rnti]-30.0, params.txQueueSize*8,"inband");
   

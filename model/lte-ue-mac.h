@@ -155,7 +155,7 @@ private:
   *
   * \param rc LteUeCmacSapProvider::RachConfig
   */
-  void DoConfigureNprach (NbIotRrcSap::NprachConfig rc);
+  void DoConfigureRadioResourceConfig (NbIotRrcSap::RadioResourceConfigCommonNb rc);
  /**
   * Start contention based random access procedure function
   */
@@ -312,7 +312,8 @@ private:
   bool m_rachConfigured; ///< is RACH configured?
   bool m_nprachConfigured; ///< is RACH configured?
   LteUeCmacSapProvider::RachConfig m_rachConfig; ///< RACH configuration
-  NbIotRrcSap::NprachConfig m_nprachConfig; ///< RACH configuration
+  NbIotRrcSap::RachInfo m_rachConfigCe; ///< RACH configuration
+  NbIotRrcSap::RadioResourceConfigCommonNb m_radioResourceConfig; ///< RACH configuration
   uint8_t m_raPreambleId; ///< RA preamble ID
   uint8_t m_preambleTransmissionCounter; ///< preamble tranamission counter
   uint8_t m_preambleTransmissionCounterCe; ///< preamble tranamission counter

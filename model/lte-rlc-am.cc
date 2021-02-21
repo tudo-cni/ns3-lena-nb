@@ -158,7 +158,6 @@ LteRlcAm::DoTransmitPdcpPdu (Ptr<Packet> p)
   NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << p->GetSize ());
 
   /** Store PDCP PDU */
-
   LteRlcSduStatusTag tag;
   tag.SetStatus (LteRlcSduStatusTag::FULL_SDU);
   p->AddPacketTag (tag);
@@ -170,7 +169,7 @@ LteRlcAm::DoTransmitPdcpPdu (Ptr<Packet> p)
   NS_LOG_LOGIC ("txonBufferSize = " << m_txonBufferSize);
 
   /** Report Buffer Status */
-  DoReportBufferStatus ();
+  DoReportBufferStatus();
   m_rbsTimer.Cancel ();
   m_rbsTimer = Simulator::Schedule (m_rbsTimerValue, &LteRlcAm::ExpireRbsTimer, this);
 }
@@ -1632,7 +1631,7 @@ LteRlcAm::DoReportBufferStatus (void)
       NS_LOG_INFO ("Send ReportBufferStatus: " << r.txQueueSize << ", " << r.txQueueHolDelay << ", " 
                                                << r.retxQueueSize << ", " << r.retxQueueHolDelay << ", " 
                                                << r.statusPduSize);
-      m_macSapProvider->ReportBufferStatus (r);
+      m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
     }
   else
     {

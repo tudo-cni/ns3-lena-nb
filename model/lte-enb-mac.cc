@@ -26,7 +26,7 @@
 #include <ns3/pointer.h>
 #include <ns3/packet.h>
 #include <ns3/simulator.h>
-
+#include <ns3/build-profile.h>
 #include "lte-amc.h"
 #include "lte-control-messages.h"
 #include "lte-enb-net-device.h"
@@ -657,8 +657,9 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
           if (iter->second == 1)
             { // sanity check. Actually should be always equal
 
-              std::cout << "Preamble received of offset " << int (subcarrierOffset)
-                        << " at Subframe " << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << "\n";
+              
+             NS_BUILD_DEBUG( std::cout << "Preamble received of offset " << int (subcarrierOffset)
+                        << " at Subframe " << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << "\n");
               NbIotRrcSap::Rar rar;
               rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
               rar.rapId = subcarrierOffset + iter->first;
@@ -673,7 +674,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
               // 2 possible actions:
               // a) Preambles interfere with each other, so all UEs lose
               // b) eNB does cotention resolution magic and one UE surives
-              std::cout << "Collision" << std::endl;
+              NS_BUILD_DEBUG (std::cout << "Collision" << std::endl);
               if (m_dropPreambleCollision)
                 {
                   m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
@@ -682,9 +683,9 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
               else
                 {
                   m_rapIdCollisionMap[subcarrierOffset + iter->first] = true;
-                  std::cout << "Preamble received of offset " << int (subcarrierOffset)
+                  NS_BUILD_DEBUG (std::cout << "Preamble received of offset " << int (subcarrierOffset)
                             << " at Subframe " << (10 * (m_frameNo - 1) + (m_subframeNo - 1))
-                            << "\n";
+                            << "\n");
                   NbIotRrcSap::Rar rar;
                   rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
                   rar.rapId = subcarrierOffset + iter->first;
@@ -1114,7 +1115,6 @@ LteEnbMac::DoUlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulc
   if (ulcqi.m_ulCqi.m_type == UlCqi_s::PUSCH)
     {
       NS_LOG_DEBUG (this << " eNB rxed an PUSCH UL-CQI");
-      std::cout << "PUSCH CQI" << std::endl;
     }
   else if (ulcqi.m_ulCqi.m_type == UlCqi_s::SRS)
     {
@@ -1126,12 +1126,12 @@ LteEnbMac::DoUlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulc
 void
 LteEnbMac::DoUlCqiReportNb (std::vector<double> cqi)
 {
-  std::cout << "Received CQI: ";
+  NS_BUILD_DEBUG(std::cout << "Received CQI: ");
   for (std::vector<double>::iterator it = cqi.begin (); it != cqi.end (); ++it)
     {
-      std::cout << *it << " ";
+      NS_BUILD_DEBUG(std::cout << *it << " ");
     }
-  std::cout << "\n";
+  NS_BUILD_DEBUG(std::cout << "\n");
   m_ulCqiReceivedNb.push_back (cqi);
 }
 
@@ -1534,7 +1534,6 @@ LteEnbMac::DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParamete
   NS_LOG_FUNCTION (this);
   m_schedulerNb->ScheduleDlRlcBufferReq (params, searchspace);
 }
-
 // ////////////////////////////////////////////
 // SCHED SAP
 // ////////////////////////////////////////////

@@ -44,6 +44,7 @@
 #include <ns3/pointer.h>
 #include <ns3/boolean.h>
 #include <ns3/lte-ue-power-control.h>
+#include <ns3/build-profile.h>
 
 namespace ns3 {
 
@@ -1265,7 +1266,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
                   else
                     {
 
-                      std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n";
+                      NS_BUILD_DEBUG(std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n");
                       NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
                       // set the uplink bandwidth according to the UL grant
                       //std::vector <int> ulRb;

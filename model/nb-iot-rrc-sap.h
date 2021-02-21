@@ -1355,6 +1355,39 @@ class NbIotRrcSap{
              }
             return res;
         }
+    static uint8_t ConvertRaResponseWindowSize2int(RachInfo rach){
+            uint8_t res = 0;
+            switch(rach.RaResponseWindowSize){
+                case RachInfo::RaResponseWindowSize::pp2:
+                    res = 2;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp3:
+                    res = 3;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp4:
+                    res = 4;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp5:
+                    res = 5;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp6:
+                    res = 6;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp7:
+                    res = 7;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp8:
+                    res = 8;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp10:
+                    res = 10;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+
 
 
 };

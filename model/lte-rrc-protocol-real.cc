@@ -25,6 +25,7 @@
 #include <ns3/node-list.h>
 #include <ns3/node.h>
 #include <ns3/simulator.h>
+#include <ns3/build-profile.h>
 
 #include "lte-rrc-protocol-real.h"
 #include "lte-ue-rrc.h"
@@ -606,7 +607,7 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcCo
   transmitPdcpPduParameters.pdcpPdu = packet;
   transmitPdcpPduParameters.rnti = rnti;
   transmitPdcpPduParameters.lcid = 0;
-
+  NS_BUILD_DEBUG(std::cout << "Send connection setup" << std::endl);
   m_setupUeParametersMap.at (rnti).srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
 }
 
@@ -735,7 +736,6 @@ LteEnbRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameter
   // Get type of message received
   RrcUlDcchMessage rrcUlDcchMessage;
   params.pdcpSdu->PeekHeader (rrcUlDcchMessage);
-
   // Declare possible headers to receive
   MeasurementReportHeader measurementReportHeader;
   RrcConnectionReconfigurationCompleteHeader rrcConnectionReconfigurationCompleteHeader;

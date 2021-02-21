@@ -29,6 +29,7 @@
 #include <ns3/fatal-error.h>
 #include <ns3/log.h>
 #include <ns3/abort.h>
+#include <ns3/build-profile.h>
 
 #include <ns3/pointer.h>
 #include <ns3/object-map.h>
@@ -945,7 +946,7 @@ void
 UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
 {
   NS_LOG_FUNCTION (this);
-  std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl;
+  NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
   switch (m_state)
     {
     case INITIAL_RANDOM_ACCESS:
@@ -1622,6 +1623,7 @@ LteEnbRrc::LteEnbRrc ()
     m_carriersConfigured (false)
 {
   NS_LOG_FUNCTION (this);
+  m_legacy_lte = false;
   m_cmacSapUser.push_back (new EnbRrcMemberLteEnbCmacSapUser (this, 0));
   m_handoverManagementSapUser = new MemberLteHandoverManagementSapUser<LteEnbRrc> (this);
   m_anrSapUser = new MemberLteAnrSapUser<LteEnbRrc> (this);
