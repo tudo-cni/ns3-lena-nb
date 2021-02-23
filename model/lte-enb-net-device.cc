@@ -100,7 +100,7 @@ TypeId LteEnbNetDevice::GetTypeId (void)
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("DlBandwidth",
                    "Downlink Transmission Bandwidth Configuration in number of Resource Blocks",
-                   UintegerValue (25),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&LteEnbNetDevice::SetDlBandwidth, 
                                          &LteEnbNetDevice::GetDlBandwidth),
                    MakeUintegerChecker<uint8_t> ())
@@ -278,6 +278,7 @@ LteEnbNetDevice::SetDlBandwidth (uint16_t bw)
   NS_LOG_FUNCTION (this << uint16_t (bw));
   switch (bw)
     { 
+    case 1:
     case 6:
     case 15:
     case 25:

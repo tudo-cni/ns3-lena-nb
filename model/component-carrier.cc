@@ -45,7 +45,7 @@ TypeId ComponentCarrier::GetTypeId (void)
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("DlBandwidth",
                    "Downlink Transmission Bandwidth Configuration in number of Resource Blocks",
-                   UintegerValue (25),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&ComponentCarrier::SetDlBandwidth,
                                          &ComponentCarrier::GetDlBandwidth),
                    MakeUintegerChecker<uint8_t> ())
@@ -143,6 +143,7 @@ ComponentCarrier::SetDlBandwidth (uint16_t bw)
   NS_LOG_FUNCTION (this << bw);
   switch (bw)
     {
+    case 1:
     case 6:
     case 15:
     case 25:

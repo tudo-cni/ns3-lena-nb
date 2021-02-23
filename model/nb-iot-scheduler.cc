@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cmath>
 #include <ns3/build-profile.h>
 namespace ns3 {
 
@@ -655,9 +656,10 @@ NbiotScheduler::ScheduleDlRlcBufferReq (LteMacSapProvider::ReportBufferStatusPar
   /*
   Magic for defining modulation and coding scheme etc
  */
-  NS_BUILD_DEBUG(std::cout << "MCL of " << params.rnti << " is " << m_rntiRsrpMap[params.rnti]-30 << "\n");
+  double correction_factor = 10*log10(1.0/12.0); // correctionfactor applied to rsrp because it's for earch subcarrier and tx power is for full spectrum
+  NS_BUILD_DEBUG(std::cout << "MCL of " << params.rnti << " is " << m_rntiRsrpMap[params.rnti]-43.0-correction_factor<< "\n");
 
-  std::pair<NbIotRrcSap::DciN1, int> dci_tbs = m_Amc.getBareboneDci(m_rntiRsrpMap[params.rnti]-30.0, params.txQueueSize*8,"inband");
+  std::pair<NbIotRrcSap::DciN1, int> dci_tbs = m_Amc.getBareboneDci(m_rntiRsrpMap[params.rnti]-43.0-correction_factor, params.txQueueSize*8,"inband");
   
 
   NbIotRrcSap::DciN1 dci = dci_tbs.first;

@@ -179,7 +179,7 @@ LteEnbPhy::GetTypeId (void)
     .AddConstructor<LteEnbPhy> ()
     .AddAttribute ("TxPower",
                    "Transmission power in dBm",
-                   DoubleValue (30.0),
+                   DoubleValue (43.0),
                    MakeDoubleAccessor (&LteEnbPhy::SetTxPower, 
                                        &LteEnbPhy::GetTxPower),
                    MakeDoubleChecker<double> ())
@@ -193,7 +193,8 @@ LteEnbPhy::GetTypeId (void)
                    "the same overall gain and bandwidth when the receivers "
                    "are connected to sources at the standard noise "
                    "temperature T0.\"  In this model, we consider T0 = 290K.",
-                   DoubleValue (5.0),
+                   //DoubleValue (5.0),
+                   DoubleValue (0),
                    MakeDoubleAccessor (&LteEnbPhy::SetNoiseFigure, 
                                        &LteEnbPhy::GetNoiseFigure),
                    MakeDoubleChecker<double> ())

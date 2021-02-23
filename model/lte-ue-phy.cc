@@ -235,7 +235,8 @@ LteUePhy::GetTypeId (void)
                    " ideal receiver with the same overall gain and bandwidth when the receivers "
                    " are connected to sources at the standard noise temperature T0.\" "
                    "In this model, we consider T0 = 290K.",
-                   DoubleValue (9.0),
+                   //DoubleValue (9.0),
+                   DoubleValue (0.0),
                    MakeDoubleAccessor (&LteUePhy::SetNoiseFigure, 
                                        &LteUePhy::GetNoiseFigure),
                    MakeDoubleChecker<double> ())
