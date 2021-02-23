@@ -32,6 +32,7 @@
 #include <iomanip>
 #include <stdlib.h>
 #include <ctime>    
+#include <fstream>
 using namespace ns3;
 
 /**
@@ -42,24 +43,83 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("LenaSimpleEpc");
 
+std::vector<std::string> readCSVRow (const std::string &row)
+{
+  CSVState state = CSVState::UnquotedField;
+  std::vector<std::string> fields{""};
+  size_t i = 0; // index of the current field
+  for (char c : row)
+    {
+      switch (state)
+        {
+        case CSVState::UnquotedField:
+          switch (c)
+            {
+            case ',': // end of field
+              fields.push_back ("");
+              i++;
+              break;
+            case '"':
+              state = CSVState::QuotedField;
+              break;
+            default:
+              fields[i].push_back (c);
+              break;
+            }
+          break;
+        case CSVState::QuotedField:
+          switch (c)
+            {
+            case '"':
+              state = CSVState::QuotedQuote;
+              break;
+            default:
+              fields[i].push_back (c);
+              break;
+            }
+          break;
+        case CSVState::QuotedQuote:
+          switch (c)
+            {
+            case ',': // , after closing quote
+              fields.push_back ("");
+              i++;
+              state = CSVState::UnquotedField;
+              break;
+            case '"': // "" -> "
+              fields[i].push_back ('"');
+              state = CSVState::QuotedField;
+              break;
+            default: // end of quote
+              state = CSVState::UnquotedField;
+              break;
+            }
+          break;
+        }
+    }
+  return fields;
+}
+
 int
 main (int argc, char *argv[])
 {
-  uint16_t numUesCe0 = 10;
-  uint16_t numUesCe1 = 0;
-  uint16_t numUesCe2 = 0;
-  Time simTime = MilliSeconds (500000);
+  uint16_t numUesCe0 = 1;
+  uint16_t numUesCe1 = 1;
+  uint16_t numUesCe2 = 1;
+  Time simTime = MilliSeconds (3600000);
   //double distance = 50000.0;
-  double distanceCe0 = 10000.0;
-  //double distanceCe0 =  10000.0;
-  double distanceCe1 =  30000.0;
-  double distanceCe2 = 100000.0;
+  double distanceCe0 =  469531.7428251784;
+  double distanceCe1 = 1484789.7410759863;
+  double distanceCe2 = 4695317.428251784;
+  
 
   Time interPacketInterval = MilliSeconds (100);
   bool useCa = false;
   bool disableDl = false;
   bool disableUl = false;
   bool disablePl = false;
+  bool scenario = false;
+  int seed = 0;
 
   // Command line arguments
   CommandLine cmd (__FILE__);
@@ -75,6 +135,8 @@ main (int argc, char *argv[])
   cmd.AddValue ("disableDl", "Disable downlink data flows", disableDl);
   cmd.AddValue ("disableUl", "Disable uplink data flows", disableUl);
   cmd.AddValue ("disablePl", "Disable data flows between peer UEs", disablePl);
+  cmd.AddValue ("scenario", "1 if should use scenario csv", scenario);
+  cmd.AddValue ("randomSeed", "randomSeed",seed);
   cmd.Parse (argc, argv);
 
   ConfigStore inputConfig;
@@ -82,7 +144,7 @@ main (int argc, char *argv[])
 
   // parse again so you can override default values from the command line
   cmd.Parse(argc, argv);
-
+  std::cout << simTime << std::endl;
   if (useCa)
    {
      Config::SetDefault ("ns3::LteHelper::UseCa", BooleanValue (useCa));
@@ -100,9 +162,25 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
 
-
-                               
-
+  std::vector<double> positions;
+  if(scenario){
+    std::ifstream scenario("src/lte/csv/scenario.csv");
+    std::string row;
+    std::getline (scenario, row);
+    while (!scenario.eof ())
+      {
+        std::getline (scenario, row);
+        if (scenario.bad () || scenario.fail ())
+          {
+            break;
+          }
+        auto fields = readCSVRow (row);
+        positions.push_back(stod(fields[3])*1000.0);
+      }
+    for(std::vector<double>::iterator it = positions.begin(); it != positions.end(); ++it){
+      std::cout << *it << std::endl;
+    }
+  }
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
 
 
@@ -132,29 +210,40 @@ main (int argc, char *argv[])
   NodeContainer ueNodes;
   NodeContainer enbNodes;
   enbNodes.Create (1);
-  ueNodes.Create (numUesCe0+numUesCe1+numUesCe2);
-
+  if(scenario){
+    ueNodes.Create (positions.size());
+  }
+  else{
+    ueNodes.Create (numUesCe0+numUesCe1+numUesCe2);
+  }
   // Install Mobility Model
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
 
 
   positionAlloc->Add (Vector (0, 0, 0));
+  if(scenario){
+      for(std::vector<double>::iterator it = positions.begin(); it != positions.end(); ++it){
+      positionAlloc->Add (Vector (*it, 0, 0));
+      }
+  }
+  else{
   // positions for CE0
-  for (uint16_t i = 1; i <= numUesCe0;i++)
-    {
-      positionAlloc->Add (Vector (distanceCe0, 0, 0));
-      //positionAlloc->Add (Vector (distance*(i%positions)+1000, 0, 0));
-    }
-  for (uint16_t i = 1; i <= numUesCe1;i++)
-    {
-      positionAlloc->Add (Vector (distanceCe1, 0, 0));
-      //positionAlloc->Add (Vector (distance*(i%positions)+1000, 0, 0));
-    }
-  for (uint16_t i = 1; i <= numUesCe2;i++)
-    {
-      positionAlloc->Add (Vector (distanceCe2, 0, 0));
-      //positionAlloc->Add (Vector (distance*(i%positions)+1000, 0, 0));
-    }
+    for (uint16_t i = 1; i <= numUesCe0;i++)
+      {
+        positionAlloc->Add (Vector (distanceCe0, 0, 0));
+        //positionAlloc->Add (Vector (distance*(i%positions)+1000, 0, 0));
+      }
+    for (uint16_t i = 1; i <= numUesCe1;i++)
+      {
+        positionAlloc->Add (Vector (distanceCe1, 0, 0));
+        //positionAlloc->Add (Vector (distance*(i%positions)+1000, 0, 0));
+      }
+    for (uint16_t i = 1; i <= numUesCe2;i++)
+      {
+        positionAlloc->Add (Vector (distanceCe2, 0, 0));
+        //positionAlloc->Add (Vector (distance*(i%positions)+1000, 0, 0));
+      }
+  }
   MobilityHelper mobility;
   mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   mobility.SetPositionAllocator(positionAlloc);
@@ -178,7 +267,7 @@ main (int argc, char *argv[])
       ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
     }
   // Attach one UE per eNodeB
-
+  RngSeedManager::SetSeed (seed);  // Changes seed from default of 1 to 3
   Ptr<UniformRandomVariable> RaUeUniformVariable = CreateObject<UniformRandomVariable> ();
 
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
@@ -209,18 +298,25 @@ main (int argc, char *argv[])
   std::stringstream ss;
   ss << std::put_time(&tm, "ra_%d_%m_%Y_%H_%M_%S");
   logfile += ss.str();
-  logfile += "_";
-  logfile += std::to_string(numUesCe0);
-  logfile += "_";
-  logfile += std::to_string(distanceCe0);
-  logfile += "_";
-  logfile += std::to_string(numUesCe1);
-  logfile += "_";
-  logfile += std::to_string(distanceCe1);
-  logfile += "_";
-  logfile += std::to_string(numUesCe2);
-  logfile += "_";
-  logfile += std::to_string(distanceCe2);
+  if (scenario){
+    logfile += "_";
+    logfile += "predifined_scenario";
+    logfile += "_";
+  }
+  else{
+    logfile += "_";
+    logfile += std::to_string(numUesCe0);
+    logfile += "_";
+    logfile += std::to_string(distanceCe0);
+    logfile += "_";
+    logfile += std::to_string(numUesCe1);
+    logfile += "_";
+    logfile += std::to_string(distanceCe1);
+    logfile += "_";
+    logfile += std::to_string(numUesCe2);
+    logfile += "_";
+    logfile += std::to_string(distanceCe2);
+  }
   logfile += ".log";
   std::cout << logfile << "\n";
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
