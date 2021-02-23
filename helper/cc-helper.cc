@@ -74,7 +74,7 @@ TypeId CcHelper::GetTypeId (void)
                    MakeUintegerChecker<uint32_t> (0))
     .AddAttribute ("DlBandwidth",
                    "Set Dl Bandwidth for the first carrier component",
-                   UintegerValue (25),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&CcHelper::m_dlBandwidth),
                    MakeUintegerChecker<uint16_t> (0,100))
     .AddAttribute ("UlBandwidth",
