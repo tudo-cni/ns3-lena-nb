@@ -965,10 +965,10 @@ UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
             m_rrc->m_rrcSapUser->SendRrcConnectionSetup (m_rnti, msg2);
 
             RecordDataRadioBearersToBeStarted ();
-            //m_connectionSetupTimeout = Simulator::Schedule (
-            //    m_rrc->m_connectionSetupTimeoutDuration,
-            //    &LteEnbRrc::ConnectionSetupTimeout, m_rrc, m_rnti);
-            //SwitchToState (CONNECTION_SETUP);
+            m_connectionSetupTimeout = Simulator::Schedule (
+                m_rrc->m_connectionSetupTimeoutDuration,
+                &LteEnbRrc::ConnectionSetupTimeout, m_rrc, m_rnti);
+            SwitchToState (CONNECTION_SETUP);
           }
         else
           {

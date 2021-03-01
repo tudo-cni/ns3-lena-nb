@@ -656,6 +656,8 @@ class NbIotRrcSap{
             } mCS;
             bool redundandyVersion;
             bool NDI;
+
+            std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
         };
 
         struct UlGrant{
@@ -754,6 +756,7 @@ class NbIotRrcSap{
         int rnti;
         int tbs; // in bit
         bool isRar;
+        int lcid;
 
         };
         static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)
@@ -1222,7 +1225,7 @@ class NbIotRrcSap{
              }
             return res;
         }
-        static uint16_t ConvertDciRepetitions2int (DciN1 dci){
+        static uint16_t ConvertDciN1Repetitions2int (DciN1 dci){
             uint16_t res = 0;
             switch(dci.dciRepetitions){
                 case DciN1::DciRepetitions::r1:
@@ -1388,7 +1391,137 @@ class NbIotRrcSap{
             return res;
         }
 
+    static uint16_t ConvertDciN0Repetitions2int(DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.dciRepetitions){
+                case DciN0::DciRepetitions::r1:
+                    res = 1;
+                    break;
+                case DciN0::DciRepetitions::r2:
+                    res = 2;
+                    break;
+                case DciN0::DciRepetitions::r4:
+                    res = 4;
+                    break;
+                case DciN0::DciRepetitions::r8:
+                    res = 8;
+                    break;
+                case DciN0::DciRepetitions::r16:
+                    res = 16;
+                    break;
+                case DciN0::DciRepetitions::r32:
+                    res = 32;
+                    break;
+                case DciN0::DciRepetitions::r64:
+                    res = 64;
+                    break;
+                case DciN0::DciRepetitions::r128:
+                    res = 128;
+                    break;
+                case DciN0::DciRepetitions::r256:
+                    res = 256;
+                    break;
+                case DciN0::DciRepetitions::r512:
+                    res = 512;
+                    break;
+                case DciN0::DciRepetitions::r1024:
+                    res = 1024;
+                    break;
+                case DciN0::DciRepetitions::r2048:
+                    res = 2048;
+                    break;
+                default:
+                    break;
 
+             }
+            return res;
+        }
+        static uint16_t ConvertNpuschSchedulingDelay2int (DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.npuschSchedulingDelay){
+                case DciN0::NpuschSchedulingDelay::ms8:
+                    res = 8;
+                    break;
+                case DciN0::NpuschSchedulingDelay::ms16:
+                    res = 16;
+                    break;
+                case DciN0::NpuschSchedulingDelay::ms32:
+                    res = 32;
+                    break;
+                case DciN0::NpuschSchedulingDelay::ms64:
+                    res = 64;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNumResourceUnits2int(DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.numResourceUnits){
+                case DciN0::NumResourceUnits::ru1:
+                    res = 1;
+                    break;
+                case DciN0::NumResourceUnits::ru2:
+                    res = 2;
+                    break;
+                case DciN0::NumResourceUnits::ru3:
+                    res = 3;
+                    break;
+                case DciN0::NumResourceUnits::ru4:
+                    res = 4;
+                    break;
+                case DciN0::NumResourceUnits::ru5:
+                    res = 5;
+                    break;
+                case DciN0::NumResourceUnits::ru6:
+                    res = 6;
+                    break;
+                case DciN0::NumResourceUnits::ru8:
+                    res = 8;
+                    break;
+                case DciN0::NumResourceUnits::ru10:
+                    res = 10;
+                    break;
+                default:
+                    break;
+            }
+            return res;
+        }
+        static uint16_t ConvertNumNpuschRepetitions2int (DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.numNpuschRepetitions){
+                case DciN0::NumNpuschRepetitions::r1:
+                    res = 1;
+                    break;
+                case DciN0::NumNpuschRepetitions::r2:
+                    res = 2;
+                    break;
+                case DciN0::NumNpuschRepetitions::r4:
+                    res = 4;
+                    break;
+                case DciN0::NumNpuschRepetitions::r8:
+                    res = 8;
+                    break;
+                case DciN0::NumNpuschRepetitions::r16:
+                    res = 16;
+                    break;
+                case DciN0::NumNpuschRepetitions::r32:
+                    res = 32;
+                    break;
+                case DciN0::NumNpuschRepetitions::r64:
+                    res = 64;
+                    break;
+                case DciN0::NumNpuschRepetitions::r128:
+                    res = 128;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+
+ 
 
 };
 }

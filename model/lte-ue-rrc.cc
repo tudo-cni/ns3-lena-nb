@@ -1167,16 +1167,16 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
         m_connectionTimeout.Cancel ();
         SwitchToState (CONNECTED_NORMALLY);
         m_leaveConnectedMode = false;
-        //LteRrcSap::RrcConnectionSetupCompleted msg2;
-        //msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
-        //m_rrcSapUser->SendRrcConnectionSetupCompleted (msg2);
-        //m_asSapUser->NotifyConnectionSuccessful ();
-        //m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
+        LteRrcSap::RrcConnectionSetupCompleted msg2;
+        msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
+        m_rrcSapUser->SendRrcConnectionSetupCompleted (msg2);
+        m_asSapUser->NotifyConnectionSuccessful ();
+        m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
         NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
 
         LogRA(true, Simulator::Now()-m_connectStartTime);
-        m_asSapUser->NotifyMessage4();
-        SwitchToState(IDLE_START);
+        //m_asSapUser->NotifyMessage4();
+        //SwitchToState(IDLE_START);
         m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);
         NS_ABORT_MSG_IF (m_noOfSyncIndications > 0, "Sync indications should be zero "
                          "when a new RRC connection is established. Current value = " << (uint16_t) m_noOfSyncIndications);

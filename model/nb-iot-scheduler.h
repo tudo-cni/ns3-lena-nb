@@ -86,6 +86,7 @@ protected:
   std::vector<NbIotRrcSap::DciN1::NpdcchTimeOffset> m_DciTimeOffsetRmaxSmall;
   std::vector<NbIotRrcSap::DciN1::NpdcchTimeOffset> m_DciTimeOffsetRmaxBig;
   std::vector<NbIotRrcSap::UlGrant::SchedulingDelay> m_Msg3TimeOffset;
+  std::vector<NbIotRrcSap::DciN0::NpuschSchedulingDelay> m_DciTimeOffsetUplink;
   std::vector<NbIotRrcSap::HarqAckResource::TimeOffset> m_HarqTimeOffsets;
   std::vector<NbIotRrcSap::HarqAckResource::SubcarrierIndex> m_HarqSubcarrierIndex;
   NbIotRrcSap::NprachParametersNb m_ce1;

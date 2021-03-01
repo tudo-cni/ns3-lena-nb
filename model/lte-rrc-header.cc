@@ -79,6 +79,7 @@ RrcAsn1Header::BandwidthToEnum (uint16_t bandwidth) const
   int n;
   switch (bandwidth)
     {
+      case 1: n = 6; break;
       case 6: n = 0; break;
       case 15: n = 1; break;
       case 25: n = 2; break;
@@ -1117,7 +1118,7 @@ RrcAsn1Header::SerializeMeasConfig (LteRrcSap::MeasConfig measConfig) const
           SerializeInteger (it->measObjectEutra.carrierFreq, 0, MAX_EARFCN);
 
           // Serialize  allowedMeasBandwidth
-          SerializeEnum (6, BandwidthToEnum (it->measObjectEutra.allowedMeasBandwidth));
+          SerializeEnum (7, BandwidthToEnum (it->measObjectEutra.allowedMeasBandwidth));
 
           SerializeBoolean (it->measObjectEutra.presenceAntennaPort1);
           SerializeBitstring (std::bitset<2> (it->measObjectEutra.neighCellConfig));
