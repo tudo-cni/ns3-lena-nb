@@ -676,6 +676,30 @@ private:
 
 };
 
+class UlDciN0NbiotControlMessage : public LteControlMessage
+{
+public:
+  UlDciN0NbiotControlMessage (void);
+  virtual ~UlDciN0NbiotControlMessage (void);
+
+  /**
+  * \brief add a DCI into the message
+  * \param dci the dci
+  */
+  void SetDci (NbIotRrcSap::DciN0 dci);
+  void SetRnti (uint32_t rnti);
+
+  /**
+  * \brief Get dic information
+  * \return dci messages
+  */
+  NbIotRrcSap::DciN0 GetDci (void);
+  uint32_t GetRnti (void);
+
+private:
+  NbIotRrcSap::DciN0 m_dci; ///< DCI
+  uint m_rnti;
+};
 
 } // namespace ns3
 

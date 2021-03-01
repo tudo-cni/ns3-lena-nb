@@ -438,6 +438,47 @@ DlDciN1NbiotControlMessage::GetRnti (void)
 // ----------------------------------------------------------------------------------------------------------
 
 
+UlDciN0NbiotControlMessage::UlDciN0NbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::UL_DCI_NB);
+}
+
+
+UlDciN0NbiotControlMessage::~UlDciN0NbiotControlMessage (void)
+{
+
+}
+
+void
+UlDciN0NbiotControlMessage::SetDci (NbIotRrcSap::DciN0 dci)
+{
+  m_dci = dci;
+
+}
+
+
+NbIotRrcSap::DciN0
+UlDciN0NbiotControlMessage::GetDci (void)
+{
+  return m_dci;
+}
+
+void
+UlDciN0NbiotControlMessage::SetRnti (uint32_t rnti)
+{
+  m_rnti = rnti;
+
+}
+
+
+uint32_t
+UlDciN0NbiotControlMessage::GetRnti (void)
+{
+  return m_rnti;
+}
+// ----------------------------------------------------------------------------------------------------------
+
+
 RarNbiotControlMessage::RarNbiotControlMessage (void)
 {
   SetMessageType (LteControlMessage::RAR_NB);
