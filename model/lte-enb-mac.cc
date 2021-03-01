@@ -657,14 +657,15 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
           if (iter->second == 1)
             { // sanity check. Actually should be always equal
 
-              
-             NS_BUILD_DEBUG( std::cout << "Preamble received of offset " << int (subcarrierOffset)
-                        << " at Subframe " << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << "\n");
+              NS_BUILD_DEBUG (std::cout << "Preamble received of offset " << int (subcarrierOffset)
+                                        << " at Subframe "
+                                        << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << "\n");
               NbIotRrcSap::Rar rar;
               rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
               rar.rapId = subcarrierOffset + iter->first;
               rar.rarPayload.cellRnti = rar.cellRnti;
-              m_rarQueue.push_back(std::make_pair(m_rapIdRantiMap[subcarrierOffset + iter->first], rar));
+              m_rarQueue.push_back (
+                  std::make_pair (m_rapIdRantiMap[subcarrierOffset + iter->first], rar));
               m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
             }
           else if (iter->second > 1)
@@ -683,9 +684,9 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
               else
                 {
                   m_rapIdCollisionMap[subcarrierOffset + iter->first] = true;
-                  NS_BUILD_DEBUG (std::cout << "Preamble received of offset " << int (subcarrierOffset)
-                            << " at Subframe " << (10 * (m_frameNo - 1) + (m_subframeNo - 1))
-                            << "\n");
+                  NS_BUILD_DEBUG (std::cout << "Preamble received of offset "
+                                            << int (subcarrierOffset) << " at Subframe "
+                                            << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << "\n");
                   NbIotRrcSap::Rar rar;
                   rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
                   rar.rapId = subcarrierOffset + iter->first;
@@ -702,40 +703,46 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
             }
         }
       std::vector<NbIotRrcSap::NpdcchMessage> rar_dcis;
-      if (m_rarQueue.size() > 0)
+      if (m_rarQueue.size () > 0)
         {
-          int size_mac_pdu = 0; 
-          size_mac_pdu +=  8; // E/T/R/R/BI Header 8 bit ETSI 136.321 13.7 6.1.5-2
+          int size_mac_pdu = 0;
+          size_mac_pdu += 8; // E/T/R/R/BI Header 8 bit ETSI 136.321 13.7 6.1.5-2
           int max_pdu_size_mac = 680;
           int size_mac_sdu_header = 8; // E/T/RAPID Header 8 bit ETSI 136.321 13.7 6.1.5-1
           int size_rar = 48; // MAC RAR for NB-IoT UEs 48 bit ETSI 136.321 13.7 6.1.5-3b
-          while ((m_rarQueue.size() > 0)){
-            // Create new DCI to be scheduled
-            rar_dcis.push_back(NbIotRrcSap::NpdcchMessage());
-            rar_dcis.back().ranti = m_rarQueue.front().first;
-            rar_dcis.back().npdcchFormat = NbIotRrcSap::NpdcchMessage::NpdcchFormat::format1;
-            rar_dcis.back().dciType = NbIotRrcSap::NpdcchMessage::DciType::n1;
-            rar_dcis.back().searchSpaceType = NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2;
-            rar_dcis.back().ce = ce;
-            rar_dcis.back().isRar = true;
-            rar_dcis.back().dciN1.numNpdschSubframesPerRepetition =
-                NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
-            rar_dcis.back().dciN1.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
-            // while there is space in the MAC PDU fill in as many RARs as fit. Otherwise create new DCI
-            while ((m_rarQueue.size() > 0)&&(size_mac_pdu+size_mac_sdu_header+size_rar < max_pdu_size_mac)){ 
-              size_mac_pdu += size_mac_sdu_header; 
-              size_mac_pdu += size_rar;
-              std::pair<int, NbIotRrcSap::Rar> rar = m_rarQueue.front();
-              rar_dcis.back().rars.push_back(rar.second);
-              m_rarQueue.erase(m_rarQueue.begin());
+          while ((m_rarQueue.size () > 0))
+            {
+              // Create new DCI to be scheduled
+              rar_dcis.push_back (NbIotRrcSap::NpdcchMessage ());
+              rar_dcis.back ().ranti = m_rarQueue.front ().first;
+              rar_dcis.back ().npdcchFormat = NbIotRrcSap::NpdcchMessage::NpdcchFormat::format1;
+              rar_dcis.back ().dciType = NbIotRrcSap::NpdcchMessage::DciType::n1;
+              rar_dcis.back ().searchSpaceType = NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2;
+              rar_dcis.back ().ce = ce;
+              rar_dcis.back ().isRar = true;
+              rar_dcis.back ().dciN1.numNpdschSubframesPerRepetition =
+                  NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
+              rar_dcis.back ().dciN1.numNpdschRepetitions =
+                  NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
+              // while there is space in the MAC PDU fill in as many RARs as fit. Otherwise create new DCI
+              while ((m_rarQueue.size () > 0) &&
+                     (size_mac_pdu + size_mac_sdu_header + size_rar < max_pdu_size_mac))
+                {
+                  size_mac_pdu += size_mac_sdu_header;
+                  size_mac_pdu += size_rar;
+                  std::pair<int, NbIotRrcSap::Rar> rar = m_rarQueue.front ();
+                  rar_dcis.back ().rars.push_back (rar.second);
+                  m_rarQueue.erase (m_rarQueue.begin ());
+                }
             }
-          }
 
-                    // Dci set depending on coverage level.... yet static
+          // Dci set depending on coverage level.... yet static
           //rar_dci.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r1;
-          for(std::vector<NbIotRrcSap::NpdcchMessage>::iterator it = rar_dcis.begin(); it != rar_dcis.end(); ++it){
-            m_schedulerNb->ScheduleNpdcchMessageReq (*it);
-          }
+          for (std::vector<NbIotRrcSap::NpdcchMessage>::iterator it = rar_dcis.begin ();
+               it != rar_dcis.end (); ++it)
+            {
+              m_schedulerNb->ScheduleNpdcchMessageReq (*it);
+            }
         }
     }
 }
@@ -879,29 +886,32 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
         }
       else
         {
-          if (!contention_resolution[it->rnti])
+          if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n1)
             {
-              int subframestowait = *(it->dciN1.npdschOpportunity.end () - 1) - currentsubframe;
-              LteMacSapUser::TxOpportunityParameters txOpParams;
-              uint16_t rnti = it->rnti;
-              uint8_t lcid = 0;
-              std::map<uint16_t, std::map<uint8_t, LteMacSapUser *>>::iterator rntiIt =
-                  m_rlcAttached.find (rnti);
-              NS_ASSERT_MSG (rntiIt != m_rlcAttached.end (), "could not find RNTI" << rnti);
-              std::map<uint8_t, LteMacSapUser *>::iterator lcidIt = rntiIt->second.find (lcid);
-              NS_ASSERT_MSG (lcidIt != rntiIt->second.end (),
-                             "could not find LCID" << (uint32_t) lcid << " carrier id:"
-                                                   << (uint16_t) m_componentCarrierId);
-              //NS_LOG_DEBUG (this << " rnti= " << rnti << " lcid= " << (uint32_t) lcid << " layer= " << k);
-              txOpParams.bytes = it->tbs;
-              txOpParams.layer = 0;
-              txOpParams.harqId = 0;
-              txOpParams.componentCarrierId = m_componentCarrierId;
-              txOpParams.rnti = rnti;
-              txOpParams.lcid = lcid;
-              Simulator::Schedule (MilliSeconds (subframestowait),
-                                   &LteMacSapUser::NotifyTxOpportunity, (*lcidIt).second,
-                                   txOpParams);
+              if (!contention_resolution[it->rnti])
+                {
+                  int subframestowait = *(it->dciN1.npdschOpportunity.end () - 1) - currentsubframe;
+                  LteMacSapUser::TxOpportunityParameters txOpParams;
+                  uint16_t rnti = it->rnti;
+                  uint8_t lcid = 0;
+                  std::map<uint16_t, std::map<uint8_t, LteMacSapUser *>>::iterator rntiIt =
+                      m_rlcAttached.find (rnti);
+                  NS_ASSERT_MSG (rntiIt != m_rlcAttached.end (), "could not find RNTI" << rnti);
+                  std::map<uint8_t, LteMacSapUser *>::iterator lcidIt = rntiIt->second.find (lcid);
+                  NS_ASSERT_MSG (lcidIt != rntiIt->second.end (),
+                                 "could not find LCID" << (uint32_t) lcid << " carrier id:"
+                                                       << (uint16_t) m_componentCarrierId);
+                  //NS_LOG_DEBUG (this << " rnti= " << rnti << " lcid= " << (uint32_t) lcid << " layer= " << k);
+                  txOpParams.bytes = it->tbs;
+                  txOpParams.layer = 0;
+                  txOpParams.harqId = 0;
+                  txOpParams.componentCarrierId = m_componentCarrierId;
+                  txOpParams.rnti = rnti;
+                  txOpParams.lcid = it->lcid;
+                  Simulator::Schedule (MilliSeconds (subframestowait),
+                                       &LteMacSapUser::NotifyTxOpportunity, (*lcidIt).second,
+                                       txOpParams);
+                }
             }
         }
       if (!contention_resolution[it->rnti])
@@ -917,6 +927,16 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                                    m_enbPhySapProvider, msg);
               contention_resolution[it->rnti] = true;
             }
+          else if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n0){
+            Ptr<UlDciN0NbiotControlMessage> msg = Create<UlDciN0NbiotControlMessage> ();
+            msg->SetDci(it->dciN0);
+            msg->SetRnti(it->rnti);
+            int subframestowait = *(it->dciRepetitionsubframes.end () - 1) - currentsubframe;
+            Simulator::Schedule (MilliSeconds (subframestowait),
+                                  &LteEnbPhySapProvider::SendLteControlMessage,
+                                  m_enbPhySapProvider, msg);
+            contention_resolution[it->rnti] = true;
+          }
         }
     }
 
@@ -1126,12 +1146,12 @@ LteEnbMac::DoUlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulc
 void
 LteEnbMac::DoUlCqiReportNb (std::vector<double> cqi)
 {
-  NS_BUILD_DEBUG(std::cout << "Received CQI: ");
+  NS_BUILD_DEBUG (std::cout << "Received CQI: ");
   for (std::vector<double>::iterator it = cqi.begin (); it != cqi.end (); ++it)
     {
-      NS_BUILD_DEBUG(std::cout << *it << " ");
+      NS_BUILD_DEBUG (std::cout << *it << " ");
     }
-  NS_BUILD_DEBUG(std::cout << "\n");
+  NS_BUILD_DEBUG (std::cout << "\n");
   m_ulCqiReceivedNb.push_back (cqi);
 }
 
