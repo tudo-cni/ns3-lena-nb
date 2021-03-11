@@ -72,6 +72,7 @@ public:
   virtual void UeUpdateConfigurationReq (UeConfig params);
   virtual RachConfig GetRachConfig ();
   virtual RachConfigNb GetRachConfigNb ();
+  virtual void NotifyConnectionSuccessful(uint16_t rnti);
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti);
 
 private:
@@ -134,6 +135,11 @@ LteEnbCmacSapProvider::RachConfigNb
 EnbMacMemberLteEnbCmacSapProvider::GetRachConfigNb ()
 {
   return m_mac->DoGetRachConfigNb ();
+}
+
+void 
+EnbMacMemberLteEnbCmacSapProvider::NotifyConnectionSuccessful(uint16_t rnti){
+  m_mac->DoNotifyConnectionSuccessful(rnti);
 }
 
 LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue
@@ -849,17 +855,11 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
   // Implement NB-IoT DCI Searchspaces Type2-CSS All AL2  Liberg et al. p 282
   // Find out if current subframe is start of Type2/UE-specific search space
   // A Tutorial to NB-IoT Design zeugs
-  m_sib2Nb = m_cmacSapUser->GetCurrentSystemInformationBlockType2Nb ();
-  m_ce0Parameter =
-      m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0;
-  m_ce1Parameter =
-      m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1;
-  m_ce2Parameter =
-      m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2;
+
   CheckIfPreambleWasReceived (m_ce0Parameter);
   CheckIfPreambleWasReceived (m_ce1Parameter);
   CheckIfPreambleWasReceived (m_ce2Parameter);
-  m_schedulerNb->SetCeLevel (m_ce0Parameter, m_ce1Parameter, m_ce2Parameter);
+  //m_schedulerNb->SetCeLevel (m_ce0Parameter, m_ce1Parameter, m_ce2Parameter);
   m_schedulerNb->SetRntiRsrpMap (m_ulRsrpReceivedNb);
   std::vector<NbIotRrcSap::NpdcchMessage> scheduled = m_schedulerNb->Schedule (frameNo, subframeNo);
 
@@ -1104,6 +1104,9 @@ LteEnbMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
         {
           m_schedulerNb->ScheduleMsg5Req (dlharq->GetRnti ());
         }
+      else{
+          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti(),20,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+      } 
     }
   else
     {
@@ -1236,6 +1239,7 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
   rxPduParams.p = p;
   rxPduParams.rnti = rnti;
   rxPduParams.lcid = lcid;
+
 
   //Receive PDU only if LCID is found
   if (lcidIt != rntiIt->second.end ())
@@ -1826,4 +1830,7 @@ LteEnbMac::DoDlInfoListElementHarqFeeback (DlInfoListElement_s params)
   m_dlInfoListReceived.push_back (params);
 }
 
+void LteEnbMac::DoNotifyConnectionSuccessful(uint16_t rnti){
+  m_connectionSuccessful[rnti] = true;
+}
 } // namespace ns3

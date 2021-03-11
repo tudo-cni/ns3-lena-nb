@@ -507,6 +507,8 @@ private:
   void DoReceiveNprachPreamble (uint8_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
   void DoUlCqiReportNb (std::vector<double> cqi);
 
+  void DoNotifyConnectionSuccessful(uint16_t rnti);
+
   NbiotScheduler* m_schedulerNb = nullptr;
   std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
   std::map<uint32_t, NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel> m_RntiCeMap;

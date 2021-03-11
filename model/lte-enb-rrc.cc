@@ -1000,6 +1000,7 @@ UeManager::RecvRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupComplet
   switch (m_state)
     {
     case CONNECTION_SETUP:
+      m_rrc->m_cmacSapProvider.at(0)->NotifyConnectionSuccessful(m_rnti);
       m_connectionSetupTimeout.Cancel ();
       if ( m_caSupportConfigured == false && m_rrc->m_numberOfComponentCarriers > 1)
         {
@@ -1743,7 +1744,7 @@ LteEnbRrc::GetTypeId (void)
                    "context is destroyed. Must account for the UE's reception "
                    "of RRC CONNECTION SETUP and transmission of RRC CONNECTION "
                    "SETUP COMPLETE.",
-                   TimeValue (MilliSeconds (150)),
+                   TimeValue (MilliSeconds (50000)),
                    MakeTimeAccessor (&LteEnbRrc::m_connectionSetupTimeoutDuration),
                    MakeTimeChecker ())
     .AddAttribute ("ConnectionRejectedTimeoutDuration",

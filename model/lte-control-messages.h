@@ -688,6 +688,7 @@ public:
   */
   void SetDci (NbIotRrcSap::DciN0 dci);
   void SetRnti (uint32_t rnti);
+  void SetLc(uint8_t lc);
 
   /**
   * \brief Get dic information
@@ -695,10 +696,12 @@ public:
   */
   NbIotRrcSap::DciN0 GetDci (void);
   uint32_t GetRnti (void);
+  uint8_t GetLc();
 
 private:
   NbIotRrcSap::DciN0 m_dci; ///< DCI
   uint m_rnti;
+  uint8_t m_lc;
 };
 
 } // namespace ns3

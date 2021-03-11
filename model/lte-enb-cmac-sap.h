@@ -158,6 +158,7 @@ public:
   virtual RachConfigNb GetRachConfigNb () = 0;
 
 
+  virtual void NotifyConnectionSuccessful(uint16_t rnti) = 0;
   /**
    * \brief AllocateNcRaPreambleReturnValue structure
    * 

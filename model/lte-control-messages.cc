@@ -476,6 +476,19 @@ UlDciN0NbiotControlMessage::GetRnti (void)
 {
   return m_rnti;
 }
+void
+UlDciN0NbiotControlMessage::SetLc(uint8_t lc)
+{
+  m_lc = lc;
+
+}
+
+
+uint8_t
+UlDciN0NbiotControlMessage::GetLc(void)
+{
+  return m_lc;
+}
 // ----------------------------------------------------------------------------------------------------------
 
 

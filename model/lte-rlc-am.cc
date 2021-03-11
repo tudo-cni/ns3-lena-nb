@@ -93,7 +93,7 @@ LteRlcAm::GetTypeId (void)
     .AddConstructor<LteRlcAm> ()
     .AddAttribute ("PollRetransmitTimer",
                    "Value of the t-PollRetransmit timer (See section 7.3 of 3GPP TS 36.322)",
-                   TimeValue (MilliSeconds (20)),
+                   TimeValue (MilliSeconds (500000)),
                    MakeTimeAccessor (&LteRlcAm::m_pollRetransmitTimerValue),
                    MakeTimeChecker ())
     .AddAttribute ("ReorderingTimer",
@@ -109,7 +109,7 @@ LteRlcAm::GetTypeId (void)
     .AddAttribute ("ReportBufferStatusTimer",
                    "How much to wait to issue a new Report Buffer Status since the last time "
                    "a new SDU was received",     
-                   TimeValue (MilliSeconds (20)),
+                   TimeValue (MilliSeconds (200)),
                    MakeTimeAccessor (&LteRlcAm::m_rbsTimerValue),
                    MakeTimeChecker ())
     .AddAttribute ("TxOpportunityForRetxAlwaysBigEnough",

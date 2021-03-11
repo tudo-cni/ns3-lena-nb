@@ -1143,7 +1143,7 @@ LteRlcUm::DoReportBufferStatus (void)
   r.statusPduSize = 0;
 
   NS_LOG_LOGIC ("Send ReportBufferStatus = " << r.txQueueSize << ", " << r.txQueueHolDelay );
-  m_macSapProvider->ReportBufferStatus (r);
+  m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
 }
 
 
