@@ -63,7 +63,8 @@ void ScheduleDlRlcBufferReq(LteMacSapProvider::ReportBufferStatusParameters para
 void ScheduleMsg5Req(int rnti);
 void SetCeLevel(NbIotRrcSap::NprachParametersNb ce0, NbIotRrcSap::NprachParametersNb ce1, NbIotRrcSap::NprachParametersNb ce2);
 void SetRntiRsrpMap(std::map<uint16_t, double> map);
-
+void ScheduleUlRlcBufferReq(int rnti, int dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+void AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace);
 std::vector<int> GetNextAvailableSearchSpaceCandidate(int SearchSpaceStartFrame, int SearchSpaceStartSubframe, int R_max, int R);
 std::vector<int> GetDlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes);
 std::vector<int> GetUlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes, int carrier);
@@ -75,6 +76,7 @@ std::vector<NbIotRrcSap::NpdcchMessage> Schedule(int frameNo, int subframeNo);
 std::vector<NbIotRrcSap::NpdcchMessage> ScheduleSearchSpace(NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NprachParametersNb ce);
 std::vector<std::pair<int, std::vector<int>>> GetNextAvailableNpuschCandidate(int endSubframeNpdsch, int minSchedulingDelay, int numSubframes, bool isHarq);
 std::pair<NbIotRrcSap::UlGrant, std::pair<int,std::vector<int>>> GetNextAvailableMsg3UlGrantCandidate(int endSubframeMsg2, int numSubframes);
+NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NpdcchMessage::DciType dci_type);
 std::vector<int8_t> m_downlink;
 NbIotRrcSap::NprachParametersNb m_ce0;
 protected:
@@ -91,6 +93,8 @@ protected:
   std::vector<NbIotRrcSap::HarqAckResource::SubcarrierIndex> m_HarqSubcarrierIndex;
   NbIotRrcSap::NprachParametersNb m_ce1;
   NbIotRrcSap::NprachParametersNb m_ce2;
+  std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, LteMacSapProvider::ReportBufferStatusParameters>> m_RntiRlcDlBuffer;
+  std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, uint>> m_RntiRlcUlBuffer;
   int m_frameNo;
   bool m_only15KhzSpacing = true;
   int m_subframeNo;

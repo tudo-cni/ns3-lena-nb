@@ -15,17 +15,20 @@ NbiotAmc::NbiotAmc ()
   m_npusch_params = readNpuschCSV (npusch_file);
   m_npdsch_params = readNpdschCSV (npdsch_file);
 
-  m_highestmcl = m_npdsch_params.inband.begin()->Pathloss;
-  m_lowestmcl = m_npdsch_params.inband.begin()->Pathloss;
-  for(std::vector<NpdschMeasurementValues>::iterator it = m_npdsch_params.inband.begin(); it != m_npdsch_params.inband.end(); ++it){
-    if(it->Pathloss < m_lowestmcl){
-      m_lowestmcl = it->Pathloss;
+  m_highestmcl = m_npdsch_params.inband.begin ()->Pathloss;
+  m_lowestmcl = m_npdsch_params.inband.begin ()->Pathloss;
+  for (std::vector<NpdschMeasurementValues>::iterator it = m_npdsch_params.inband.begin ();
+       it != m_npdsch_params.inband.end (); ++it)
+    {
+      if (it->Pathloss < m_lowestmcl)
+        {
+          m_lowestmcl = it->Pathloss;
+        }
+      if (it->Pathloss > m_highestmcl)
+        {
+          m_highestmcl = it->Pathloss;
+        }
     }
-    if(it->Pathloss > m_highestmcl){
-      m_highestmcl = it->Pathloss;
-    }
-
-  }
 }
 void
 NbiotAmc::DoDispose ()
@@ -179,12 +182,14 @@ NbiotAmc::getNpdschParameters (double couplingloss, int dataSize, std::string op
 {
   couplingloss = abs (floor (couplingloss));
   std::vector<NpdschMeasurementValues> *values;
-  if(couplingloss < m_lowestmcl){
-    couplingloss = m_lowestmcl;
-  }
-  if(couplingloss > m_highestmcl){
-    couplingloss = m_highestmcl;
-  }
+  if (couplingloss < m_lowestmcl)
+    {
+      couplingloss = m_lowestmcl;
+    }
+  if (couplingloss > m_highestmcl)
+    {
+      couplingloss = m_highestmcl;
+    }
 
   if (opMode == "inband")
     {
@@ -222,12 +227,14 @@ NpuschMeasurementValues
 NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, double bandwidth)
 {
   couplingloss = abs (floor (couplingloss));
-  if(couplingloss < m_lowestmcl){
-    couplingloss = m_lowestmcl;
-  }
-  if(couplingloss > m_highestmcl){
-    couplingloss = m_highestmcl;
-  }
+  if (couplingloss < m_lowestmcl)
+    {
+      couplingloss = m_lowestmcl;
+    }
+  if (couplingloss > m_highestmcl)
+    {
+      couplingloss = m_highestmcl;
+    }
   NpuschMeasurementValues value;
   value.TTI = 10000;
   for (std::vector<NpuschMeasurementValues>::iterator it = m_npusch_params.measurements.begin ();
@@ -235,16 +242,13 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
     {
       if (it->SCS == scs)
         {
-          if (it->bandwidth == bandwidth)
+          if (it->Pathloss == couplingloss)
             {
-              if (it->Pathloss == couplingloss)
+              if (it->TBS >= dataSize)
                 {
-                  if (it->TBS >= dataSize)
-                    {
-                      if (it->TTI < value.TTI)
-                        {
-                          value = *it;
-                        }
+                  if (it->TTI < value.TTI)
+                    { 
+                      value = *it;
                     }
                 }
             }
@@ -262,14 +266,16 @@ NbiotAmc::mapMeasurementValuetoMSG3 (NpuschMeasurementValues value)
 }
 
 int
-NbiotAmc::getMsg3Subframes (double couplingloss, int dataSize, double scs, double bandwidth){
-  NpuschMeasurementValues value = getNpuschParameters(couplingloss, dataSize, scs, bandwidth);
+NbiotAmc::getMsg3Subframes (double couplingloss, int dataSize, double scs, double bandwidth)
+{
+  NpuschMeasurementValues value = getNpuschParameters (couplingloss, dataSize, scs, bandwidth);
   // Only singletone 15khz supported yet
   // Extension later on
-  return value.NRep*value.NRU;
+  return value.NRep * value.NRU;
 }
 
-    NbIotRrcSap::DciN1 NbiotAmc::mapMeasurementValuetoDciN1 (NpdschMeasurementValues value)
+NbIotRrcSap::DciN1
+NbiotAmc::mapMeasurementValuetoDciN1 (NpdschMeasurementValues value)
 {
   NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition subframes;
   switch (value.NSF)
@@ -362,12 +368,93 @@ NbiotAmc::getMsg3Subframes (double couplingloss, int dataSize, double scs, doubl
   return dci;
 }
 
+NbIotRrcSap::DciN0
+NbiotAmc::mapMeasurementValuetoDciN0 (NpuschMeasurementValues value)
+{
+  NbIotRrcSap::DciN0::NumResourceUnits subframes;
+  switch (value.NRU)
+    {
+    case 1:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru1;
+      break;
+    case 2:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru2;
+      break;
+    case 3:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru3;
+      break;
+    case 4:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru4;
+      break;
+    case 5:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru5;
+      break;
+    case 6:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru6;
+      break;
+    case 8:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru8;
+      break;
+    case 10:
+    default:
+      subframes = NbIotRrcSap::DciN0::NumResourceUnits::ru10;
+      break;
+    }
+
+  NbIotRrcSap::DciN0::NumNpuschRepetitions repetitions;
+  switch (value.NRep)
+    {
+    case 1:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r1;
+      break;
+    case 2:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r2;
+      break;
+    case 4:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r4;
+      break;
+    case 8:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r8;
+      break;
+    case 16:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r16;
+      break;
+    case 32:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r32;
+      break;
+    case 64:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r64;
+      break;
+    case 128:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r128;
+      break;
+    default:
+      repetitions = NbIotRrcSap::DciN0::NumNpuschRepetitions::r128;
+      break;
+    }
+
+  NbIotRrcSap::DciN0 dci;
+  dci.format = true;
+  dci.numResourceUnits = subframes;
+  dci.numNpuschRepetitions = repetitions;
+  return dci;
+}
+
 std::pair<NbIotRrcSap::DciN1, int>
-NbiotAmc::getBareboneDci (double couplingloss, int dataSize, std::string opMode)
+NbiotAmc::getBareboneDciN1 (double couplingloss, int dataSize, std::string opMode)
 {
   NpdschMeasurementValues value = getNpdschParameters (couplingloss, dataSize, opMode);
   NbIotRrcSap::DciN1 dci = mapMeasurementValuetoDciN1 (value);
-  uint16_t tbs = TransportBlockSizeTableNb[value.IMCS][value.NSF];
+  uint16_t tbs = TransportBlockSizeTableDlNb[value.IMCS][value.NSF];
+  return std::make_pair (dci, tbs);
+}
+
+std::pair<NbIotRrcSap::DciN0, int>
+NbiotAmc::getBareboneDciN0 (double couplingloss, int dataSize, double scs, double bandwidth)
+{
+  NpuschMeasurementValues value = getNpuschParameters (couplingloss, dataSize, scs, bandwidth);
+  NbIotRrcSap::DciN0 dci = mapMeasurementValuetoDciN0 (value);
+  uint16_t tbs = TransportBlockSizeTableUlNb[value.ITBS][value.NRU];
   return std::make_pair (dci, tbs);
 }
 } // namespace ns3
