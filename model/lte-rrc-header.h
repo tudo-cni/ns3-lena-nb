@@ -557,6 +557,61 @@ private:
 };
 
 /**
+* This class manages the serialization/deserialization of RrcConnectionRequest IE
+*/
+class RrcConnectionResumeRequestNbHeader : public RrcUlCcchMessage
+{
+public:
+  RrcConnectionResumeRequestNbHeader ();
+  ~RrcConnectionResumeRequestNbHeader ();
+
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+  // Inherited from RrcAsn1Header 
+  void PreSerialize () const;
+  uint32_t Deserialize (Buffer::Iterator bIterator);
+  void Print (std::ostream &os) const;
+
+  /**
+   * Receives a RrcConnectionRequest IE and stores the contents into the class attributes
+   * @param msg The information element to parse
+   */
+  void SetMessage (NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+
+  /**
+   * Returns a RrcConnectionRequest IE from the values in the class attributes
+   * @return A RrcConnectionRequest, as defined in LteRrcSap
+   */
+  NbIotRrcSap::RrcConnectionResumeRequestNb GetMessage () const;
+
+  /**
+   * Get ResumeId attribute
+   * @return ResumeId attribute
+   */
+  std::bitset<40> GetResumeId() const;
+  /**
+   * Get ResumeId attribute
+   * @return ResumeId attribute
+   */
+  std::bitset<16> GetShortResumeMacI() const;
+
+private:
+  std::bitset<40> m_resumeId; ///< MMEC
+  std::bitset<16> m_shortResumeMacI;
+  /// EstablishmentCause enumeration
+  enum
+  {   mtAcces,
+                moSignalling,
+                moData,
+                moExceptionData,
+                delayTolerantAccess
+  } m_resumeCause; ///< the establishent cause
+  std::bitset<3> m_spare; ///< sparIe bit
+};
+/**
 * This class manages the serialization/deserialization of RrcConnectionSetup IE
 */
 class RrcConnectionSetupHeader : public RrcDlCcchMessage

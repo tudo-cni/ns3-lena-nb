@@ -186,6 +186,10 @@ void Asn1Header::SerializeBitstring (std::bitset<2> data) const
   SerializeBitstring<2> (data);
 }
 
+void Asn1Header::SerializeBitstring (std::bitset<3> data) const
+{
+  SerializeBitstring<3> (data);
+}
 void Asn1Header::SerializeBitstring (std::bitset<8> data) const
 {
   SerializeBitstring<8> (data);
@@ -216,6 +220,10 @@ void Asn1Header::SerializeBitstring (std::bitset<32> data) const
   SerializeBitstring<32> (data);
 }
 
+void Asn1Header::SerializeBitstring (std::bitset<40> data) const
+{
+  SerializeBitstring<40> (data);
+}
 void Asn1Header::SerializeBoolean (bool value) const
 {
   // Clause 12 ITU-T X.691
@@ -493,6 +501,10 @@ Buffer::Iterator Asn1Header::DeserializeBitstring (std::bitset<2> *data, Buffer:
   return DeserializeBitstring<2> (data,bIterator);
 }
 
+Buffer::Iterator Asn1Header::DeserializeBitstring (std::bitset<3> *data, Buffer::Iterator bIterator)
+{
+  return DeserializeBitstring<3> (data,bIterator);
+}
 Buffer::Iterator Asn1Header::DeserializeBitstring (std::bitset<8> *data, Buffer::Iterator bIterator)
 {
   return DeserializeBitstring<8> (data,bIterator);
@@ -522,7 +534,10 @@ Buffer::Iterator Asn1Header::DeserializeBitstring (std::bitset<32> *data, Buffer
 {
   return DeserializeBitstring<32> (data,bIterator);
 }
-
+Buffer::Iterator Asn1Header::DeserializeBitstring (std::bitset<40> *data, Buffer::Iterator bIterator)
+{
+  return DeserializeBitstring<40> (data,bIterator);
+}
 Buffer::Iterator Asn1Header::DeserializeBoolean (bool *value, Buffer::Iterator bIterator)
 {
   std::bitset<1> readBit;

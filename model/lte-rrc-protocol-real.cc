@@ -128,6 +128,30 @@ LteUeRrcProtocolReal::DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionReques
 }
 
 void 
+LteUeRrcProtocolReal::DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  // initialize the RNTI and get the EnbLteRrcSapProvider for the
+  // eNB we are currently attached to
+  m_rnti = m_rrc->GetRnti ();
+  SetEnbRrcSapProvider ();
+
+  Ptr<Packet> packet = Create<Packet> ();
+
+  RrcConnectionResumeRequestNbHeader rrcConnectionResumeRequestNbHeader;
+  rrcConnectionResumeRequestNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcConnectionResumeRequestNbHeader);
+
+  LteRlcSapProvider::TransmitPdcpPduParameters transmitPdcpPduParameters;
+  transmitPdcpPduParameters.pdcpPdu = packet;
+  transmitPdcpPduParameters.rnti = m_rnti;
+  transmitPdcpPduParameters.lcid = 0;
+
+  m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+}
+
+
+void 
 LteUeRrcProtocolReal::DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg)
 {
   Ptr<Packet> packet = Create<Packet> ();
@@ -711,6 +735,7 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
   // Declare possible headers to receive
   RrcConnectionReestablishmentRequestHeader rrcConnectionReestablishmentRequestHeader;
   RrcConnectionRequestHeader rrcConnectionRequestHeader;
+  RrcConnectionResumeRequestNbHeader rrcConnectionResumeRequestNbHeader;
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcUlCcchMessage.GetMessageType () )
@@ -727,6 +752,11 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
       rrcConnectionRequestMsg = rrcConnectionRequestHeader.GetMessage ();
       m_enbRrcSapProvider->RecvRrcConnectionRequest (rnti,rrcConnectionRequestMsg);
       break;
+    case 2:
+      p->RemoveHeader(rrcConnectionResumeRequestNbHeader);
+      NbIotRrcSap::RrcConnectionResumeRequestNb rrcConnectionResumeRequestNbMsg;
+      rrcConnectionResumeRequestNbMsg = rrcConnectionResumeRequestNbHeader.GetMessage();
+      m_enbRrcSapProvider->RecvRrcConnectionResumeRequestNb (rnti, rrcConnectionResumeRequestNbMsg);
     }
 }
 

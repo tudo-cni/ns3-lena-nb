@@ -107,6 +107,12 @@ private:
    */
   void DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg);
   /**
+   * Send RRC connection request function
+   *
+   * \param msg LteRrcSap::RrcConnectionRequest 
+   */
+  void DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+  /**
    * Send RRC connection setup completed function
    *
    * \param msg LteRrcSap::RrcConnectionSetupCompleted 

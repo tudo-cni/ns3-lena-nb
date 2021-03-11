@@ -531,7 +531,7 @@ LteUeRrc::DoInitialize (void)
 
   // setup the UE side of SRB0
   uint8_t lcid = 0;
-
+  m_resumeId = 0;
   Ptr<LteRlc> rlc = CreateObject<LteRlcTm> ()->GetObject<LteRlc> ();
   rlc->SetLteMacSapProvider (m_macSapProvider);
   rlc->SetRnti (m_rnti);
@@ -681,12 +681,19 @@ LteUeRrc::DoNotifyRandomAccessSuccessful ()
         // we just received a RAR with a T-C-RNTI and an UL grant
         // send RRC connection request as message 3 of the random access procedure 
         SwitchToState (IDLE_CONNECTING);
-        LteRrcSap::RrcConnectionRequest msg;
-        msg.ueIdentity = m_imsi;
-        m_rrcSapUser->SendRrcConnectionRequest (msg); 
-        m_connectionTimeout = Simulator::Schedule (m_t300,
-                                                   &LteUeRrc::ConnectionTimeout,
-                                                   this);
+        if (m_resumeId == 0){ // Complete Connection Setup
+          LteRrcSap::RrcConnectionRequest msg;
+          msg.ueIdentity = m_imsi;
+          m_rrcSapUser->SendRrcConnectionRequest (msg); 
+          m_connectionTimeout = Simulator::Schedule (m_t300,
+                                                    &LteUeRrc::ConnectionTimeout,
+                                                    this);
+        }
+        else{
+          NbIotRrcSap::RrcConnectionResumeRequestNb msg;
+          msg.resumeIdentity = m_resumeId;
+          m_rrcSapUser->SendRrcConnectionResumeRequestNb(msg);
+        }
       }
       break;
 

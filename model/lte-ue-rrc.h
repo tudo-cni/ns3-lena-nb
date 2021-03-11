@@ -1373,9 +1373,13 @@ private:
    */
   void ResetRlfParams ();
 
+  // NBIOT SPECIFIC
   // Temporary Logging method for successful random access
   void LogRA(bool success, Time timetillconnection);
   std::string m_logfile;
+
+  uint64_t m_resumeId;
+
 public:
   /** 
    * The number of component carriers.

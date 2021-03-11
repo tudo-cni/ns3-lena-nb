@@ -104,6 +104,7 @@ RrcAsn1Header::EnumToBandwidth (int n) const
       case 3: bw = 50; break;
       case 4: bw = 75; break;
       case 5: bw = 100; break;
+      case 6: bw = 1; break;
       default:
         NS_FATAL_ERROR ("Wrong enum value for bandwidth: " << n);
     }
@@ -3814,7 +3815,7 @@ RrcAsn1Header::DeserializeMeasConfig (LteRrcSap::MeasConfig * measConfig, Buffer
               elem.measObjectEutra.carrierFreq = n;
 
               // allowedMeasBandwidth
-              bIterator = DeserializeEnum (6, &n, bIterator);
+              bIterator = DeserializeEnum (7, &n, bIterator);
               elem.measObjectEutra.allowedMeasBandwidth = EnumToBandwidth (n);
 
               // presenceAntennaPort1
@@ -4558,7 +4559,150 @@ RrcAsn1Header::DeserializeMeasConfig (LteRrcSap::MeasConfig * measConfig, Buffer
     }
   return bIterator;
 }
+//////////////////// RrcConnectionResumeRequestNb class ////////////////////////
 
+// Constructor
+RrcConnectionResumeRequestNbHeader::RrcConnectionResumeRequestNbHeader() : RrcUlCcchMessage ()
+{
+  m_resumeId = std::bitset<40> (0ul);
+  m_shortResumeMacI = std::bitset<16> (0ul);
+  m_resumeCause= moSignalling;
+  m_spare = std::bitset<3> (0ul);
+}
+
+// Destructor
+RrcConnectionResumeRequestNbHeader::~RrcConnectionResumeRequestNbHeader()
+{
+}
+
+TypeId
+RrcConnectionResumeRequestNbHeader::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::RrcConnectionRequestHeader")
+    .SetParent<Header> ()
+    .SetGroupName("Lte")
+  ;
+  return tid;
+}
+
+void
+RrcConnectionResumeRequestNbHeader::Print (std::ostream &os) const
+{
+  os << "ResumeID:" << m_resumeId<< std::endl;
+  os << "ShortResumeMacI:" << m_shortResumeMacI<< std::endl;
+  os << "ResumeCause:" << m_resumeCause<< std::endl;
+  os << "Spare: " << m_spare << std::endl;
+}
+
+void
+RrcConnectionResumeRequestNbHeader::PreSerialize () const
+{
+  m_serializationResult = Buffer ();
+
+  SerializeUlCcchMessage (2);
+
+  // Serialize RRCConnectionResumeRequest sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize criticalExtensions choice:
+  // 2 options, selected: 0 (option: rrcConnectionRequest-r8)
+  SerializeChoice (2,0,false);
+
+  // Serialize RRCConnectionRequest-r8-IEs sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize InitialUE-Identity choice:
+  // 2 options, selected: 0 (option: s-TMSI)
+  SerializeChoice (2,0,false);
+
+  // Serialize S-TMSI sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize mmec : MMEC ::= BIT STRING (SIZE (8))
+  SerializeBitstring (m_resumeId);
+
+  // Serialize m-TMSI ::= BIT STRING (SIZE (32))
+  SerializeBitstring (m_shortResumeMacI);
+
+  // Serialize establishmentCause : EstablishmentCause ::= ENUMERATED
+  SerializeEnum (5,m_resumeCause);
+
+  // Serialize spare : BIT STRING (SIZE (1))
+  SerializeBitstring (std::bitset<3> ());
+
+  // Finish serialization
+  FinalizeSerialization ();
+}
+
+uint32_t
+RrcConnectionResumeRequestNbHeader::Deserialize (Buffer::Iterator bIterator)
+{
+  std::bitset<1> dummy;
+  std::bitset<0> optionalOrDefaultMask;
+  int selectedOption;
+
+  bIterator = DeserializeUlCcchMessage (bIterator);
+
+  // Deserialize RCConnectionRequest sequence
+  bIterator = DeserializeSequence (&optionalOrDefaultMask,false,bIterator);
+
+  // Deserialize criticalExtensions choice:
+  bIterator = DeserializeChoice (2,false,&selectedOption,bIterator);
+
+  // Deserialize RRCConnectionRequest-r8-IEs sequence
+  bIterator = DeserializeSequence (&optionalOrDefaultMask,false,bIterator);
+
+  // Deserialize InitialUE-Identity choice
+  bIterator = DeserializeChoice (2,false,&selectedOption,bIterator);
+
+  // Deserialize S-TMSI sequence
+  bIterator = DeserializeSequence (&optionalOrDefaultMask,false,bIterator);
+
+  // Deserialize mmec
+  bIterator = DeserializeBitstring (&m_resumeId,bIterator);
+
+  // Deserialize m-TMSI
+  bIterator = DeserializeBitstring (&m_shortResumeMacI,bIterator);
+
+  // Deserialize resumeCause 
+  bIterator = DeserializeEnum (8,&selectedOption,bIterator);
+
+  // Deserialize spare
+  bIterator = DeserializeBitstring (&dummy,bIterator);
+
+  return GetSerializedSize ();
+}
+
+void
+RrcConnectionResumeRequestNbHeader::SetMessage (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  m_resumeId= std::bitset<40> ((uint32_t)msg.resumeIdentity);
+  m_isDataSerialized = false;
+}
+
+NbIotRrcSap::RrcConnectionResumeRequestNb
+RrcConnectionResumeRequestNbHeader::GetMessage () const
+{
+  NbIotRrcSap::RrcConnectionResumeRequestNb msg;
+  msg.resumeIdentity = (uint64_t) m_resumeId.to_ulong ();
+
+  return msg;
+}
+
+std::bitset<40>
+RrcConnectionResumeRequestNbHeader::GetResumeId() const
+{
+  return m_resumeId;
+}
+
+std::bitset<16>
+RrcConnectionResumeRequestNbHeader::GetShortResumeMacI() const
+{
+  return m_shortResumeMacI;
+}
 //////////////////// RrcConnectionRequest class ////////////////////////
 
 // Constructor
@@ -6993,7 +7137,7 @@ RrcUlCcchMessage::SerializeUlCcchMessage (int messageType) const
   // Choose c1
   SerializeChoice (2,0,false);
   // Choose message type
-  SerializeChoice (2,messageType,false);
+  SerializeChoice (3,messageType,false);
 }
 
 ///////////////////  RrcDlCcchMessage //////////////////////////////////

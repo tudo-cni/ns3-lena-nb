@@ -234,6 +234,11 @@ protected:
    * Serialize a bitstring
    * \param bitstring bitstring to serialize
    */
+  void SerializeBitstring (std::bitset<3> bitstring) const;
+  /**
+   * Serialize a bitstring
+   * \param bitstring bitstring to serialize
+   */
   void SerializeBitstring (std::bitset<8> bitstring) const;
   /**
    * Serialize a bitstring
@@ -260,6 +265,11 @@ protected:
    * \param bitstring bitstring to serialize
    */
   void SerializeBitstring (std::bitset<32> bitstring) const;
+  /**
+   * Serialize a bitstring
+   * \param bitstring bitstring to serialize
+   */
+  void SerializeBitstring (std::bitset<40> bitstring) const;
 
   // Deserialization functions
 
@@ -482,6 +492,14 @@ protected:
    * \param bIterator buffer iterator
    * \returns the modified buffer iterator
    */
+  Buffer::Iterator DeserializeBitstring (std::bitset<3> *bitstring,
+                                         Buffer::Iterator bIterator);
+  /**
+   * Deserialize a bitstring
+   * \param bitstring buffer to store the result
+   * \param bIterator buffer iterator
+   * \returns the modified buffer iterator
+   */
   Buffer::Iterator DeserializeBitstring (std::bitset<8> *bitstring,
                                          Buffer::Iterator bIterator);
   /**
@@ -524,6 +542,15 @@ protected:
    */
   Buffer::Iterator DeserializeBitstring (std::bitset<32> *bitstring,
                                          Buffer::Iterator bIterator);
+  /**
+   * Deserialize a bitstring
+   * \param bitstring buffer to store the result
+   * \param bIterator buffer iterator
+   * \returns the modified buffer iterator
+   */
+  Buffer::Iterator DeserializeBitstring (std::bitset<40> *bitstring,
+                                         Buffer::Iterator bIterator);
+
 
   /**
    * Deserialize nothing (null op)

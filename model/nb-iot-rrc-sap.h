@@ -592,6 +592,7 @@ class NbIotRrcSap{
                 twelve
             } mCS;
             bool NDI;
+            uint32_t tbs;
             HarqAckResource harqAckResource; 
             // Parameters to reduce simulation complexity
             std::vector<int> npdschOpportunity;
@@ -656,6 +657,7 @@ class NbIotRrcSap{
             } mCS;
             bool redundandyVersion;
             bool NDI;
+            uint32_t tbs;
 
             std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
         };
@@ -757,6 +759,30 @@ class NbIotRrcSap{
         int tbs; // in bit
         bool isRar;
         int lcid;
+
+        };
+
+        struct RrcConnectionResumeRequestNb{
+            uint32_t resumeIdentity; // 40 bits
+            enum class EstablishmentCauseNb{
+                mtAcces,
+                moSignalling,
+                moData,
+                moExceptionData,
+                delayTolerantAccess,
+               // mtEdt // Not Release 13
+            } establishmentCauseNb;
+
+        };
+
+        struct RrcConnectionResumeNb{
+            uint8_t RrcTransactionIdentifier;
+            // rest is optional 
+            //critical extensions possible
+        };
+
+        struct RrcConnectionResumeCompleteNb{
+            uint8_t RrcTransactionIdentifier;
 
         };
         static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)

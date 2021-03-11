@@ -116,6 +116,20 @@ LteUeRrcProtocolIdeal::DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionReque
 }
 
 void 
+LteUeRrcProtocolIdeal::DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  // initialize the RNTI and get the EnbLteRrcSapProvider for the
+  // eNB we are currently attached to
+  m_rnti = m_rrc->GetRnti ();
+  SetEnbRrcSapProvider ();
+    
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+                       &LteEnbRrcSapProvider::RecvRrcConnectionRequest,
+                       m_enbRrcSapProvider,
+                       m_rnti, 
+                       msg);
+}
+void 
 LteUeRrcProtocolIdeal::DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg)
 {
   Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
