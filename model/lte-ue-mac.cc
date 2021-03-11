@@ -882,6 +882,7 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
               Simulator::Schedule (MilliSeconds (subframestowait),
                                    &LteUePhySapProvider::SendHarqAckResponse, m_uePhySapProvider,
                                    true);
+              m_nextPossibleHarqOpportunity.clear();
               NS_BUILD_DEBUG (std::cout << m_rnti << " Got to MSG4-HARQ \n");
             }
         }
@@ -1151,33 +1152,243 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
     }
   else if (msg->GetMessageType () == LteControlMessage::UL_DCI_NB)
     {
-      Ptr<UlDciN0NbiotControlMessage> dci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
-      const uint8_t lc0Lcid = 1;
-      std::map<uint8_t, LcInfo>::iterator lc0InfoIt = m_lcInfoMap.find (lc0Lcid);
-      NS_ASSERT (lc0InfoIt != m_lcInfoMap.end ());
-      std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator lc0BsrIt =
-          m_ulBsrReceived.find (lc0Lcid);
-      if ((lc0BsrIt != m_ulBsrReceived.end ()) && (lc0BsrIt->second.txQueueSize > 0))
+      //Ptr<UlDciN0NbiotControlMessage> dci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
+      //const uint8_t lc0Lcid = 1;
+      //std::map<uint8_t, LcInfo>::iterator lc0InfoIt = m_lcInfoMap.find (lc0Lcid);
+      //NS_ASSERT (lc0InfoIt != m_lcInfoMap.end ());
+      //std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator lc0BsrIt =
+      //    m_ulBsrReceived.find (lc0Lcid);
+      ////if ((lc0BsrIt != m_ulBsrReceived.end ()) && (lc0BsrIt->second.txQueueSize > 0))
+      //  
+      //    // NS_ASSERT_MSG (raResponse.m_grant.m_tbSize > lc0BsrIt->second.txQueueSize,
+      //    //               "segmentation of Message 3 is not allowed");
+      //    // this function can be called only from primary carrier
+      //    if (m_componentCarrierId > 0)
+      //      {
+      //        NS_FATAL_ERROR ("Function called on wrong componentCarrier");
+      //      }
+      //    LteMacSapUser::TxOpportunityParameters txOpParams;
+      //    txOpParams.bytes = dci->GetDci().tbs/8;
+      //    txOpParams.layer = 0;
+      //    txOpParams.harqId = 0;
+      //    txOpParams.componentCarrierId = m_componentCarrierId;
+      //    txOpParams.rnti = m_rnti;
+      //    txOpParams.lcid = lc0Lcid;
+      //    int subframes = *(dci->GetDci().npuschOpportunity[0].second.end () - 1) -
+      //                    (10 * (m_frameNo - 1) + m_subframeNo - 1);
+      //    Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+      //                        lc0InfoIt->second.macSapUser, txOpParams);
+      //    //lc0InfoIt->second.macSapUser->NotifyTxOpportunity(txOpParams);
+      //    lc0BsrIt->second.txQueueSize = 0;
+      Ptr<UlDciN0NbiotControlMessage> msg2 = DynamicCast<UlDciN0NbiotControlMessage> (msg);
+      NbIotRrcSap::DciN0 dci = msg2->GetDci ();
+
+      int subframes = *(dci.npuschOpportunity[0].second.end () - 1) -
+          (10 * (m_frameNo - 1) + m_subframeNo - 1);
+      if (dci.NDI)
         {
-          // NS_ASSERT_MSG (raResponse.m_grant.m_tbSize > lc0BsrIt->second.txQueueSize,
-          //               "segmentation of Message 3 is not allowed");
-          // this function can be called only from primary carrier
-          if (m_componentCarrierId > 0)
+          // New transmission -> empty pkt buffer queue (for deleting eventual pkts not acked )
+          Ptr<PacketBurst> pb = CreateObject<PacketBurst> ();
+          m_miUlHarqProcessesPacket.at (m_harqProcessId) = pb;
+          // Retrieve data from RLC
+          std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator itBsr;
+          uint16_t activeLcs = 0;
+          uint32_t statusPduMinSize = 0;
+          for (itBsr = m_ulBsrReceived.begin (); itBsr != m_ulBsrReceived.end (); itBsr++)
             {
-              NS_FATAL_ERROR ("Function called on wrong componentCarrier");
+              if (((*itBsr).second.statusPduSize > 0) || ((*itBsr).second.retxQueueSize > 0) ||
+                  ((*itBsr).second.txQueueSize > 0))
+                {
+                  activeLcs++;
+                  if (((*itBsr).second.statusPduSize != 0) &&
+                      ((*itBsr).second.statusPduSize < statusPduMinSize))
+                    {
+                      statusPduMinSize = (*itBsr).second.statusPduSize;
+                    }
+                  if (((*itBsr).second.statusPduSize != 0) && (statusPduMinSize == 0))
+                    {
+                      statusPduMinSize = (*itBsr).second.statusPduSize;
+                    }
+                }
             }
+          if (activeLcs == 0)
+            {
+              NS_LOG_ERROR (this << " No active flows for this UL-DCI");
+              return;
+            }
+          std::map<uint8_t, LcInfo>::iterator it;
+          uint32_t bytesPerActiveLc = dci.tbs/ activeLcs;
+          bool statusPduPriority = false;
+          if ((statusPduMinSize != 0) && (bytesPerActiveLc < statusPduMinSize))
+            {
+              // send only the status PDU which has highest priority
+              statusPduPriority = true;
+              NS_LOG_DEBUG (this << " Reduced resource -> send only Status, b ytes "
+                                 << statusPduMinSize);
+              if (dci.tbs< statusPduMinSize)
+                {
+                  NS_FATAL_ERROR ("Insufficient Tx Opportunity for sending a status message");
+                }
+            }
+          NS_LOG_LOGIC (this << " UE " << m_rnti << ": UL-CQI notified TxOpportunity of "
+                             << dci.tbs << " => " << bytesPerActiveLc << " bytes per active LC"
+                             << " statusPduMinSize " << statusPduMinSize);
+
           LteMacSapUser::TxOpportunityParameters txOpParams;
-          txOpParams.bytes = 11;
-          txOpParams.layer = 0;
-          txOpParams.harqId = 0;
-          txOpParams.componentCarrierId = m_componentCarrierId;
-          txOpParams.rnti = m_rnti;
-          txOpParams.lcid = lc0Lcid;
-          int subframes = *(dci->GetDci().npuschOpportunity[0].second.end () - 1) -
-                          (10 * (m_frameNo - 1) + m_subframeNo - 1);
-          Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
-                               lc0InfoIt->second.macSapUser, txOpParams);
-          lc0BsrIt->second.txQueueSize = 0;
+
+          for (it = m_lcInfoMap.begin (); it != m_lcInfoMap.end (); it++)
+            {
+              itBsr = m_ulBsrReceived.find ((*it).first);
+              NS_LOG_DEBUG (this << " Processing LC " << (uint32_t) (*it).first
+                                 << " bytesPerActiveLc " << bytesPerActiveLc);
+              if ((itBsr != m_ulBsrReceived.end ()) &&
+                  (((*itBsr).second.statusPduSize > 0) || ((*itBsr).second.retxQueueSize > 0) ||
+                   ((*itBsr).second.txQueueSize > 0)))
+                {
+                  if ((statusPduPriority) && ((*itBsr).second.statusPduSize == statusPduMinSize))
+                    {
+                      txOpParams.bytes = (*itBsr).second.statusPduSize;
+                      txOpParams.layer = 0;
+                      txOpParams.harqId = 0;
+                      txOpParams.componentCarrierId = m_componentCarrierId;
+                      txOpParams.rnti = m_rnti;
+                      txOpParams.lcid = (*it).first;
+                      Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+                              it->second.macSapUser, txOpParams);
+                      NS_LOG_LOGIC (this << "\t" << bytesPerActiveLc << " send  "
+                                         << (*itBsr).second.statusPduSize << " status bytes to LC "
+                                         << (uint32_t) (*it).first << " statusQueue "
+                                         << (*itBsr).second.statusPduSize << " retxQueue"
+                                         << (*itBsr).second.retxQueueSize << " txQueue"
+                                         << (*itBsr).second.txQueueSize);
+                      (*itBsr).second.statusPduSize = 0;
+                      break;
+                    }
+                  else
+                    {
+                      uint32_t bytesForThisLc = bytesPerActiveLc;
+                      NS_LOG_LOGIC (this << "\t" << bytesPerActiveLc << " bytes to LC "
+                                         << (uint32_t) (*it).first << " statusQueue "
+                                         << (*itBsr).second.statusPduSize << " retxQueue"
+                                         << (*itBsr).second.retxQueueSize << " txQueue"
+                                         << (*itBsr).second.txQueueSize);
+                      if (((*itBsr).second.statusPduSize > 0) &&
+                          (bytesForThisLc > (*itBsr).second.statusPduSize))
+                        {
+                          txOpParams.bytes = (*itBsr).second.statusPduSize;
+                          txOpParams.layer = 0;
+                          txOpParams.harqId = 0;
+                          txOpParams.componentCarrierId = m_componentCarrierId;
+                          txOpParams.rnti = m_rnti;
+                          txOpParams.lcid = (*it).first;
+                          Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+                              it->second.macSapUser, txOpParams);
+                          bytesForThisLc -= (*itBsr).second.statusPduSize;
+                          NS_LOG_DEBUG (this << " serve STATUS " << (*itBsr).second.statusPduSize);
+                          (*itBsr).second.statusPduSize = 0;
+                        }
+                      else
+                        {
+                          if ((*itBsr).second.statusPduSize > bytesForThisLc)
+                            {
+                              NS_FATAL_ERROR (
+                                  "Insufficient Tx Opportunity for sending a status message");
+                            }
+                        }
+
+                      if ((bytesForThisLc > 7) // 7 is the min TxOpportunity useful for Rlc
+                          && (((*itBsr).second.retxQueueSize > 0) ||
+                              ((*itBsr).second.txQueueSize > 0)))
+                        {
+                          if ((*itBsr).second.retxQueueSize > 0)
+                            {
+                              NS_LOG_DEBUG (this << " serve retx DATA, bytes " << bytesForThisLc);
+                              txOpParams.bytes = bytesForThisLc;
+                              txOpParams.layer = 0;
+                              txOpParams.harqId = 0;
+                              txOpParams.componentCarrierId = m_componentCarrierId;
+                              txOpParams.rnti = m_rnti;
+                              txOpParams.lcid = (*it).first;
+                              Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+                                it->second.macSapUser, txOpParams);
+                              if ((*itBsr).second.retxQueueSize >= bytesForThisLc)
+                                {
+                                  (*itBsr).second.retxQueueSize -= bytesForThisLc;
+                                }
+                              else
+                                {
+                                  (*itBsr).second.retxQueueSize = 0;
+                                }
+                            }
+                          else if ((*itBsr).second.txQueueSize > 0)
+                            {
+                              uint16_t lcid = (*it).first;
+                              uint32_t rlcOverhead;
+                              if (lcid == 1)
+                                {
+                                  // for SRB1 (using RLC AM) it's better to
+                                  // overestimate RLC overhead rather than
+                                  // underestimate it and risk unneeded
+                                  // segmentation which increases delay
+                                  rlcOverhead = 4;
+                                }
+                              else
+                                {
+                                  // minimum RLC overhead due to header
+                                  rlcOverhead = 2;
+                                }
+                              NS_LOG_DEBUG (this << " serve tx DATA, bytes " << bytesForThisLc
+                                                 << ", RLC overhead " << rlcOverhead);
+                              txOpParams.bytes = bytesForThisLc;
+                              txOpParams.layer = 0;
+                              txOpParams.harqId = 0;
+                              txOpParams.componentCarrierId = m_componentCarrierId;
+                              txOpParams.rnti = m_rnti;
+                              txOpParams.lcid = (*it).first;
+
+                              Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+                                it->second.macSapUser, txOpParams);
+                              if ((*itBsr).second.txQueueSize >= bytesForThisLc - rlcOverhead)
+                                {
+                                  (*itBsr).second.txQueueSize -= bytesForThisLc - rlcOverhead;
+                                }
+                              else
+                                {
+                                  (*itBsr).second.txQueueSize = 0;
+                                }
+                            }
+                        }
+                      else
+                        {
+                          if (((*itBsr).second.retxQueueSize > 0) ||
+                              ((*itBsr).second.txQueueSize > 0))
+                            {
+                              // resend BSR info for updating eNB peer MAC
+                              m_freshUlBsr = true;
+                            }
+                        }
+                      NS_LOG_LOGIC (this << "\t" << bytesPerActiveLc << "\t new queues "
+                                         << (uint32_t) (*it).first << " statusQueue "
+                                         << (*itBsr).second.statusPduSize << " retxQueue"
+                                         << (*itBsr).second.retxQueueSize << " txQueue"
+                                         << (*itBsr).second.txQueueSize);
+                    }
+                }
+            }
+        }
+      else
+        {
+          // HARQ retransmission -> retrieve data from HARQ buffer
+          NS_LOG_DEBUG (this << " UE MAC RETX HARQ " << (uint16_t) m_harqProcessId);
+          Ptr<PacketBurst> pb = m_miUlHarqProcessesPacket.at (m_harqProcessId);
+          for (std::list<Ptr<Packet>>::const_iterator j = pb->Begin (); j != pb->End (); ++j)
+            {
+              Ptr<Packet> pkt = (*j)->Copy ();
+              Simulator::Schedule (MilliSeconds (subframes), &LteUePhySapProvider::SendMacPdu ,
+                m_uePhySapProvider, pkt);
+              //m_uePhySapProvider->SendMacPdu (pkt);
+            }
+          m_miUlHarqProcessesPacketTimer.at (m_harqProcessId) = HARQ_PERIOD;
         }
     }
   else
