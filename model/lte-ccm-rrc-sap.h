@@ -358,7 +358,7 @@ template <class C>
 Ptr<UeManager>
 MemberLteCcmRrcSapUser<C>::GetUeManager (uint16_t rnti)
 {
-  return m_owner->GetUeManager (rnti);
+  return m_owner->GetUeManagerbyRnti (rnti);
 }
 
 template <class C>

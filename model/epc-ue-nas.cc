@@ -95,6 +95,11 @@ EpcUeNas::GetTypeId (void)
   return tid;
 }
 
+void
+EpcUeNas::SetUeNetDevice(Ptr<LteUeNetDevice> dev){
+  m_netdevice = dev;
+}
+
 void 
 EpcUeNas::SetDevice (Ptr<NetDevice> dev)
 {
@@ -213,6 +218,11 @@ EpcUeNas::Send (Ptr<Packet> packet, uint16_t protocolNumber)
 
   switch (m_state)
     {
+    case IDLE_REGISTERED:
+      {
+        // TODO Resume Connection and pass Packets down the line
+        Connect();
+      }
     case ACTIVE:
       {
         uint32_t id = m_tftClassifier.Classify (packet, EpcTft::UPLINK, protocolNumber);
@@ -297,6 +307,12 @@ EpcUeNas::GetState () const
 void
 EpcUeNas::DoNotifyMessage4(){
   Disconnect();
+  DoNotifyDie();
+}
+
+void 
+EpcUeNas::DoNotifyDie(){
+  m_netdevice->DoDispose();
 }
 void 
 EpcUeNas::SwitchToState (State newState)

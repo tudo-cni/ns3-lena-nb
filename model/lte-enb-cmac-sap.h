@@ -211,6 +211,24 @@ public:
   virtual void NotifyLcConfigResult (uint16_t rnti, uint8_t lcid, bool success) = 0;
 
   /**
+   * notify the result of the last LC config operation
+   *
+   * \param rnti the rnti of the user
+   * \param lcid the logical channel id
+   * \param success true if the operation was successful, false otherwise
+   */
+  virtual void NotifyDataInactivityNb(uint16_t rnti, uint8_t lcid) = 0;
+
+  /**
+   * notify the result of the last LC config operation
+   *
+   * \param rnti the rnti of the user
+   * \param lcid the logical channel id
+   * \param success true if the operation was successful, false otherwise
+   */
+  virtual void NotifyDataInactivitySchedulerNb(uint16_t rnti) = 0;
+
+  /**
    * \brief Parameters for [re]configuring the UE 
    */
   struct UeConfig

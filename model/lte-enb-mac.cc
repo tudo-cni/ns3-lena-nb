@@ -911,13 +911,15 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                   Simulator::Schedule (MilliSeconds (subframestowait),
                                        &LteMacSapUser::NotifyTxOpportunity, (*lcidIt).second,
                                        txOpParams);
-                }
+                  
+                                  }
             }
         }
       if (!contention_resolution[it->rnti])
         {
           if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n1)
             {
+
               Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage> ();
               msg->SetDci (it->dciN1);
               msg->SetRnti (it->rnti);
@@ -925,7 +927,19 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
               Simulator::Schedule (MilliSeconds (subframestowait),
                                    &LteEnbPhySapProvider::SendLteControlMessage,
                                    m_enbPhySapProvider, msg);
-              contention_resolution[it->rnti] = true;
+
+              // Implement DataInactivity-Timer 
+              // Notify RRC about last scheduled NPDSCH Transmission for the rnti
+              if(it->rnti != 0){ 
+                int subframestillDataInactivity = it->dciN1.npdschOpportunity.back()- currentsubframe;
+                if(!m_noDataIndicator.IsExpired()){
+                  m_noDataIndicator.Cancel();
+                }
+                m_noDataIndicator = Simulator::Schedule (MilliSeconds (subframestillDataInactivity),
+                                    &LteEnbCmacSapUser::NotifyDataInactivitySchedulerNb,
+                                    m_cmacSapUser, it->rnti);
+              }
+
             }
           else if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n0){
             Ptr<UlDciN0NbiotControlMessage> msg = Create<UlDciN0NbiotControlMessage> ();
@@ -935,10 +949,21 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
             Simulator::Schedule (MilliSeconds (subframestowait),
                                   &LteEnbPhySapProvider::SendLteControlMessage,
                                   m_enbPhySapProvider, msg);
-            contention_resolution[it->rnti] = true;
+            // Implement DataInactivity-Timer 
+            // Notify RRC about last scheduled NPDSCH Transmission for the rnti
+            if(it->rnti != 0){
+              int subframestillDataInactivity = it->dciN0.npuschOpportunity.back().second.back() - currentsubframe;
+              if(!m_noDataIndicator.IsExpired()){
+                  m_noDataIndicator.Cancel();
+              }
+              m_noDataIndicator = Simulator::Schedule (MilliSeconds (subframestillDataInactivity),
+                                  &LteEnbCmacSapUser::NotifyDataInactivitySchedulerNb,
+                                  m_cmacSapUser, it->rnti);
+            }
           }
         }
     }
+    scheduled.clear();
 
   //// CE0 Type2
   //// --- DOWNLINK ---
@@ -1832,5 +1857,11 @@ LteEnbMac::DoDlInfoListElementHarqFeeback (DlInfoListElement_s params)
 
 void LteEnbMac::DoNotifyConnectionSuccessful(uint16_t rnti){
   m_connectionSuccessful[rnti] = true;
+}
+
+void LteEnbMac::DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid){
+  //Later Check HARQ Process
+  m_cmacSapUser->NotifyDataInactivityNb(rnti,lcid);
+
 }
 } // namespace ns3

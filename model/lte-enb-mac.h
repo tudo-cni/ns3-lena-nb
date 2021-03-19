@@ -509,6 +509,8 @@ private:
 
   void DoNotifyConnectionSuccessful(uint16_t rnti);
 
+  void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
+
   NbiotScheduler* m_schedulerNb = nullptr;
   std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
   std::map<uint32_t, NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel> m_RntiCeMap;
@@ -532,6 +534,8 @@ private:
   std::map<uint16_t, bool> m_connectionSuccessful;
   std::map<uint16_t, double> m_ulRsrpReceivedNb;
   std::vector<std::vector<double>> m_ulCqiReceivedNb;
+
+  EventId m_noDataIndicator;
   };
 
 } // end namespace ns3

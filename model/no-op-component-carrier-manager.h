@@ -111,6 +111,12 @@ protected:
    *
    * \param txOpParams the LteMacSapUser::TxOpportunityParameters
    */
+  virtual void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
+  /**
+   * \brief Notify transmit opportunity.
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
   /**
    * \brief Receive PDU.

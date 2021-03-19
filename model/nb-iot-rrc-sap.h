@@ -776,13 +776,25 @@ class NbIotRrcSap{
         };
 
         struct RrcConnectionResumeNb{
-            uint8_t RrcTransactionIdentifier;
+            uint8_t rrcTransactionIdentifier;
             // rest is optional 
             //critical extensions possible
         };
 
         struct RrcConnectionResumeCompleteNb{
-            uint8_t RrcTransactionIdentifier;
+            uint8_t rrcTransactionIdentifier;
+
+        };
+
+        struct RrcConnectionReleaseNb{
+            uint8_t rrcTransactionIdentifier;
+            enum class ReleaseCauseNb{
+                loadBalancingTAUrequired, 
+                other, 
+                rrc_Suspend,
+                spare1
+            } releaseCauseNb;
+            uint64_t resumeIdentity;
 
         };
         static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)

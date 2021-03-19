@@ -113,7 +113,9 @@ static const std::string g_ueRrcStateName[LteUeRrc::NUM_STATES] =
   "CONNECTED_NORMALLY",
   "CONNECTED_HANDOVER",
   "CONNECTED_PHY_PROBLEM",
-  "CONNECTED_REESTABLISHING"
+  "CONNECTED_REESTABLISHING",
+  "IDLE_SUSPEND_EDRX",
+  "IDLE_SUSPEND_PSM"
 };
 
 /**
@@ -1196,6 +1198,43 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
     }
 }
 
+void 
+LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
+{
+  NS_LOG_FUNCTION (this << " RNTI " << m_rnti);
+  switch (m_state)
+    {
+    case IDLE_CONNECTING:
+      {
+        //ApplyRadioResourceConfigDedicated (msg.radioResourceConfigDedicated);
+        m_connEstFailCount = 0;
+        m_connectionTimeout.Cancel ();
+        SwitchToState (CONNECTED_NORMALLY);
+        m_leaveConnectedMode = false;
+        NbIotRrcSap::RrcConnectionResumeCompleteNb msg2;
+        msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
+        m_rrcSapUser->SendRrcConnectionResumeCompletedNb (msg2);
+        m_asSapUser->NotifyConnectionSuccessful ();
+        m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
+        NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
+
+        LogRA(true, Simulator::Now()-m_connectStartTime);
+        //m_asSapUser->NotifyMessage4();
+        //SwitchToState(IDLE_START);
+        m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);
+        NS_ABORT_MSG_IF (m_noOfSyncIndications > 0, "Sync indications should be zero "
+                         "when a new RRC connection is established. Current value = " << (uint16_t) m_noOfSyncIndications);
+      }
+      break;
+
+    default:
+      NS_FATAL_ERROR ("method unexpected in state " << ToString (m_state));
+      break;
+    }
+}
+
+
+
 void
 LteUeRrc::DoRecvRrcConnectionReconfiguration (LteRrcSap::RrcConnectionReconfiguration msg)
 {
@@ -1338,6 +1377,31 @@ void
 LteUeRrc::DoRecvRrcConnectionRelease (LteRrcSap::RrcConnectionRelease msg)
 {
   NS_LOG_FUNCTION (this << " RNTI " << m_rnti);
+  /// \todo Currently not implemented, see Section 5.3.8 of 3GPP TS 36.331.
+}
+
+void 
+LteUeRrc::DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg)
+{
+  NS_LOG_FUNCTION (this << " RNTI " << m_rnti);
+  if (msg.releaseCauseNb == NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::rrc_Suspend){
+    if (msg.resumeIdentity != 0){
+      m_resumeId = msg.resumeIdentity;
+    }
+    //m_asSapUser->NotifyConnectionSuspended();
+    if(m_eDrx){
+      SwitchToState(IDLE_SUSPEND_EDRX);
+      // Start EDRX TIMER
+    }  
+    else if(m_psm){
+      //Start PSM Timer
+      SwitchToState(IDLE_SUSPEND_PSM);
+    }
+    return;
+
+  }
+  SwitchToState(IDLE_CAMPED_NORMALLY);
+  
   /// \todo Currently not implemented, see Section 5.3.8 of 3GPP TS 36.331.
 }
 

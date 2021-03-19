@@ -39,16 +39,17 @@ EpcEnbApplication::EpsFlowId_t::EpsFlowId_t ()
 {
 }
 
-EpcEnbApplication::EpsFlowId_t::EpsFlowId_t (const uint16_t a, const uint8_t b)
+EpcEnbApplication::EpsFlowId_t::EpsFlowId_t (const uint16_t a, const uint8_t b, const uint64_t c)
   : m_rnti (a),
-    m_bid (b)
+    m_bid (b),
+    m_imsi (c)
 {
 }
 
 bool
 operator == (const EpcEnbApplication::EpsFlowId_t &a, const EpcEnbApplication::EpsFlowId_t &b)
 {
-  return ( (a.m_rnti == b.m_rnti) && (a.m_bid == b.m_bid) );
+  return ( (a.m_rnti == b.m_rnti) && (a.m_bid == b.m_bid) && (a.m_imsi == b.m_imsi));
 }
 
 bool
@@ -178,7 +179,7 @@ EpcEnbApplication::DoPathSwitchRequest (EpcEnbS1SapProvider::PathSwitchRequestPa
       flowId.m_bid = bit->epsBearerId;
       uint32_t teid = bit->teid;
       
-      EpsFlowId_t rbid (params.rnti, bit->epsBearerId);
+      EpsFlowId_t rbid (params.rnti, bit->epsBearerId, imsi);
       // side effect: create entries if not exist
       m_rbidTeidMap[params.rnti][bit->epsBearerId] = teid;
       m_teidRbidMap[teid] = rbid;
@@ -235,7 +236,7 @@ EpcEnbApplication::DoInitialContextSetupRequest (uint64_t mmeUeS1Id, uint16_t en
       params.gtpTeid = erabIt->sgwTeid;
       m_s1SapUser->DataRadioBearerSetupRequest (params);
 
-      EpsFlowId_t rbid (rnti, erabIt->erabId);
+      EpsFlowId_t rbid (rnti, erabIt->erabId, imsi);
       // side effect: create entries if not exist
       m_rbidTeidMap[rnti][erabIt->erabId] = params.gtpTeid;
       m_teidRbidMap[params.gtpTeid] = rbid;
@@ -313,15 +314,15 @@ EpcEnbApplication::RecvFromS1uSocket (Ptr<Socket> socket)
   else
     {
       m_rxS1uSocketPktTrace (packet->Copy ());
-      SendToLteSocket (packet, it->second.m_rnti, it->second.m_bid);
+      SendToLteSocket (packet, it->second.m_rnti, it->second.m_bid, it->second.m_imsi);
     }
 }
 
 void 
-EpcEnbApplication::SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid)
+EpcEnbApplication::SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid, uint64_t imsi)
 {
   NS_LOG_FUNCTION (this << packet << rnti << (uint16_t) bid << packet->GetSize ());  
-  EpsBearerTag tag (rnti, bid);
+  EpsBearerTag tag (rnti, bid, imsi);
   packet->AddPacketTag (tag);
   uint8_t ipType;
 

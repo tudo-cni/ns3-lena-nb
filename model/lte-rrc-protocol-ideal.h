@@ -112,6 +112,12 @@ private:
    */
   void DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg);
   /**
+   * Send RRC connection setup completed function
+   *
+   * \param msg LteRrcSap::RrcConnectionSetupCompleted 
+   */
+  void DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
+  /**
    * Send RRC connection reconfiguration completed function
    *
    * \param msg LteRrcSap::RrcConnectionReconfigurationCompleted 
@@ -262,6 +268,13 @@ private:
    */
   void DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcConnectionSetup msg);
   /**
+   * Send RRC connection setup function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionSetup
+   */
+  void DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
    * Send RRC connection reconfiguration function
    *
    * \param rnti the RNTI
@@ -289,6 +302,13 @@ private:
    * \param msg LteRrcSap::RrcConnectionRelease
    */
   void DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::RrcConnectionRelease msg);
+  /**
+   * Send RRC connection release function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionRelease
+   */
+  void DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg);
   /**
    * Send RRC connection reject function
    *

@@ -611,6 +611,44 @@ private:
   } m_resumeCause; ///< the establishent cause
   std::bitset<3> m_spare; ///< sparIe bit
 };
+
+class RrcConnectionResumeNbHeader : public RrcDlDcchMessage
+{
+public:
+  RrcConnectionResumeNbHeader ();
+  ~RrcConnectionResumeNbHeader ();
+
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+  // Inherited from RrcAsn1Header 
+  void PreSerialize () const;
+  uint32_t Deserialize (Buffer::Iterator bIterator);
+  void Print (std::ostream &os) const;
+
+  /**
+   * Receives a RrcConnectionRequest IE and stores the contents into the class attributes
+   * @param msg The information element to parse
+   */
+  void SetMessage (NbIotRrcSap::RrcConnectionResumeNb msg);
+
+  /**
+   * Returns a RrcConnectionRequest IE from the values in the class attributes
+   * @return A RrcConnectionRequest, as defined in LteRrcSap
+   */
+  NbIotRrcSap::RrcConnectionResumeNb GetMessage () const;
+
+  /**
+   * Get ResumeId attribute
+   * @return ResumeId attribute
+   */
+  uint8_t GetRrcTransactionIdentifier() const;
+
+private:
+  uint8_t m_rrcTransactionIdentifier; ///< RRC transaction identifier
+};
 /**
 * This class manages the serialization/deserialization of RrcConnectionSetup IE
 */
@@ -721,6 +759,42 @@ private:
 
 };
 
+/**
+* This class manages the serialization/deserialization of RrcConnectionSetupComplete IE
+*/
+class RrcConnectionResumeCompleteNbHeader : public RrcUlDcchMessage
+{
+public:
+  RrcConnectionResumeCompleteNbHeader ();
+  ~RrcConnectionResumeCompleteNbHeader ();
+
+  // Inherited from RrcAsn1Header 
+  void PreSerialize () const;
+  uint32_t Deserialize (Buffer::Iterator bIterator);
+  void Print (std::ostream &os) const;
+
+  /**
+  * Receives a RrcConnectionSetupCompleted IE and stores the contents into the class attributes
+  * @param msg The information element to parse
+  */
+  void SetMessage (NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
+
+  /**
+  * Returns a RrcConnectionSetupCompleted IE from the values in the class attributes
+  * @return A RrcConnectionSetupCompleted, as defined in LteRrcSap
+  */
+  NbIotRrcSap::RrcConnectionResumeCompleteNb GetMessage () const;
+
+  /**
+  * Getter for m_rrcTransactionIdentifier
+  * @return m_rrcTransactionIdentifier
+  */
+  uint8_t GetRrcTransactionIdentifier () const;
+
+private:
+  uint8_t m_rrcTransactionIdentifier; ///< RRC transaction identifier
+
+};
 /**
 * This class manages the serialization/deserialization of RrcConnectionSetupComplete IE
 */
@@ -1100,6 +1174,35 @@ public:
 
 private:
   LteRrcSap::RrcConnectionRelease m_rrcConnectionRelease; ///< RRC connection release
+};
+/**
+* This class manages the serialization/deserialization of RrcConnectionRelease IE
+*/
+class RrcConnectionReleaseNbHeader : public RrcDlDcchMessage
+{
+public:
+  RrcConnectionReleaseNbHeader ();
+  ~RrcConnectionReleaseNbHeader ();
+
+  // Inherited from RrcAsn1Header 
+  void PreSerialize () const;
+  uint32_t Deserialize (Buffer::Iterator bIterator);
+  void Print (std::ostream &os) const;
+
+  /**
+  * Receives a RrcConnectionRelease IE and stores the contents into the class attributes
+  * @param msg The information element to parse
+  */ 
+  void SetMessage (NbIotRrcSap::RrcConnectionReleaseNb msg);
+
+  /**
+  * Returns a RrcConnectionRelease IE from the values in the class attributes
+  * @return A RrcConnectionRelease, as defined in LteRrcSap
+  */
+  NbIotRrcSap::RrcConnectionReleaseNb GetMessage () const;
+
+private:
+  NbIotRrcSap::RrcConnectionReleaseNb m_rrcConnectionReleaseNb; ///< RRC connection release
 };
 
 /**

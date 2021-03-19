@@ -82,6 +82,7 @@ public:
    */
   virtual void ReportBufferStatus (ReportBufferStatusParameters params) = 0;
   virtual void ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace) = 0;
+  virtual void ReportNoTransmissionNb (uint16_t rnti,uint8_t lcid) = 0;
 
 
 };
@@ -202,6 +203,7 @@ public:
   virtual void TransmitPdu (TransmitPduParameters params);
   virtual void ReportBufferStatus (ReportBufferStatusParameters params);
   virtual void ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+  virtual void ReportNoTransmissionNb(uint16_t rnti, uint8_t lcid); // used in Combination of MAC data for dataInactivity of RRC
 
 private:
   C* m_mac; ///< the MAC class
@@ -230,7 +232,11 @@ void EnbMacMemberLteMacSapProvider<C>::ReportBufferStatusNb (ReportBufferStatusP
 {
   m_mac->DoReportBufferStatusNb (params, searchspace);
 }
-
+template <class C>
+void EnbMacMemberLteMacSapProvider<C>::ReportNoTransmissionNb (uint16_t rnti,uint8_t lcid)
+{
+  m_mac->DoReportNoTransmissionNb(rnti,lcid);
+}
 
 
 } // namespace ns3

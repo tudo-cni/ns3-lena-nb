@@ -54,7 +54,7 @@ public:
    * @param rnti the value of the RNTI to set
    * @param bid the value of the Bearer Id to set
    */
-  EpsBearerTag (uint16_t  rnti, uint8_t bid);
+  EpsBearerTag (uint16_t  rnti, uint8_t bid, uint64_t imsi);
   
   /**
    * Set the RNTI to the given value.
@@ -69,6 +69,13 @@ public:
    * @param bid the value of the Bearer Id to set
    */
   void SetBid (uint8_t bid);
+
+  /**
+   * Set the bearer id to the given value.
+   *
+   * @param bid the value of the Bearer Id to set
+   */
+  void SetImsi(uint64_t imsi);
 
   virtual void Serialize (TagBuffer i) const;
   virtual void Deserialize (TagBuffer i);
@@ -86,9 +93,17 @@ public:
    */
   uint8_t GetBid (void) const;
 
+  /**
+   * Get Bearer Id function
+   * \returns the Bearer Id
+   */
+  uint64_t GetImsi (void) const;
+
+
 private:
   uint16_t m_rnti; ///< RNTI value
   uint8_t m_bid; ///< Bearer Id value
+  uint64_t m_imsi; ///< Bearer Id value
 
 };
 

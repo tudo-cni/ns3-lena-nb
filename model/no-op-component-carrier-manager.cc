@@ -104,8 +104,19 @@ NoOpComponentCarrierManager::DoReportBufferStatusNb (LteMacSapProvider::ReportBu
   NS_LOG_FUNCTION (this);
   auto ueManager = m_ccmRrcSapUser->GetUeManager (params.rnti);
   std::map <uint8_t, LteMacSapProvider*>::iterator it = m_macSapProvidersMap.find (ueManager->GetComponentCarrierId ());
+  
   NS_ASSERT_MSG (it != m_macSapProvidersMap.end (), "could not find Sap for ComponentCarrier ");
   it->second->ReportBufferStatusNb (params, searchspace);
+}
+
+void 
+NoOpComponentCarrierManager::DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid){
+  NS_LOG_FUNCTION (this);
+  auto ueManager = m_ccmRrcSapUser->GetUeManager (rnti);
+  std::map <uint8_t, LteMacSapProvider*>::iterator it = m_macSapProvidersMap.find (ueManager->GetComponentCarrierId ());
+  NS_ASSERT_MSG (it != m_macSapProvidersMap.end (), "could not find Sap for ComponentCarrier ");
+  it->second->ReportNoTransmissionNb(rnti, lcid);
+
 }
 
 void

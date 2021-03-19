@@ -4578,7 +4578,7 @@ RrcConnectionResumeRequestNbHeader::~RrcConnectionResumeRequestNbHeader()
 TypeId
 RrcConnectionResumeRequestNbHeader::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::RrcConnectionRequestHeader")
+  static TypeId tid = TypeId ("ns3::RrcConnectionResumeRequestHeaderNb")
     .SetParent<Header> ()
     .SetGroupName("Lte")
   ;
@@ -4702,6 +4702,141 @@ std::bitset<16>
 RrcConnectionResumeRequestNbHeader::GetShortResumeMacI() const
 {
   return m_shortResumeMacI;
+}
+
+//////////////////// RrcConnectionResumeNb class ////////////////////////
+
+// Constructor
+RrcConnectionResumeNbHeader::RrcConnectionResumeNbHeader() : RrcDlDcchMessage ()
+{
+
+  m_rrcTransactionIdentifier = 0;
+}
+
+// Destructor
+RrcConnectionResumeNbHeader::~RrcConnectionResumeNbHeader()
+{
+}
+
+TypeId
+RrcConnectionResumeNbHeader::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::RrcConnectionResumeNbHeader")
+    .SetParent<Header> ()
+    .SetGroupName("Lte")
+  ;
+  return tid;
+}
+
+void
+RrcConnectionResumeNbHeader::Print (std::ostream &os) const
+{
+  os << "RrcTransactionIdentifier:" << m_rrcTransactionIdentifier<< std::endl;
+}
+
+void
+RrcConnectionResumeNbHeader::PreSerialize () const
+{
+  m_serializationResult = Buffer ();
+
+  SerializeDlDcchMessage (12);
+
+  // Serialize RRCConnectionSetup sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize rrc-TransactionIdentifier ::=INTEGER (0..3)
+  SerializeInteger (m_rrcTransactionIdentifier,0,3);
+
+  // Serialize criticalExtensions choice:
+  // 2 options, selected: 0 (option: c1)
+  SerializeChoice (2,0,false);
+
+  // Serialize c1 choice:
+  // 8 options, selected: 0 (option: rrcConnectionSetup-r8)
+  SerializeChoice (2,0,false);
+
+  // Serialize rrcConnectionResume-r13 sequence
+  // 5 optional fields (not present). Extension marker not present.
+  SerializeSequence (std::bitset<5> (0),false);
+
+  // Serialize nonCriticalExtension sequence
+  // 2 optional fields, none present. No extension marker.
+
+  // Finish serialization
+  FinalizeSerialization ();
+
+}
+
+uint32_t
+RrcConnectionResumeNbHeader::Deserialize (Buffer::Iterator bIterator)
+{
+  int n;
+
+  std::bitset<0> bitset0;
+  std::bitset<5> bitset1;
+  std::bitset<2> bitset2;
+
+  bIterator = DeserializeDlDcchMessage (bIterator);
+
+  // Deserialize RRCConnectionSetup sequence
+  bIterator = DeserializeSequence (&bitset0,false,bIterator);
+
+  // Deserialize rrc-TransactionIdentifier ::=INTEGER (0..3)
+  bIterator = DeserializeInteger (&n,0,3,bIterator);
+  m_rrcTransactionIdentifier = n;
+
+  // Deserialize criticalExtensions choice
+  int criticalExtensionChoice;
+  bIterator = DeserializeChoice (2,false,&criticalExtensionChoice,bIterator);
+  if (criticalExtensionChoice == 1)
+    {
+      // Deserialize criticalExtensionsFuture
+      bIterator = DeserializeSequence (&bitset0,false,bIterator);
+    }
+  else if (criticalExtensionChoice == 0)
+    {
+      // Deserialize c1
+      int c1;
+      bIterator = DeserializeChoice (8,false,&c1,bIterator);
+
+      if (c1 > 0)
+        {
+          // Deserialize spareX , X:=7..1
+          bIterator = DeserializeNull (bIterator);
+        }
+      else if (c1 == 0)
+        {
+          // Deserialize rrcConnectionResume-r13
+          // 1 optional fields, no extension marker.
+          bIterator = DeserializeSequence (&bitset1,false,bIterator);
+
+          
+        }
+    }
+  return GetSerializedSize ();
+
+}
+
+void
+RrcConnectionResumeNbHeader::SetMessage (NbIotRrcSap::RrcConnectionResumeNb msg)
+{
+  m_rrcTransactionIdentifier= msg.rrcTransactionIdentifier;
+  m_isDataSerialized = false;
+}
+
+NbIotRrcSap::RrcConnectionResumeNb
+RrcConnectionResumeNbHeader::GetMessage () const
+{
+  NbIotRrcSap::RrcConnectionResumeNb msg;
+  msg.rrcTransactionIdentifier= (uint8_t) m_rrcTransactionIdentifier;
+  return msg;
+}
+
+uint8_t 
+RrcConnectionResumeNbHeader::GetRrcTransactionIdentifier() const
+{
+  return m_rrcTransactionIdentifier;
 }
 //////////////////// RrcConnectionRequest class ////////////////////////
 
@@ -5134,6 +5269,99 @@ RrcConnectionSetupCompleteHeader::GetMessage () const
   return msg;
 }
 
+//////////////////// RrcConnectionResumeCompleteNbHeader class ////////////////////////
+
+RrcConnectionResumeCompleteNbHeader::RrcConnectionResumeCompleteNbHeader ()
+{
+
+}
+
+RrcConnectionResumeCompleteNbHeader::~RrcConnectionResumeCompleteNbHeader()
+{
+}
+
+void
+RrcConnectionResumeCompleteNbHeader::PreSerialize () const
+{
+  m_serializationResult = Buffer ();
+
+  // Serialize DCCH message
+  SerializeUlDcchMessage (16);
+
+  // Serialize RRCConnectionSetupComplete sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize rrc-TransactionIdentifier
+  SerializeInteger (m_rrcTransactionIdentifier,0,3);
+
+  // Serialize criticalExtensions choice
+  // 2 options, selected 0 (c1)
+  SerializeChoice (2,0,false);
+
+  // Choose spare3 NULL
+  SerializeSequence (std::bitset<4>(),false);
+
+  // Finish serialization
+  FinalizeSerialization ();
+}
+
+uint32_t
+RrcConnectionResumeCompleteNbHeader::Deserialize (Buffer::Iterator bIterator)
+{
+  std::bitset<0> bitset0;
+
+  bIterator = DeserializeUlDcchMessage (bIterator);
+
+  bIterator = DeserializeSequence (&bitset0,false,bIterator);
+
+  int n;
+  bIterator = DeserializeInteger (&n,0,3,bIterator);
+  m_rrcTransactionIdentifier = n;
+
+  bIterator = DeserializeChoice (2,false,&n,bIterator);
+
+  if (n == 1)
+    {
+      // Deserialize criticalExtensionsFuture
+      bIterator = DeserializeSequence (&bitset0,false,bIterator);
+    }
+  else if (n == 0)
+    {
+      // Deserialize c1
+      std::bitset<4> bitset1;
+      bIterator = DeserializeSequence(&bitset1,false,bIterator);
+    }
+
+  return GetSerializedSize ();
+}
+
+void
+RrcConnectionResumeCompleteNbHeader::Print (std::ostream &os) const
+{
+  os << "rrcTransactionIdentifier: " << (int) m_rrcTransactionIdentifier << std::endl;
+}
+
+void
+RrcConnectionResumeCompleteNbHeader::SetMessage (NbIotRrcSap::RrcConnectionResumeCompleteNb msg)
+{
+  m_rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
+  m_isDataSerialized = false;
+}
+
+uint8_t
+RrcConnectionResumeCompleteNbHeader::GetRrcTransactionIdentifier () const
+{
+  return m_rrcTransactionIdentifier;
+}
+
+NbIotRrcSap::RrcConnectionResumeCompleteNb
+RrcConnectionResumeCompleteNbHeader::GetMessage () const
+{
+  NbIotRrcSap::RrcConnectionResumeCompleteNb msg;
+  msg.rrcTransactionIdentifier = m_rrcTransactionIdentifier;
+  return msg;
+}
 //////////////////// RrcConnectionReconfigurationCompleteHeader class ////////////////////////
 
 RrcConnectionReconfigurationCompleteHeader::RrcConnectionReconfigurationCompleteHeader ()
@@ -6698,6 +6926,142 @@ RrcConnectionReleaseHeader::GetMessage () const
   return m_rrcConnectionRelease;
 }
 
+//////////////////// RrcConnectionReleaseNbHeader class ////////////////////////
+
+RrcConnectionReleaseNbHeader::RrcConnectionReleaseNbHeader ()
+{
+}
+
+RrcConnectionReleaseNbHeader::~RrcConnectionReleaseNbHeader ()
+{
+}
+
+void
+RrcConnectionReleaseNbHeader::PreSerialize () const
+{
+  m_serializationResult = Buffer ();
+
+  // Serialize DCCH message
+  SerializeDlDcchMessage (13);
+
+  // Serialize RrcConnectionRelease sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize rrc-TransactionIdentifier
+  SerializeInteger (m_rrcConnectionReleaseNb.rrcTransactionIdentifier,0,3);
+
+  // Serialize criticalExtensions choice
+  SerializeChoice (2,0,false);
+
+  // Serialize c1 choice
+  SerializeChoice (2,0,false);
+
+  // Serialize RRCConnectionRelease-NB-r13-IEs sequence
+  // 5 optional field (not present), no extension marker.
+  SerializeSequence (std::bitset<5> (0),false);
+
+  // Serialize ReleaseCause
+  switch (m_rrcConnectionReleaseNb.releaseCauseNb)
+    {
+    case NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::loadBalancingTAUrequired:
+      SerializeEnum (4,0);
+      break;
+    case NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::other:
+      SerializeEnum (4,1);
+      break;
+    case NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::rrc_Suspend:
+      SerializeEnum (4,2);
+      break;
+    default:
+      SerializeEnum (4,3);
+    }
+  // Finish serialization
+  FinalizeSerialization ();
+}
+
+uint32_t
+RrcConnectionReleaseNbHeader::Deserialize (Buffer::Iterator bIterator)
+{
+  std::bitset<0> bitset0;
+  int n;
+
+  bIterator = DeserializeDlDcchMessage (bIterator);
+
+  // Deserialize RrcConnectionRelease sequence
+  // 0 optional fields, no extension marker
+  bIterator = DeserializeSequence (&bitset0,false,bIterator);
+
+  // Deserialize rrc-TransactionIdentifier
+  bIterator = DeserializeInteger (&n,0,3,bIterator);
+  m_rrcConnectionReleaseNb.rrcTransactionIdentifier = n;
+
+  // Deserialize criticalExtensions choice
+  int criticalExtensionsChoice;
+  bIterator = DeserializeChoice (2,false,&criticalExtensionsChoice,bIterator);
+  if (criticalExtensionsChoice == 1)
+    {
+      // Deserialize criticalExtensionsFuture
+      bIterator = DeserializeSequence (&bitset0,false,bIterator);
+    }
+  else if (criticalExtensionsChoice == 0)
+    {
+      // Deserialize c1
+      int c1Choice;
+      bIterator = DeserializeChoice (2,false,&c1Choice,bIterator);
+
+      if (c1Choice == 0)
+        {
+          // Deserialize RRCConnectionRelease-r8-IEs
+          std::bitset<5> opts;
+          bIterator = DeserializeSequence (&opts,false,bIterator);
+
+          // Deserialize releaseCause
+          bIterator = DeserializeEnum (4,&n,bIterator);
+          switch (n)
+            {
+            case 0:
+              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::loadBalancingTAUrequired;
+              break;
+            case 1:
+              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::rrc_Suspend;
+              break;
+            case 2:
+              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::other;
+              break;
+            case 3:
+              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::spare1;
+              break;
+            }
+
+        }
+
+      else
+        {
+          bIterator = DeserializeNull (bIterator);
+        }
+    }
+
+  return GetSerializedSize ();
+}
+
+void
+RrcConnectionReleaseNbHeader::Print (std::ostream &os) const
+{
+}
+
+void
+RrcConnectionReleaseNbHeader::SetMessage (NbIotRrcSap::RrcConnectionReleaseNb msg)
+{
+  m_rrcConnectionReleaseNb = msg;
+  m_isDataSerialized = false;
+}
+
+NbIotRrcSap::RrcConnectionReleaseNb 
+RrcConnectionReleaseNbHeader::GetMessage () const
+{
+  return m_rrcConnectionReleaseNb;
+}
 //////////////////// RrcConnectionRejectHeader class ////////////////////////
 
 RrcConnectionRejectHeader::RrcConnectionRejectHeader ()
@@ -7124,7 +7488,7 @@ RrcUlCcchMessage::DeserializeUlCcchMessage (Buffer::Iterator bIterator)
   else if (n == 0)
     {
       // Deserialize c1
-      bIterator = DeserializeChoice (2,false,&m_messageType,bIterator);
+      bIterator = DeserializeChoice (3,false,&m_messageType,bIterator);
     }
 
   return bIterator;

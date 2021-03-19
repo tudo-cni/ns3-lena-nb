@@ -161,6 +161,7 @@ public:
   virtual void ReportBufferStatus (ReportBufferStatusParameters params);
   virtual void ReportBufferStatusNb (ReportBufferStatusParameters params,
                                      NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+  virtual void ReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
 
 private:
   LteUeMac *m_mac; ///< the UE MAC
@@ -187,6 +188,11 @@ UeMemberLteMacSapProvider::ReportBufferStatusNb (
     ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
 {
   m_mac->DoReportBufferStatus (params);
+}
+
+void 
+UeMemberLteMacSapProvider::ReportNoTransmissionNb(uint16_t rnti, uint8_t lcid){
+
 }
 
 /**
@@ -442,10 +448,9 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
 {
   NS_LOG_FUNCTION (this);
   // 3GPP 36.321 5.1.1
-  NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
+  NS_ASSERT_MSG (m_nprachConfigured, "NPRACH not configured");
   // assume that there is no Random Access Preambles group B
-  m_raPreambleId = m_raPreambleUniformVariable->GetInteger (
-      0, NbIotRrcSap::ConvertNprachNumSubcarriers2int (m_CeLevel) - 1);
+  m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, NbIotRrcSap::ConvertNprachNumSubcarriers2int (m_CeLevel) - 1);
   bool contention = true;
   SendRaPreambleNb (contention);
 }
@@ -475,17 +480,10 @@ void
 LteUeMac::SendRaPreambleNb (bool contention)
 {
   NS_LOG_FUNCTION (this << (uint32_t) m_raPreambleId << contention);
-  // Since regular UL LteControlMessages need m_ulConfigured = true in
-  // order to be sent by the UE, the rach preamble needs to be sent
-  // with a dedicated primitive (not
-  // m_uePhySapProvider->SendLteControlMessage (msg)) so that it can
-  // bypass the m_ulConfigured flag. This is reasonable, since In fact
-  // the RACH preamble is sent on 6RB bandwidth so the uplink
-  // bandwidth does not need to be configured.
+
 
   // NPRACH WINDOW STARTS at framenumber mod (NPRACH_PERIOD/10) = 0 (A Tutorial on NB-IoT Physical Layer Design, Mathhieu Kanj, et al.)
-  uint16_t window_condition =
-      (m_frameNo - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10);
+  uint16_t window_condition = (m_frameNo - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10);
   if (window_condition != 0)
     {
       uint16_t frames_to_wait =
@@ -496,10 +494,10 @@ LteUeMac::SendRaPreambleNb (bool contention)
     }
 
   NS_ASSERT (m_frameNo > 0); // sanity check for subframe starting at 1
+
   // ETSI 36.321 5.1.4
   m_raRnti = 1 + floor (m_frameNo / 4);
 
-  //m_uePhySapProvider->SendRachPreamble (m_raPreambleId, m_raRnti);
   m_radioResourceConfig.nprachConfig.nprachCpLength =
       NbIotRrcSap::NprachConfig::NprachCpLength::us266dot7;
   int sendingTime = NbIotRrcSap::ConvertNprachStartTime2int (m_CeLevel);
@@ -512,11 +510,13 @@ LteUeMac::SendRaPreambleNb (bool contention)
   double preambleRepetition = 4.0 * preambleGroupTime;
   double time = sendingTime + NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int (m_CeLevel) *
                                   preambleRepetition;
+
   Simulator::Schedule (MilliSeconds (time), &LteUePhySapProvider::SendNprachPreamble,
                        m_uePhySapProvider, m_raPreambleId, m_raRnti,
                        NbIotRrcSap::ConvertNprachSubcarrierOffset2int (m_CeLevel));
   NS_LOG_INFO (this << " sent preamble id " << (uint32_t) m_raPreambleId << ", RA-RNTI "
                     << (uint32_t) m_raRnti);
+
   // 3GPP 36.321 5.1.4
   Time raWindowBegin;
   Time raWindowEnd;
@@ -545,7 +545,6 @@ LteUeMac::SendRaPreambleNb (bool contention)
   //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
   std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time << std::endl;
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
-  // TODO RESPONSE WINDOW
   m_noRaResponseReceivedEvent =
       Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeoutNb, this, contention);
 }
@@ -753,18 +752,22 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   double rsrp = m_uePhySapProvider->GetRSRP ();
   NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm"
                             << "\n");
+  // TODO Grenzfälle
   if (rsrp < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
     {
+      // CE2
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb2;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo3;
     }
-  else if (rsrp < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound)
+  else if (rsrp <= m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound)
     {
+      // CE1
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb1;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo2;
     }
   else if (rsrp > m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound)
     {
+      // CE0
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb0;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo1;
     }

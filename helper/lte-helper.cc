@@ -1223,7 +1223,7 @@ DrbActivator::ActivateDrb (uint64_t imsi, uint16_t cellId, uint16_t rnti)
       Ptr<LteEnbNetDevice> enbLteDevice = m_ueDevice->GetObject<LteUeNetDevice> ()->GetTargetEnb ();
       Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetObject<LteEnbNetDevice> ()->GetRrc ();
       NS_ASSERT (ueRrc->GetCellId () == enbLteDevice->GetCellId ());
-      Ptr<UeManager> ueManager = enbRrc->GetUeManager (rnti);
+      Ptr<UeManager> ueManager = enbRrc->GetUeManagerbyRnti (rnti);
       NS_ASSERT (ueManager->GetState () == UeManager::CONNECTED_NORMALLY
                  || ueManager->GetState () == UeManager::CONNECTION_RECONFIGURATION);
       EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters params;

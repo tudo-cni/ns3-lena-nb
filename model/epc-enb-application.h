@@ -151,6 +151,7 @@ public:
   {
     uint16_t  m_rnti; ///< RNTI
     uint8_t   m_bid; ///< Bid, the EPS Bearer IDentifier
+    uint64_t m_imsi; // For NB-IoT Connection Resume eDRX
 
   public:
     EpsFlowId_t ();
@@ -160,7 +161,7 @@ public:
      * \param a RNTI
      * \param b bid
      */
-    EpsFlowId_t (const uint16_t a, const uint8_t b);
+    EpsFlowId_t (const uint16_t a, const uint8_t b, const uint64_t c);
 
     /**
      * Comparison operator
@@ -234,7 +235,7 @@ private:
    * \param rnti maps to enbUeS1Id
    * \param bid the EPS Bearer IDentifier
    */
-  void SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid);
+  void SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid, uint64_t imsi);
 
 
   /** 

@@ -117,6 +117,8 @@ public:
     CONNECTED_HANDOVER,
     CONNECTED_PHY_PROBLEM,
     CONNECTED_REESTABLISHING,
+    IDLE_SUSPEND_EDRX,
+    IDLE_SUSPEND_PSM,
     NUM_STATES
   };
 
@@ -525,6 +527,11 @@ private:
    */
   void DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg);
   /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
+   * \param msg the LteRrcSap::RrcConnectionSetup
+   */
+  void DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReconfiguration interface.
    * \param msg the LteRrcSap::RrcConnectionReconfiguration
    */
@@ -544,6 +551,11 @@ private:
    * \param msg LteRrcSap::RrcConnectionRelease
    */
   void DoRecvRrcConnectionRelease (LteRrcSap::RrcConnectionRelease msg);
+  /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionRelease interface.
+   * \param msg LteRrcSap::RrcConnectionRelease
+   */
+  void DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReject interface.
    * \param msg the LteRrcSap::RrcConnectionReject
@@ -1379,6 +1391,9 @@ private:
   std::string m_logfile;
 
   uint64_t m_resumeId;
+
+  bool m_eDrx;
+  bool m_psm;
 
 public:
   /** 
