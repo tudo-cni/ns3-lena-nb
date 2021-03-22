@@ -328,6 +328,16 @@ LteEnbRrcProtocolIdeal::SetUeRrcSapProvider (uint16_t rnti, LteUeRrcSapProvider*
                                          << " could not find RNTI = " << rnti);
   it->second = p;
 }
+void 
+LteEnbRrcProtocolIdeal::DoResumeUe (uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+}
+void 
+LteEnbRrcProtocolIdeal::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+}
 
 void 
 LteEnbRrcProtocolIdeal::DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParameters params)

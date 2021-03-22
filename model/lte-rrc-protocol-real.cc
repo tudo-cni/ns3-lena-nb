@@ -386,6 +386,7 @@ LteUeRrcProtocolReal::DoReceivePdcpPdu (Ptr<Packet> p)
       rrcConnectionSetupMsg = rrcConnectionSetupHeader.GetMessage ();
       m_ueRrcSapProvider->RecvRrcConnectionSetup (rrcConnectionSetupMsg);
       break;
+
     }
 }
 
@@ -399,8 +400,8 @@ LteUeRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters
   // Declare possible headers to receive
   RrcConnectionReconfigurationHeader rrcConnectionReconfigurationHeader;
   RrcConnectionReleaseHeader rrcConnectionReleaseHeader;
-  RrcConnectionReleaseNbHeader rrcConnectionReleaseNbHeader;
   RrcConnectionResumeNbHeader rrcConnectionResumeNbHeader;
+  RrcConnectionReleaseNbHeader rrcConnectionReleaseNbHeader;
 
   // Declare possible messages to receive
   LteRrcSap::RrcConnectionReconfiguration rrcConnectionReconfigurationMsg;
@@ -424,6 +425,7 @@ LteUeRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters
       params.pdcpSdu->RemoveHeader (rrcConnectionResumeNbHeader);
       rrcConnectionResumeNbMsg = rrcConnectionResumeNbHeader.GetMessage ();
       m_ueRrcSapProvider->RecvRrcConnectionResumeNb (rrcConnectionResumeNbMsg);
+      break;
     case 13:
       params.pdcpSdu->RemoveHeader (rrcConnectionReleaseNbHeader);
       rrcConnectionReleaseNbMsg = rrcConnectionReleaseNbHeader.GetMessage ();
@@ -573,6 +575,16 @@ LteEnbRrcProtocolReal::DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParame
 }
 
 void 
+LteEnbRrcProtocolReal::DoResumeUe(uint16_t rnti, uint64_t resumeId){
+  m_completeSetupUeParametersMap[rnti] = m_resumeCompleteSetupUeParametersMap[resumeId];
+  m_resumeCompleteSetupUeParametersMap.erase(resumeId);
+  m_enbRrcSapProviderMap[rnti] = m_resumeEnbRrcSapProviderMap[resumeId];
+  m_resumeEnbRrcSapProviderMap.erase (resumeId);
+  m_setupUeParametersMap[rnti] = m_resumeSetupUeParametersMap[resumeId];
+  m_setupUeParametersMap.erase (resumeId);
+}
+
+void 
 LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << rnti);
@@ -584,6 +596,13 @@ LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti)
   m_completeSetupUeParametersMap.erase (it);
   m_enbRrcSapProviderMap.erase (rnti);
   m_setupUeParametersMap.erase (rnti);
+}
+
+void 
+LteEnbRrcProtocolReal::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId){
+  m_resumeCompleteSetupUeParametersMap[resumeId] = m_completeSetupUeParametersMap[rnti];
+  m_resumeEnbRrcSapProviderMap[resumeId] = m_enbRrcSapProviderMap[rnti];
+  m_resumeSetupUeParametersMap[resumeId] = m_setupUeParametersMap[rnti];
 }
 
 void 
@@ -677,13 +696,12 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::
   rrcConnectionResumeNbHeader.SetMessage (msg);
 
   packet->AddHeader (rrcConnectionResumeNbHeader);
+  LtePdcpSapProvider::TransmitPdcpSduParameters transmitPdcpSduParameters;
+  transmitPdcpSduParameters.pdcpSdu = packet;
+  transmitPdcpSduParameters.rnti = rnti;
+  transmitPdcpSduParameters.lcid = 1;
 
-  LteRlcSapProvider::TransmitPdcpPduParameters transmitPdcpPduParameters;
-  transmitPdcpPduParameters.pdcpPdu = packet;
-  transmitPdcpPduParameters.rnti = rnti;
-  transmitPdcpPduParameters.lcid = 0;
-  NS_BUILD_DEBUG(std::cout << "Send connection Resume" << std::endl);
-  m_setupUeParametersMap.at (rnti).srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+  m_setupUeParametersMap[rnti].srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
 }
 
 void 
@@ -871,7 +889,7 @@ LteEnbRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameter
       rrcConnectionSetupCompletedMsg = rrcConnectionSetupCompleteHeader.GetMessage ();
       m_enbRrcSapProvider->RecvRrcConnectionSetupCompleted (params.rnti, rrcConnectionSetupCompletedMsg);
       break;
-    case 16:
+    case 14:
       params.pdcpSdu->RemoveHeader (rrcConnectionResumeCompleteNbHeader);
       rrcConnectionResumeCompleteNbMsg = rrcConnectionResumeCompleteNbHeader.GetMessage ();
       m_enbRrcSapProvider->RecvRrcConnectionResumeCompletedNb (params.rnti, rrcConnectionResumeCompleteNbMsg);

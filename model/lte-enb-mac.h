@@ -231,6 +231,16 @@ private:
   */
   void DoRemoveUe (uint16_t rnti);
   /**
+  * \brief Remove UE function
+  * \param rnti the RNTI
+  */
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
+  * \brief Remove UE function
+  * \param rnti the RNTI
+  */
+  void DoResumeUe(uint16_t rnti, uint64_t resumeId);
+  /**
   * \brief Add LC function
   * \param lcinfo the LC info
   * \param msu the LTE MAC SAP user
@@ -384,6 +394,7 @@ private:
 
   /// RNTI, LC ID, SAP of the RLC instance
   std::map <uint16_t, std::map<uint8_t, LteMacSapUser*> > m_rlcAttached;
+  std::map <uint64_t, std::map<uint8_t, LteMacSapUser*> > m_resumeRlcAttached;
 
   std::vector <CqiListElement_s> m_dlCqiReceived; ///< DL-CQI received
   std::vector <FfMacSchedSapProvider::SchedUlCqiInfoReqParameters> m_ulCqiReceived; ///< UL-CQI received

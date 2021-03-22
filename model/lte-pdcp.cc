@@ -134,6 +134,12 @@ LtePdcp::SetLtePdcpSapUser (LtePdcpSapUser * s)
   m_pdcpSapUser = s;
 }
 
+LtePdcpSapUser*
+LtePdcp::GetLtePdcpSapUser ()
+{
+  NS_LOG_FUNCTION (this);
+  return m_pdcpSapUser;
+}
 LtePdcpSapProvider*
 LtePdcp::GetLtePdcpSapProvider ()
 {

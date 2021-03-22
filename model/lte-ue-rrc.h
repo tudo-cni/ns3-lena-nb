@@ -119,6 +119,7 @@ public:
     CONNECTED_REESTABLISHING,
     IDLE_SUSPEND_EDRX,
     IDLE_SUSPEND_PSM,
+    CONNECTED_TAU,
     NUM_STATES
   };
 
@@ -1391,10 +1392,15 @@ private:
   std::string m_logfile;
 
   uint64_t m_resumeId;
+  bool m_resumePending;
+  bool m_enablePSM;
+  bool m_enableEDRX;
 
-  bool m_eDrx;
-  bool m_psm;
+  EventId m_eDrxTimeout;
 
+  EventId m_psmTimeout;
+  Time m_t3412;
+  Time m_t3324;
 public:
   /** 
    * The number of component carriers.

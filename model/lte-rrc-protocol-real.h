@@ -267,6 +267,15 @@ private:
    */
   void DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParameters params);
   /**
+   * Resume UE function
+   *
+   * \param rnti the RNTI
+   * \param params LteEnbRrcSapUser::SetupUeParameters
+   */
+  void DoResumeUe (uint16_t rnti, uint64_t resumeId);
+
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
    * Remove UE function
    *
    * \param rnti the RNTI
@@ -399,6 +408,10 @@ private:
   std::map<uint16_t, LteUeRrcSapProvider*> m_enbRrcSapProviderMap; ///< ENB RRC SAP provider map
   std::map<uint16_t, LteEnbRrcSapUser::SetupUeParameters> m_setupUeParametersMap; ///< setup UE parameters map
   std::map<uint16_t, LteEnbRrcSapProvider::CompleteSetupUeParameters> m_completeSetupUeParametersMap; ///< complete setup UE parameters map
+  
+  std::map<uint64_t, LteUeRrcSapProvider*> m_resumeEnbRrcSapProviderMap; ///< ENB RRC SAP provider map
+  std::map<uint64_t, LteEnbRrcSapUser::SetupUeParameters> m_resumeSetupUeParametersMap; ///< setup UE parameters map
+  std::map<uint64_t, LteEnbRrcSapProvider::CompleteSetupUeParameters> m_resumeCompleteSetupUeParametersMap; ///< complete setup UE parameters map
 
 };
 

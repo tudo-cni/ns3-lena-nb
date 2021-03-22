@@ -85,6 +85,12 @@ public:
   void SetLteRlcSapUser (LteRlcSapUser * s);
 
   /**
+   * Resume Procedure
+   *
+   * \param s the RLC SAP user to be used by this LTE_RLC
+   */
+  LteRlcSapUser* GetLteRlcSapUser ();
+  /**
    *
    *
    * \return the RLC SAP Provider interface offered to the PDCP by this LTE_RLC

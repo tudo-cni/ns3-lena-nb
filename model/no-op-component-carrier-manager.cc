@@ -244,7 +244,42 @@ NoOpComponentCarrierManager::DoRemoveUe (uint16_t rnti)
   m_rlcLcInstantiated.erase (rnti);
   m_ueAttached.erase (rnti);
 }
+void
+NoOpComponentCarrierManager::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this);
+  std::map<uint16_t, uint8_t>::iterator stateIt;
+  std::map<uint16_t, uint8_t>::iterator eccIt; // m_enabledComponentCarrier iterator
+  stateIt = m_ueState.find (rnti);
+  eccIt = m_enabledComponentCarrier.find (rnti);
+  NS_ASSERT_MSG (stateIt != m_ueState.end (), "request to remove UE info with unknown rnti ");
+  NS_ASSERT_MSG (eccIt != m_enabledComponentCarrier.end (), "request to remove UE info with unknown rnti ");
 
+  //std::map <uint16_t, std::map<uint8_t, LteEnbCmacSapProvider::LcInfo> >::iterator lcsIt;
+  auto rlcLcIt = m_rlcLcInstantiated.find (rnti);
+  NS_ASSERT_MSG (rlcLcIt != m_rlcLcInstantiated.end (), "request to Release Data Radio Bearer on UE without Logical Channels enabled");
+
+  auto rntiIt = m_ueAttached.find (rnti);
+
+  NS_ASSERT_MSG (rntiIt != m_ueAttached.end (), "request to Release Data Radio Bearer on unattached UE");
+
+  m_resumeUeState[resumeId] = m_ueState[rnti];
+  m_resumeEnabledComponentCarrier[resumeId] = m_enabledComponentCarrier[rnti];
+  m_resumeRlcLcInstantiated[resumeId] = m_rlcLcInstantiated[rnti];
+  m_resumeUeAttached[resumeId] = m_ueAttached[rnti];
+}
+
+void 
+NoOpComponentCarrierManager::DoResumeUe(uint16_t rnti, uint64_t resumeId){
+  m_ueState[rnti]= m_resumeUeState[resumeId]; 
+  m_resumeUeState.erase(resumeId);
+  m_enabledComponentCarrier[rnti]= m_resumeEnabledComponentCarrier[resumeId];
+  m_resumeEnabledComponentCarrier.erase(resumeId);
+  m_rlcLcInstantiated[rnti]= m_resumeRlcLcInstantiated[resumeId];
+  m_resumeRlcLcInstantiated.erase(resumeId);
+  m_ueAttached[rnti]=m_resumeUeAttached[resumeId];
+  m_resumeUeAttached.erase(resumeId);
+}
 std::vector<LteCcmRrcSapProvider::LcsConfig>
 NoOpComponentCarrierManager::DoSetupDataRadioBearer (EpsBearer bearer, uint8_t bearerId, uint16_t rnti, uint8_t lcid, uint8_t lcGroup, LteMacSapUser *msu)
 {
@@ -385,7 +420,8 @@ NoOpComponentCarrierManager::DoConfigureSignalBearer(LteEnbCmacSapProvider::LcIn
     }
   else
     {
-      NS_LOG_ERROR ("LC already exists");
+      rntiIt->second[lcinfo.lcId] = msu;
+      //NS_LOG_ERROR ("LC already exists");
     }
 
   return m_ccmMacSapUser;

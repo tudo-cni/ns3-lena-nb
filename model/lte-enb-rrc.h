@@ -87,8 +87,8 @@ public:
   {
     INITIAL_RANDOM_ACCESS = 0,
     CONNECTION_SETUP,
-    CONNECTION_RESUME,
     CONNECTION_REJECTED,
+    CONNECTION_RESUME, // New NBIOT
     ATTACH_REQUEST,
     CONNECTED_NORMALLY,
     CONNECTION_RECONFIGURATION,
@@ -97,9 +97,9 @@ public:
     HANDOVER_JOINING,
     HANDOVER_PATH_SWITCH,
     HANDOVER_LEAVING,
-    IDLE_SUSPEND_EDRX,
-    IDLE_SUSPEND_PSM,
-    CONNECTED_TAU,
+    IDLE_SUSPEND_EDRX,// New NBIOT
+    IDLE_SUSPEND_PSM,// New NBIOT
+    CONNECTED_TAU,// New NBIOT
     NUM_STATES
   };
 
@@ -153,6 +153,7 @@ public:
   void NotifyDataInactivityNb(uint8_t lcid);
   
   void NotifyDataInactivitySchedulerNb();
+  void NotifyDataActivitySchedulerNb();
   /**
    * Notify LC config result function
    *
@@ -1348,7 +1349,7 @@ private:
    * \param componentCarrierId ID of the primary component carrier
    * \return temporary RNTI
    */
-  uint16_t DoAllocateTemporaryResumeId();
+  uint64_t DoAllocateTemporaryResumeId();
   /**
    * Allocate temporary Resume ID function
    *
@@ -1380,6 +1381,8 @@ private:
    * \param lcid LCID
    */
   void DoNotifyDataInactivitySchedulerNb(uint16_t rnti);
+
+  void DoNotifyDataActivitySchedulerNb(uint16_t rnti);
   /**
    * RRC configuration update indication function
    *

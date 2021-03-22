@@ -1134,6 +1134,16 @@ public:
    * \param rnti the RNTI
    */
   virtual void RemoveUe (uint16_t rnti) = 0;
+  /**
+   * \brief Remove UE function
+   * \param rnti the RNTI
+   */
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId) = 0;
+  /**
+   * \brief Remove UE function
+   * \param rnti the RNTI
+   */
+  virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId) = 0;
 
   /**
    * \brief Send a _SystemInformation_ message to all attached UEs
@@ -1632,6 +1642,8 @@ public:
   // inherited from LteEnbRrcSapUser
 
   virtual void SetupUe (uint16_t rnti, SetupUeParameters params);
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId);
+  virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId);
   virtual void RemoveUe (uint16_t rnti);
   virtual void SendSystemInformation (uint16_t cellId, SystemInformation msg);
   virtual void SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg);
@@ -1671,6 +1683,18 @@ MemberLteEnbRrcSapUser<C>::SetupUe (uint16_t rnti, SetupUeParameters params)
   m_owner->DoSetupUe (rnti, params);
 }
 
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::ResumeUe (uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoResumeUe (rnti, resumeId);
+}
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::MoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoMoveUeToResume(rnti, resumeId);
+}
 template <class C>
 void
 MemberLteEnbRrcSapUser<C>::RemoveUe (uint16_t rnti)

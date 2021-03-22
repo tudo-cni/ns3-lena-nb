@@ -156,6 +156,8 @@ LteUeRrc::LteUeRrc ()
     m_previousCellId (0),
     m_connEstFailCountLimit (0),
     m_connEstFailCount (0),
+    m_t3412(MilliSeconds(30000)),
+    m_t3324(MilliSeconds(3500)),
     m_numberOfComponentCarriers (MIN_NO_CC)
 {
   NS_LOG_FUNCTION (this);
@@ -251,6 +253,18 @@ LteUeRrc::GetTypeId (void)
                    UintegerValue (2), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
                    MakeUintegerAccessor (&LteUeRrc::m_n311),
                    MakeUintegerChecker<uint8_t> (1, 10))
+    .AddAttribute ("eDRX",
+                   "This specifies the maximum number of in-sync indications. "
+                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
+                   BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   MakeBooleanAccessor(&LteUeRrc::m_enableEDRX),
+                   MakeBooleanChecker())
+    .AddAttribute ("PSM",
+                   "This specifies the maximum number of in-sync indications. "
+                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
+                   BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   MakeBooleanAccessor(&LteUeRrc::m_enablePSM),
+                   MakeBooleanChecker())
     .AddTraceSource ("MibReceived",
                      "trace fired upon reception of Master Information Block",
                      MakeTraceSourceAccessor (&LteUeRrc::m_mibReceivedTrace),
@@ -694,11 +708,13 @@ LteUeRrc::DoNotifyRandomAccessSuccessful ()
         else{
           NbIotRrcSap::RrcConnectionResumeRequestNb msg;
           msg.resumeIdentity = m_resumeId;
+          m_srb0->m_rlc->SetRnti(m_rnti);
+          m_srb1->m_rlc->SetRnti(m_rnti);
+          m_srb1->m_pdcp->SetRnti(m_rnti);
           m_rrcSapUser->SendRrcConnectionResumeRequestNb(msg);
         }
       }
       break;
-
     case CONNECTED_HANDOVER:
       {
         LteRrcSap::RrcConnectionReconfigurationCompleted msg;
@@ -857,7 +873,10 @@ LteUeRrc::DoConnect ()
     case CONNECTED_HANDOVER:
       NS_LOG_INFO ("already connected");
       break;
-
+    case IDLE_SUSPEND_EDRX:
+    case IDLE_SUSPEND_PSM:
+      m_resumePending = true;
+      break;
     default:
       NS_FATAL_ERROR ("unexpected event in state " << ToString (m_state));
       break;
@@ -1207,6 +1226,9 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
     case IDLE_CONNECTING:
       {
         //ApplyRadioResourceConfigDedicated (msg.radioResourceConfigDedicated);
+        m_srb0->m_rlc->SetRnti(m_rnti);
+        m_srb1->m_rlc->SetRnti(m_rnti);
+        m_srb1->m_pdcp->SetRnti(m_rnti);
         m_connEstFailCount = 0;
         m_connectionTimeout.Cancel ();
         SwitchToState (CONNECTED_NORMALLY);
@@ -1389,11 +1411,11 @@ LteUeRrc::DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg)
       m_resumeId = msg.resumeIdentity;
     }
     //m_asSapUser->NotifyConnectionSuspended();
-    if(m_eDrx){
+    if(m_enableEDRX){
       SwitchToState(IDLE_SUSPEND_EDRX);
       // Start EDRX TIMER
     }  
-    else if(m_psm){
+    else if(m_enablePSM){
       //Start PSM Timer
       SwitchToState(IDLE_SUSPEND_PSM);
     }
@@ -3515,7 +3537,22 @@ LteUeRrc::SwitchToState (State newState)
     case CONNECTED_PHY_PROBLEM:
     case CONNECTED_REESTABLISHING:
       break;
- 
+    case IDLE_SUSPEND_EDRX:
+      if(m_enablePSM){
+        m_eDrxTimeout = Simulator::Schedule(m_t3324, &LteUeRrc::SwitchToState, this, IDLE_SUSPEND_PSM);
+      }else{
+        m_eDrxTimeout = Simulator::Schedule(m_t3324, &LteUeRrc::SwitchToState, this, IDLE_SUSPEND_EDRX);
+      }
+      break;
+    case IDLE_SUSPEND_PSM:
+      // Move from eDRX to PSM
+      m_psmTimeout = Simulator::Schedule(m_t3412-m_t3324, &LteUeRrc::SwitchToState, this, CONNECTED_TAU);
+      break;
+    case CONNECTED_TAU:
+      // usually wait for TAU but no TAU implemented yet
+      StartConnectionNb();
+      //SwitchToState(IDLE_SUSPEND_PSM);
+      break;
     default:
       break;
     }

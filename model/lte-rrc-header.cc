@@ -5286,7 +5286,7 @@ RrcConnectionResumeCompleteNbHeader::PreSerialize () const
   m_serializationResult = Buffer ();
 
   // Serialize DCCH message
-  SerializeUlDcchMessage (16);
+  SerializeUlDcchMessage (14);
 
   // Serialize RRCConnectionSetupComplete sequence:
   // no default or optional fields. Extension marker not present.
@@ -7024,10 +7024,10 @@ RrcConnectionReleaseNbHeader::Deserialize (Buffer::Iterator bIterator)
               m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::loadBalancingTAUrequired;
               break;
             case 1:
-              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::rrc_Suspend;
+              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::other;
               break;
             case 2:
-              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::other;
+              m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::rrc_Suspend;
               break;
             case 3:
               m_rrcConnectionReleaseNb.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::spare1;

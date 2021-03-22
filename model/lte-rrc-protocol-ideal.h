@@ -234,6 +234,22 @@ private:
    * \param params LteEnbRrcSapUser::SetupUeParameters 
    */
   void DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParameters params);
+
+  // methods forwarded from LteEnbRrcSapUser
+  /**
+   * Setup UE function
+   *
+   * \param rnti the RNTI
+   * \param params LteEnbRrcSapUser::SetupUeParameters 
+   */
+  void DoResumeUe (uint16_t rnti, uint64_t resumeId);
+  /**
+   * Setup UE function
+   *
+   * \param rnti the RNTI
+   * \param params LteEnbRrcSapUser::SetupUeParameters 
+   */
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
   /**
    * Remove UE function
    *

@@ -154,6 +154,10 @@ EpcEnbApplication::DoInitialUeMessage (uint64_t imsi, uint16_t rnti)
 {
   NS_LOG_FUNCTION (this);
   // side effect: create entry if not exist
+  if(m_imsiRntiMap.find(imsi) != m_imsiRntiMap.end()){
+    m_imsiRntiMap[imsi] = rnti;
+    return;
+  }
   m_imsiRntiMap[imsi] = rnti;
   m_s1apSapMme->InitialUeMessage (imsi, rnti, imsi, m_cellId);
 }

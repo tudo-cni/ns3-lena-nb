@@ -78,6 +78,7 @@ public:
   virtual NbIotRrcSap::SystemInformationBlockType2Nb GetCurrentSystemInformationBlockType2Nb();
   virtual void NotifyDataInactivityNb(uint16_t rnti, uint8_t lcid);
   virtual void NotifyDataInactivitySchedulerNb(uint16_t rnti);
+  virtual void NotifyDataActivitySchedulerNb(uint16_t rnti);
 
 private:
   LteEnbRrc* m_rrc; ///< the RRC
@@ -128,6 +129,11 @@ EnbRrcMemberLteEnbCmacSapUser::NotifyDataInactivitySchedulerNb(uint16_t rnti)
 {
   m_rrc->DoNotifyDataInactivitySchedulerNb(rnti);
 }
+void
+EnbRrcMemberLteEnbCmacSapUser::NotifyDataActivitySchedulerNb(uint16_t rnti)
+{
+  m_rrc->DoNotifyDataActivitySchedulerNb(rnti);
+}
 ///////////////////////////////////////////
 // UeManager
 ///////////////////////////////////////////
@@ -139,6 +145,7 @@ static const std::string g_ueManagerStateName[UeManager::NUM_STATES] =
   "INITIAL_RANDOM_ACCESS",
   "CONNECTION_SETUP",
   "CONNECTION_REJECTED",
+  "CONNECTION_RESUME",// New NBIOT
   "ATTACH_REQUEST",
   "CONNECTED_NORMALLY",
   "CONNECTION_RECONFIGURATION",
@@ -147,9 +154,9 @@ static const std::string g_ueManagerStateName[UeManager::NUM_STATES] =
   "HANDOVER_JOINING",
   "HANDOVER_PATH_SWITCH",
   "HANDOVER_LEAVING",
-  "IDLE_SUSPEND_EDRX",
-  "IDLE_SUSPEND_PSM",
-  "CONNECTED_TAU"
+  "IDLE_SUSPEND_EDRX", // New NBIOT
+  "IDLE_SUSPEND_PSM", // New NBIOT
+  "CONNECTED_TAU"// New NBIOT
 };
 
 /**
@@ -185,10 +192,11 @@ UeManager::UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s, uint8_t compon
     m_needPhyMacConfiguration (false),
     m_caSupportConfigured (false),
     m_pendingStartDataRadioBearers (false),
-    m_t3412(MilliSeconds(100000000000)),
+    m_t3412(MilliSeconds(30000)),
     m_t3324(MilliSeconds(3500)),
     m_dataInactivityInterval(200),
-    m_eDrxCycle(0)
+    m_eDrxCycle(0),
+    m_enablePSM(true)
 { 
   NS_LOG_FUNCTION (this);
 }
@@ -991,6 +999,7 @@ UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
             LteRrcSap::RrcConnectionSetup msg2;
             msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
             msg2.radioResourceConfigDedicated = BuildRadioResourceConfigDedicated ();
+
             m_rrc->m_rrcSapUser->SendRrcConnectionSetup (m_rnti, msg2);
 
             RecordDataRadioBearersToBeStarted ();
@@ -1029,16 +1038,60 @@ UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeReq
   NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
   switch (m_state)
     {
-    case INITIAL_RANDOM_ACCESS:
+    case IDLE_SUSPEND_PSM:
+    case IDLE_SUSPEND_EDRX:
       {
         m_connectionRequestTimeout.Cancel ();
 
-        if (m_rrc->m_admitRrcConnectionResumeRequest == true)
+        if (m_rrc->m_admitRrcConnectionResumeRequest)
           {
-            if(m_rrc->DoCheckIfResumeIdExists(msg.resumeIdentity)){
+            // setup the eNB side of SRB0
+              {
+                uint8_t lcid = 0;
+                LteEnbCmacSapProvider::LcInfo lcinfo;
+                lcinfo.rnti = m_rnti;
+                lcinfo.lcId = lcid;
+                lcinfo.lcGroup = 0;
+                lcinfo.qci = 0;
+                lcinfo.isGbr = false;
+                lcinfo.mbrUl = 0;
+                lcinfo.mbrDl = 0;
+                lcinfo.gbrUl = 0;
+                lcinfo.gbrDl = 0;
 
+                // MacSapUserForRlc in the ComponentCarrierManager MacSapUser
+                LteMacSapUser* lteMacSapUser = m_rrc->m_ccmRrcSapProvider->ConfigureSignalBearer(lcinfo, m_srb0->m_rlc->GetLteMacSapUser ()); 
+                // Signal Channel are only on Primary Carrier
+                m_rrc->m_cmacSapProvider.at (m_componentCarrierId)->AddLc (lcinfo, lteMacSapUser);
+                m_rrc->m_ccmRrcSapProvider->AddLc (lcinfo, lteMacSapUser);
+              }
+
+              // setup the eNB side of SRB1; the UE side will be set up upon RRC connection establishment
+              {
+                uint8_t lcid = 1;
+
+                LteEnbCmacSapProvider::LcInfo lcinfo;
+                lcinfo.rnti = m_rnti;
+                lcinfo.lcId = lcid;
+                lcinfo.lcGroup = 0; // all SRBs always mapped to LCG 0
+                lcinfo.qci = EpsBearer::GBR_CONV_VOICE; // not sure why the FF API requires a CQI even for SRBs...
+                lcinfo.isGbr = true;
+                lcinfo.mbrUl = 1e6;
+                lcinfo.mbrDl = 1e6;
+                lcinfo.gbrUl = 1e4;
+                lcinfo.gbrDl = 1e4;
+                // MacSapUserForRlc in the ComponentCarrierManager MacSapUser
+                LteMacSapUser* MacSapUserForRlc = m_rrc->m_ccmRrcSapProvider->ConfigureSignalBearer(lcinfo, m_srb1->m_rlc->GetLteMacSapUser ()); 
+                // Signal Channel are only on Primary Carrier
+                m_rrc->m_cmacSapProvider.at (m_componentCarrierId)->AddLc (lcinfo, MacSapUserForRlc);
+                m_rrc->m_ccmRrcSapProvider->AddLc (lcinfo, MacSapUserForRlc);
+              }
               NbIotRrcSap::RrcConnectionResumeNb msg2;
               msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
+              m_srb0->m_rlc->SetRnti(m_rnti);
+              m_srb1->m_pdcp->SetRnti(m_rnti);
+              m_srb1->m_rlc->SetRnti(m_rnti);
+              m_rrc->m_rrcSapUser->ResumeUe(m_rnti, m_resumeId);
               m_rrc->m_rrcSapUser->SendRrcConnectionResumeNb (m_rnti, msg2);
               RecordDataRadioBearersToBeStarted ();
               m_connectionResumeTimeout = Simulator::Schedule (
@@ -1047,7 +1100,8 @@ UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeReq
               SwitchToState (CONNECTION_SETUP);
 
             }
-            else{
+        else if (m_rrc->m_admitRrcConnectionRequest)
+            {
               //m_imsi = msg.ueIdentity;
               LteRrcSap::RrcConnectionSetup msg2;
               msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
@@ -1062,9 +1116,8 @@ UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeReq
 
 
             }
-          }
         else
-          {
+        {
             NS_LOG_INFO ("rejecting connection request for RNTI " << m_rnti);
 
             // send RRC CONNECTION REJECT to UE
@@ -1076,7 +1129,7 @@ UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeReq
                 m_rrc->m_connectionRejectedTimeoutDuration,
                 &LteEnbRrc::ConnectionRejectedTimeout, m_rrc, m_rnti);
             SwitchToState (CONNECTION_REJECTED);
-          }
+          }  
       }
       break;
 
@@ -1132,7 +1185,7 @@ UeManager::RecvRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeC
     {
     case CONNECTION_SETUP:
       m_rrc->m_cmacSapProvider.at(0)->NotifyConnectionSuccessful(m_rnti);
-      m_connectionSetupTimeout.Cancel ();
+      m_connectionResumeTimeout.Cancel ();
       m_rrc->SendSavedPackets(m_imsi, m_rnti);
       if (m_rrc->m_s1SapProvider != 0)
         {
@@ -1613,7 +1666,7 @@ UeManager::SwitchToState (State newState)
   NS_LOG_INFO (this << " IMSI " << m_imsi << " RNTI " << m_rnti << " UeManager "
                     << ToString (oldState) << " --> " << ToString (newState));
   m_stateTransitionTrace (m_imsi, m_rrc->ComponentCarrierToCellId (m_componentCarrierId), m_rnti, oldState, newState);
-
+  std::cout  << int(newState) << ToString(newState) << std::endl;
   switch (newState)
     {
     case INITIAL_RANDOM_ACCESS:
@@ -1622,6 +1675,12 @@ UeManager::SwitchToState (State newState)
       break;
 
     case CONNECTION_SETUP:
+      if(!m_eDrxTimeout.IsExpired()){
+        m_eDrxTimeout.Cancel();
+      }
+      if(!m_psmTimeout.IsExpired()){
+        m_psmTimeout.Cancel();
+      }
       break;
 
     case ATTACH_REQUEST:
@@ -1658,7 +1717,11 @@ UeManager::SwitchToState (State newState)
     case IDLE_SUSPEND_PSM:
       // Move from eDRX to PSM
       m_psmTimeout = Simulator::Schedule(m_t3412-m_t3324, &UeManager::SwitchToState, this, CONNECTED_TAU);
-
+      break;
+    case CONNECTED_TAU:
+      // usually wait for TAU but no TAU implemented yet
+      SwitchToState(IDLE_SUSPEND_PSM);
+      break;
     default:
       break;
     }
@@ -1743,17 +1806,25 @@ void UeManager::NotifyDataInactivityNb(uint8_t lcid){
 
 }
 void UeManager::NotifyDataInactivitySchedulerNb(){
-  if(!m_dataInactivityTimeout.IsExpired()){
-    m_dataInactivityTimeout.Cancel();
+  if (m_state == CONNECTED_NORMALLY){
+    if(!m_dataInactivityTimeout.IsExpired()){
+      m_dataInactivityTimeout.Cancel();
+    }
+    m_dataInactivityTimeout = Simulator::Schedule(MilliSeconds(m_dataInactivityInterval), &UeManager::SwitchToResumeNb, this);
   }
-  m_dataInactivityTimeout = Simulator::Schedule(MilliSeconds(m_dataInactivityInterval), &UeManager::SwitchToResumeNb, this);
 }
 
+void UeManager::NotifyDataActivitySchedulerNb(){
+    if(!m_dataInactivityTimeout.IsExpired()){
+      m_dataInactivityTimeout.Cancel();
+    }
+}
 void UeManager::SwitchToResumeNb(){
   NbIotRrcSap::RrcConnectionReleaseNb msg;
   msg.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
   msg.releaseCauseNb = NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::rrc_Suspend;
-  msg.resumeIdentity = m_rrc->DoAllocateTemporaryResumeId();
+  m_resumeId = m_rrc->DoAllocateTemporaryResumeId();
+  msg.resumeIdentity = m_resumeId; 
   m_rrc->m_rrcSapUser->SendRrcConnectionReleaseNb(m_rnti, msg);
   SwitchToState(IDLE_SUSPEND_EDRX);
   Simulator::Schedule(MilliSeconds(10000), &LteEnbRrc::MoveUeManagerToResumed, m_rrc, m_rnti, m_resumeId);
@@ -1934,6 +2005,15 @@ LteEnbRrc::GetTypeId (void)
                    TimeValue (MilliSeconds (50000)),
                    MakeTimeAccessor (&LteEnbRrc::m_connectionSetupTimeoutDuration),
                    MakeTimeChecker ())
+    .AddAttribute ("ConnectionResumeTimeoutDuration",
+                   "After accepting connection request, if no RRC CONNECTION "
+                   "SETUP COMPLETE is received before this time, the UE "
+                   "context is destroyed. Must account for the UE's reception "
+                   "of RRC CONNECTION SETUP and transmission of RRC CONNECTION "
+                   "SETUP COMPLETE.",
+                   TimeValue (MilliSeconds (50000)),
+                   MakeTimeAccessor (&LteEnbRrc::m_connectionResumeTimeoutDuration),
+                   MakeTimeChecker ())
     .AddAttribute ("ConnectionRejectedTimeoutDuration",
                    "Time to wait between sending a RRC CONNECTION REJECT and "
                    "destroying the UE context",
@@ -1983,12 +2063,16 @@ LteEnbRrc::GetTypeId (void)
                    BooleanValue (true),
                    MakeBooleanAccessor (&LteEnbRrc::m_admitHandoverRequest),
                    MakeBooleanChecker ())
-    .AddAttribute ("AdmitRrcConnectionRequest",
-                   "Whether to admit a connection request from a UE",
+  .AddAttribute ("AdmitRrcConnectionRequest",
+                  "Whether to admit a connection request from a UE",
                    BooleanValue (true),
                    MakeBooleanAccessor (&LteEnbRrc::m_admitRrcConnectionRequest),
                    MakeBooleanChecker ())
-
+  .AddAttribute ("AdmitRrcConnectionResumeRequest",
+                   "Whether to admit a connection request from a UE",
+                   BooleanValue (true),
+                   MakeBooleanAccessor (&LteEnbRrc::m_admitRrcConnectionResumeRequest),
+                   MakeBooleanChecker ())
     // UE measurements related attributes
     .AddAttribute ("RsrpFilterCoefficient",
                    "Determines the strength of smoothing effect induced by "
@@ -2984,7 +3068,13 @@ LteEnbRrc::DoNotifyDataInactivitySchedulerNb(uint16_t rnti)
   Ptr<UeManager> ueManager = GetUeManagerbyRnti(rnti);
   ueManager->NotifyDataInactivitySchedulerNb();
 }
-
+void
+LteEnbRrc::DoNotifyDataActivitySchedulerNb(uint16_t rnti)
+{
+  NS_LOG_FUNCTION (this << (uint32_t) rnti);
+  Ptr<UeManager> ueManager = GetUeManagerbyRnti(rnti);
+  ueManager->NotifyDataActivitySchedulerNb();
+}
 uint8_t
 LteEnbRrc::DoAddUeMeasReportConfigForHandover (LteRrcSap::ReportConfigEutra reportConfig)
 {
@@ -3112,7 +3202,7 @@ LteEnbRrc::AddUe (UeManager::State state, uint8_t componentCarrierId)
   return rnti;
 }
 
-uint16_t
+uint64_t
 LteEnbRrc::DoAllocateTemporaryResumeId()
 {
   NS_LOG_FUNCTION (this);
@@ -3131,7 +3221,14 @@ LteEnbRrc::DoAllocateTemporaryResumeId()
 void 
 LteEnbRrc::MoveUeManagerToResumed(uint16_t rnti, uint64_t resumeId){
   m_ueResumedMap[resumeId] = GetUeManagerbyRnti(rnti);
+  m_cmacSapProvider.at(0)->MoveUeToResume(rnti, resumeId);
+  m_cmacSapProvider.at (0)->RemoveUe (rnti);
+  m_rrcSapUser->MoveUeToResume(rnti,resumeId);
+  m_cphySapProvider.at (0)->RemoveUe (rnti);
   m_ueActiveMap.erase(rnti);
+  /// HERE WEITER MACHEN 
+  /////
+  ///////////////////////////////////////////
 }
 
 void

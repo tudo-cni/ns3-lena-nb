@@ -116,6 +116,7 @@ TypeId LteUeNetDevice::GetTypeId (void)
 LteUeNetDevice::LteUeNetDevice (void)
   : m_isConstructed (false)
 {
+
   NS_LOG_FUNCTION (this);
 }
 
@@ -281,6 +282,7 @@ LteUeNetDevice::DoInitialize (void)
       it->second->GetMac ()->Initialize ();
     }
   m_rrc->Initialize ();
+  m_nas->SetUeNetDevice(this->GetObject<LteUeNetDevice>());
 }
 
 bool

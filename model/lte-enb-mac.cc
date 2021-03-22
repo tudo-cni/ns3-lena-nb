@@ -66,6 +66,8 @@ public:
   virtual void ConfigureMac (uint16_t ulBandwidth, uint16_t dlBandwidth);
   virtual void AddUe (uint16_t rnti);
   virtual void RemoveUe (uint16_t rnti);
+  virtual void MoveUeToResume(uint16_t rnti,uint64_t resumeId);
+  virtual void ResumeUe(uint16_t rnti,uint64_t resumeId);
   virtual void AddLc (LcInfo lcinfo, LteMacSapUser *msu);
   virtual void ReconfigureLc (LcInfo lcinfo);
   virtual void ReleaseLc (uint16_t rnti, uint8_t lcid);
@@ -100,7 +102,16 @@ EnbMacMemberLteEnbCmacSapProvider::RemoveUe (uint16_t rnti)
 {
   m_mac->DoRemoveUe (rnti);
 }
-
+void
+EnbMacMemberLteEnbCmacSapProvider::MoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  m_mac->DoMoveUeToResume(rnti,resumeId);
+}
+void
+EnbMacMemberLteEnbCmacSapProvider::ResumeUe(uint16_t rnti, uint64_t resumeId)
+{
+  m_mac->DoResumeUe(rnti,resumeId);
+}
 void
 EnbMacMemberLteEnbCmacSapProvider::AddLc (LcInfo lcinfo, LteMacSapUser *msu)
 {
@@ -932,6 +943,8 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
               // Notify RRC about last scheduled NPDSCH Transmission for the rnti
               if(it->rnti != 0){ 
                 int subframestillDataInactivity = it->dciN1.npdschOpportunity.back()- currentsubframe;
+                m_cmacSapUser->NotifyDataActivitySchedulerNb(it->rnti);
+
                 if(!m_noDataIndicator.IsExpired()){
                   m_noDataIndicator.Cancel();
                 }
@@ -953,6 +966,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
             // Notify RRC about last scheduled NPDSCH Transmission for the rnti
             if(it->rnti != 0){
               int subframestillDataInactivity = it->dciN0.npuschOpportunity.back().second.back() - currentsubframe;
+              m_cmacSapUser->NotifyDataActivitySchedulerNb(it->rnti);
               if(!m_noDataIndicator.IsExpired()){
                   m_noDataIndicator.Cancel();
               }
@@ -1327,6 +1341,15 @@ LteEnbMac::DoAddUe (uint16_t rnti)
   m_miDlHarqProcessesPackets.insert (std::pair<uint16_t, DlHarqProcessesBuffer_t> (rnti, buf));
 }
 
+void 
+LteEnbMac::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId){
+  m_resumeRlcAttached[resumeId] = m_rlcAttached[rnti];
+}
+void 
+LteEnbMac::DoResumeUe(uint16_t rnti, uint64_t resumeId){
+  m_rlcAttached[rnti] = m_resumeRlcAttached[resumeId];
+  m_resumeRlcAttached.erase(resumeId);
+}
 void
 LteEnbMac::DoRemoveUe (uint16_t rnti)
 {

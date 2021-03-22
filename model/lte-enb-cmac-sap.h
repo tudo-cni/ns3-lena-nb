@@ -66,6 +66,19 @@ public:
    */
   virtual void RemoveUe (uint16_t rnti) = 0;
 
+  /** 
+   * remove the UE, e.g., after handover or termination of the RRC connection
+   * 
+   * \param rnti 
+   */
+  virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId) = 0;
+
+  /** 
+   * remove the UE, e.g., after handover or termination of the RRC connection
+   * 
+   * \param rnti 
+   */
+  virtual void ResumeUe(uint16_t rnti, uint64_t resumeId) = 0;
   /**
    * Logical Channel information to be passed to CmacSapProvider::ConfigureLc
    *
@@ -227,6 +240,14 @@ public:
    * \param success true if the operation was successful, false otherwise
    */
   virtual void NotifyDataInactivitySchedulerNb(uint16_t rnti) = 0;
+    /**
+   * notify the result of the last LC config operation
+   *
+   * \param rnti the rnti of the user
+   * \param lcid the logical channel id
+   * \param success true if the operation was successful, false otherwise
+   */
+  virtual void NotifyDataActivitySchedulerNb(uint16_t rnti) = 0;
 
   /**
    * \brief Parameters for [re]configuring the UE 
