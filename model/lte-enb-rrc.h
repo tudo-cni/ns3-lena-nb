@@ -1356,7 +1356,9 @@ private:
    * \param componentCarrierId ID of the primary component carrier
    * \return temporary RNTI
    */
-  void MoveUeManagerToResumed(uint16_t rnti, uint64_t m_resumeId);
+  void MoveUeToResumed(uint16_t rnti, uint64_t m_resumeId);
+
+  void ResumeUe(uint16_t rnti, uint64_t m_resumeId);
 
 
   /**
@@ -1473,6 +1475,13 @@ private:
    * \param rnti the C-RNTI identiftying the user
    */
   void RemoveUe (uint16_t rnti);
+  /**
+   * remove a UE from the cell
+   *
+   * \param rnti the C-RNTI identiftying the user
+   */
+  void RemoveUeNb(uint16_t rnti,bool resumed);
+
 
 
   /** 

@@ -257,6 +257,12 @@ private:
    */
   void DoRemoveUe (uint16_t rnti);
   /**
+   * Remove UE function
+   *
+   * \param rnti the RNTI
+   */
+  void DoRemoveUe (uint16_t rnti, bool resumed);
+  /**
    * Send system information function
    *
    * \param cellId cell ID

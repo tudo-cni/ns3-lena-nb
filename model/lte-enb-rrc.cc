@@ -1045,59 +1045,18 @@ UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeReq
 
         if (m_rrc->m_admitRrcConnectionResumeRequest)
           {
-            // setup the eNB side of SRB0
-              {
-                uint8_t lcid = 0;
-                LteEnbCmacSapProvider::LcInfo lcinfo;
-                lcinfo.rnti = m_rnti;
-                lcinfo.lcId = lcid;
-                lcinfo.lcGroup = 0;
-                lcinfo.qci = 0;
-                lcinfo.isGbr = false;
-                lcinfo.mbrUl = 0;
-                lcinfo.mbrDl = 0;
-                lcinfo.gbrUl = 0;
-                lcinfo.gbrDl = 0;
-
-                // MacSapUserForRlc in the ComponentCarrierManager MacSapUser
-                LteMacSapUser* lteMacSapUser = m_rrc->m_ccmRrcSapProvider->ConfigureSignalBearer(lcinfo, m_srb0->m_rlc->GetLteMacSapUser ()); 
-                // Signal Channel are only on Primary Carrier
-                m_rrc->m_cmacSapProvider.at (m_componentCarrierId)->AddLc (lcinfo, lteMacSapUser);
-                m_rrc->m_ccmRrcSapProvider->AddLc (lcinfo, lteMacSapUser);
-              }
-
-              // setup the eNB side of SRB1; the UE side will be set up upon RRC connection establishment
-              {
-                uint8_t lcid = 1;
-
-                LteEnbCmacSapProvider::LcInfo lcinfo;
-                lcinfo.rnti = m_rnti;
-                lcinfo.lcId = lcid;
-                lcinfo.lcGroup = 0; // all SRBs always mapped to LCG 0
-                lcinfo.qci = EpsBearer::GBR_CONV_VOICE; // not sure why the FF API requires a CQI even for SRBs...
-                lcinfo.isGbr = true;
-                lcinfo.mbrUl = 1e6;
-                lcinfo.mbrDl = 1e6;
-                lcinfo.gbrUl = 1e4;
-                lcinfo.gbrDl = 1e4;
-                // MacSapUserForRlc in the ComponentCarrierManager MacSapUser
-                LteMacSapUser* MacSapUserForRlc = m_rrc->m_ccmRrcSapProvider->ConfigureSignalBearer(lcinfo, m_srb1->m_rlc->GetLteMacSapUser ()); 
-                // Signal Channel are only on Primary Carrier
-                m_rrc->m_cmacSapProvider.at (m_componentCarrierId)->AddLc (lcinfo, MacSapUserForRlc);
-                m_rrc->m_ccmRrcSapProvider->AddLc (lcinfo, MacSapUserForRlc);
-              }
               NbIotRrcSap::RrcConnectionResumeNb msg2;
               msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
               m_srb0->m_rlc->SetRnti(m_rnti);
               m_srb1->m_pdcp->SetRnti(m_rnti);
               m_srb1->m_rlc->SetRnti(m_rnti);
-              m_rrc->m_rrcSapUser->ResumeUe(m_rnti, m_resumeId);
+              //m_rrc->m_rrcSapUser->ResumeUe(m_rnti, m_resumeId);
               m_rrc->m_rrcSapUser->SendRrcConnectionResumeNb (m_rnti, msg2);
               RecordDataRadioBearersToBeStarted ();
               m_connectionResumeTimeout = Simulator::Schedule (
                   m_rrc->m_connectionResumeTimeoutDuration,
                   &LteEnbRrc::ConnectionResumeTimeout, m_rrc, m_rnti);
-              SwitchToState (CONNECTION_SETUP);
+              SwitchToState (CONNECTION_RESUME);
 
             }
         else if (m_rrc->m_admitRrcConnectionRequest)
@@ -1183,14 +1142,14 @@ UeManager::RecvRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeC
   NS_LOG_FUNCTION (this);
   switch (m_state)
     {
-    case CONNECTION_SETUP:
+    case CONNECTION_RESUME:
       m_rrc->m_cmacSapProvider.at(0)->NotifyConnectionSuccessful(m_rnti);
       m_connectionResumeTimeout.Cancel ();
       m_rrc->SendSavedPackets(m_imsi, m_rnti);
       if (m_rrc->m_s1SapProvider != 0)
         {
           m_rrc->m_s1SapProvider->InitialUeMessage (m_imsi, m_rnti);
-          SwitchToState (ATTACH_REQUEST);
+          SwitchToState (CONNECTED_NORMALLY);// only set new rnti 
         }
       else
         {
@@ -1675,6 +1634,7 @@ UeManager::SwitchToState (State newState)
       break;
 
     case CONNECTION_SETUP:
+    case CONNECTION_RESUME:
       if(!m_eDrxTimeout.IsExpired()){
         m_eDrxTimeout.Cancel();
       }
@@ -1827,7 +1787,7 @@ void UeManager::SwitchToResumeNb(){
   msg.resumeIdentity = m_resumeId; 
   m_rrc->m_rrcSapUser->SendRrcConnectionReleaseNb(m_rnti, msg);
   SwitchToState(IDLE_SUSPEND_EDRX);
-  Simulator::Schedule(MilliSeconds(10000), &LteEnbRrc::MoveUeManagerToResumed, m_rrc, m_rnti, m_resumeId);
+  Simulator::Schedule(MilliSeconds(10000), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti, m_resumeId);
 }
 
 ///////////////////////////////////////////
@@ -2736,9 +2696,7 @@ LteEnbRrc::DoRecvRrcConnectionResumeRequestNb (uint16_t rnti, NbIotRrcSap::RrcCo
 {
   NS_LOG_FUNCTION (this << rnti);
   if(DoCheckIfResumeIdExists(msg.resumeIdentity) && m_admitRrcConnectionResumeRequest){
-    m_ueActiveMap[rnti] = m_ueResumedMap[msg.resumeIdentity];
-    m_ueActiveMap[rnti]->SetRnti(rnti);
-    m_ueResumedMap.erase(msg.resumeIdentity);
+    ResumeUe(rnti, msg.resumeIdentity);
   }
   GetUeManagerbyRnti (rnti)->RecvRrcConnectionResumeRequestNb (msg);
 }
@@ -3211,6 +3169,7 @@ LteEnbRrc::DoAllocateTemporaryResumeId()
 
   for(resumeId = 1; resumeId < maxresumeId; resumeId++){
     if ((resumeId != 0) && (m_ueResumedMap.find(resumeId) == m_ueResumedMap.end())){
+      m_ueResumedMap[resumeId] = 0;
       break;
     }
   }
@@ -3219,18 +3178,59 @@ LteEnbRrc::DoAllocateTemporaryResumeId()
 }
 
 void 
-LteEnbRrc::MoveUeManagerToResumed(uint16_t rnti, uint64_t resumeId){
+LteEnbRrc::MoveUeToResumed(uint16_t rnti, uint64_t resumeId){
+  
+  // Store information of old UeManager
   m_ueResumedMap[resumeId] = GetUeManagerbyRnti(rnti);
   m_cmacSapProvider.at(0)->MoveUeToResume(rnti, resumeId);
-  m_cmacSapProvider.at (0)->RemoveUe (rnti);
+  m_ccmRrcSapProvider->MoveUeToResume(rnti, resumeId);
   m_rrcSapUser->MoveUeToResume(rnti,resumeId);
-  m_cphySapProvider.at (0)->RemoveUe (rnti);
-  m_ueActiveMap.erase(rnti);
+
+  RemoveUeNb(rnti, true);
+  //// Delete Ue
+  //std::map <uint16_t, Ptr<UeManager> >::iterator it = m_ueActiveMap.find (rnti);
+  //uint16_t srsCi = (*it).second->GetSrsConfigurationIndex ();  
+  //m_cmacSapProvider.at (0)->RemoveUe (rnti);
+  //m_cphySapProvider.at (0)->RemoveUe (rnti);
+  //m_ccmRrcSapProvider->RemoveUe(rnti);
+  //m_rrcSapUser->RemoveUe(rnti);
+  //m_ueActiveMap.erase(rnti);
+  //if (srsCi != 0)// need to do this after UeManager has been deleted
+  //  {
+  //    RemoveSrsConfigurationIndex (srsCi);
+  //  }
+  //if (m_s1SapProvider != 0)
+  //  {
+  //    m_s1SapProvider->UeContextRelease (rnti);
+  //  }
   /// HERE WEITER MACHEN 
   /////
   ///////////////////////////////////////////
 }
 
+void 
+LteEnbRrc::ResumeUe(uint16_t rnti, uint64_t resumeId){
+
+  // Remove parts of new Temporary UeManager that arent needed
+  std::map <uint16_t, Ptr<UeManager> >::iterator it = m_ueActiveMap.find (rnti);
+  it->second->CancelPendingEvents ();//cancel pending events
+  m_ueActiveMap.erase (it);
+  m_cmacSapProvider.at (0)->RemoveUe (rnti);
+  m_ccmRrcSapProvider-> RemoveUe (rnti);
+  m_rrcSapUser->RemoveUe (rnti); // Remove UE context at RRC protocol
+
+  // Resume Old UeManager
+  m_ueActiveMap[rnti] = m_ueResumedMap[resumeId];
+  m_ueActiveMap[rnti]->SetRnti(rnti);
+  m_cmacSapProvider.at(0)->ResumeUe(rnti, resumeId);
+  m_rrcSapUser->ResumeUe(rnti,resumeId);
+  m_ccmRrcSapProvider->ResumeUe(rnti, resumeId);
+
+  m_ueResumedMap.erase(resumeId);
+  /// HERE WEITER MACHEN 
+  /////
+  ///////////////////////////////////////////
+}
 void
 LteEnbRrc::RemoveUe (uint16_t rnti)
 {
@@ -3262,7 +3262,37 @@ LteEnbRrc::RemoveUe (uint16_t rnti)
 
   m_rrcSapUser->RemoveUe (rnti); // Remove UE context at RRC protocol
 }
+void
+LteEnbRrc::RemoveUeNb(uint16_t rnti, bool resumed)
+{
+  NS_LOG_FUNCTION (this << (uint32_t) rnti);
+  std::map <uint16_t, Ptr<UeManager> >::iterator it = m_ueActiveMap.find (rnti);
+  NS_ASSERT_MSG (it != m_ueActiveMap.end (), "request to remove UE info with unknown rnti " << rnti);
+  uint64_t imsi = it->second->GetImsi ();
+  uint16_t srsCi = (*it).second->GetSrsConfigurationIndex ();
+  //cancel pending events
+  it->second->CancelPendingEvents ();
+  // fire trace upon connection release
+  m_connectionReleaseTrace (imsi, ComponentCarrierToCellId (it->second->GetComponentCarrierId ()), rnti);
+  m_ueActiveMap.erase (it);
+  for (uint8_t i = 0; i < m_numberOfComponentCarriers; i++)
+    {
+      m_cmacSapProvider.at (i)->RemoveUe (rnti);
+      m_cphySapProvider.at (i)->RemoveUe (rnti);
+    }
+  if (m_s1SapProvider != 0)
+    {
+      m_s1SapProvider->UeContextRelease (rnti);
+    }
+  m_ccmRrcSapProvider-> RemoveUe (rnti);
+  // need to do this after UeManager has been deleted
+  if (srsCi != 0)
+    {
+      RemoveSrsConfigurationIndex (srsCi);
+    }
 
+  m_rrcSapUser->RemoveUe (rnti,resumed); // Remove UE context at RRC protocol
+}
 TypeId
 LteEnbRrc::GetRlcType (EpsBearer bearer)
 {

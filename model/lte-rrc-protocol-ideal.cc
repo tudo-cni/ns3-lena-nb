@@ -387,7 +387,12 @@ LteEnbRrcProtocolIdeal::DoRemoveUe (uint16_t rnti)
   NS_LOG_FUNCTION (this << rnti);
   m_enbRrcSapProviderMap.erase (rnti);
 }
-
+void 
+LteEnbRrcProtocolIdeal::DoRemoveUe (uint16_t rnti, bool resumed)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  m_enbRrcSapProviderMap.erase (rnti);
+}
 void 
 LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::SystemInformation msg)
 {

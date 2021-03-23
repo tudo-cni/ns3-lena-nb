@@ -4679,7 +4679,7 @@ RrcConnectionResumeRequestNbHeader::Deserialize (Buffer::Iterator bIterator)
 void
 RrcConnectionResumeRequestNbHeader::SetMessage (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
 {
-  m_resumeId= std::bitset<40> ((uint32_t)msg.resumeIdentity);
+  m_resumeId= std::bitset<40> ((uint64_t)msg.resumeIdentity);
   m_isDataSerialized = false;
 }
 
@@ -6976,6 +6976,8 @@ RrcConnectionReleaseNbHeader::PreSerialize () const
     default:
       SerializeEnum (4,3);
     }
+
+  SerializeBitstring(std::bitset<40> ((uint64_t)m_rrcConnectionReleaseNb.resumeIdentity));
   // Finish serialization
   FinalizeSerialization ();
 }
@@ -6984,6 +6986,7 @@ uint32_t
 RrcConnectionReleaseNbHeader::Deserialize (Buffer::Iterator bIterator)
 {
   std::bitset<0> bitset0;
+  std::bitset<40> resumeid;
   int n;
 
   bIterator = DeserializeDlDcchMessage (bIterator);
@@ -7034,6 +7037,8 @@ RrcConnectionReleaseNbHeader::Deserialize (Buffer::Iterator bIterator)
               break;
             }
 
+          DeserializeBitstring(&resumeid,bIterator);
+          m_rrcConnectionReleaseNb.resumeIdentity = (uint64_t) resumeid.to_ulong ();
         }
 
       else

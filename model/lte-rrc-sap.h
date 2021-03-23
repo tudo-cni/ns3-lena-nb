@@ -1138,6 +1138,11 @@ public:
    * \brief Remove UE function
    * \param rnti the RNTI
    */
+  virtual void RemoveUe (uint16_t rnti, bool resumed) = 0;
+  /**
+   * \brief Remove UE function
+   * \param rnti the RNTI
+   */
   virtual void ResumeUe (uint16_t rnti, uint64_t resumeId) = 0;
   /**
    * \brief Remove UE function
@@ -1645,6 +1650,7 @@ public:
   virtual void ResumeUe (uint16_t rnti, uint64_t resumeId);
   virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId);
   virtual void RemoveUe (uint16_t rnti);
+  virtual void RemoveUe (uint16_t rnti, bool resumed);
   virtual void SendSystemInformation (uint16_t cellId, SystemInformation msg);
   virtual void SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg);
   virtual void SendRrcConnectionSetup (uint16_t rnti, RrcConnectionSetup msg);
@@ -1701,6 +1707,13 @@ MemberLteEnbRrcSapUser<C>::RemoveUe (uint16_t rnti)
 {
   m_owner->DoRemoveUe (rnti);
 }
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::RemoveUe (uint16_t rnti, bool resumed)
+{
+  m_owner->DoRemoveUe (rnti, resumed);
+}
+
 
 template <class C>
 void

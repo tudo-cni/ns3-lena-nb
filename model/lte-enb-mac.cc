@@ -1349,6 +1349,27 @@ void
 LteEnbMac::DoResumeUe(uint16_t rnti, uint64_t resumeId){
   m_rlcAttached[rnti] = m_resumeRlcAttached[resumeId];
   m_resumeRlcAttached.erase(resumeId);
+
+  // Reinitialize HARQ 
+  // Create DL transmission HARQ buffers
+  std::vector<Ptr<PacketBurst>> dlHarqLayer0pkt;
+  dlHarqLayer0pkt.resize (8);
+  for (uint8_t i = 0; i < 8; i++)
+    {
+      Ptr<PacketBurst> pb = CreateObject<PacketBurst> ();
+      dlHarqLayer0pkt.at (i) = pb;
+    }
+  std::vector<Ptr<PacketBurst>> dlHarqLayer1pkt;
+  dlHarqLayer1pkt.resize (8);
+  for (uint8_t i = 0; i < 8; i++)
+    {
+      Ptr<PacketBurst> pb = CreateObject<PacketBurst> ();
+      dlHarqLayer1pkt.at (i) = pb;
+    }
+  DlHarqProcessesBuffer_t buf;
+  buf.push_back (dlHarqLayer0pkt);
+  buf.push_back (dlHarqLayer1pkt);
+  m_miDlHarqProcessesPackets.insert (std::pair<uint16_t, DlHarqProcessesBuffer_t> (rnti, buf));
 }
 void
 LteEnbMac::DoRemoveUe (uint16_t rnti)

@@ -599,6 +599,22 @@ LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti)
 }
 
 void 
+LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti, bool resumed)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  std::map<uint16_t, LteEnbRrcSapProvider::CompleteSetupUeParameters>::iterator 
+    it = m_completeSetupUeParametersMap.find (rnti);
+  NS_ASSERT (it != m_completeSetupUeParametersMap.end ());
+  if(!resumed){
+    delete it->second.srb0SapUser;
+    delete it->second.srb1SapUser;
+  }
+  m_completeSetupUeParametersMap.erase (it);
+  m_enbRrcSapProviderMap.erase (rnti);
+  m_setupUeParametersMap.erase (rnti);
+}
+
+void 
 LteEnbRrcProtocolReal::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId){
   m_resumeCompleteSetupUeParametersMap[resumeId] = m_completeSetupUeParametersMap[rnti];
   m_resumeEnbRrcSapProviderMap[resumeId] = m_enbRrcSapProviderMap[rnti];
