@@ -59,11 +59,11 @@ bool IsSeachSpaceType2Begin(NbIotRrcSap::NprachParametersNb ce);
  
 void ScheduleRarReq(int rnti, int rapid, NbIotRrcSap::NprachParametersNb ue, NbIotRrcSap::DciN1::DciRepetitions rep);
 void ScheduleNpdcchMessageReq(NbIotRrcSap::NpdcchMessage msg);
-void ScheduleDlRlcBufferReq(LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 void ScheduleMsg5Req(int rnti);
 void SetCeLevel(NbIotRrcSap::NprachParametersNb ce0, NbIotRrcSap::NprachParametersNb ce1, NbIotRrcSap::NprachParametersNb ce2);
 void SetRntiRsrpMap(std::map<uint16_t, double> map);
-void ScheduleUlRlcBufferReq(int rnti, int dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+void ScheduleUlRlcBufferReq(int rnti, int dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace); // Data in Byte
+void ScheduleDlRlcBufferReq(LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace); // Data in Byte
 void AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace);
 std::vector<int> GetNextAvailableSearchSpaceCandidate(int SearchSpaceStartFrame, int SearchSpaceStartSubframe, int R_max, int R);
 std::vector<int> GetDlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes);

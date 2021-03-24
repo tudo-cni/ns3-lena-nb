@@ -1268,6 +1268,12 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
   // forward the packet to the correspondent RLC
   uint16_t rnti = tag.GetRnti ();
   uint8_t lcid = tag.GetLcid ();
+  uint8_t bsr = tag.GetBsrIndex();
+  uint64_t buffersize = BufferSizeLevelBsr::BsrId2BufferSize(bsr);
+  std::cout << "-------------------------" << std::endl;
+  std::cout << "Buffersize: " << buffersize << std::endl;
+  std::cout << "-------------------------" << std::endl;
+  m_ueStoredBSR[rnti] = bsr;
   std::map<uint16_t, std::map<uint8_t, LteMacSapUser *>>::iterator rntiIt =
       m_rlcAttached.find (rnti);
   NS_ASSERT_MSG (rntiIt != m_rlcAttached.end (), "could not find RNTI" << rnti);
@@ -1901,6 +1907,11 @@ LteEnbMac::DoDlInfoListElementHarqFeeback (DlInfoListElement_s params)
 
 void LteEnbMac::DoNotifyConnectionSuccessful(uint16_t rnti){
   m_connectionSuccessful[rnti] = true;
+  if (m_ueStoredBSR[rnti] > 0){
+      uint64_t dataSize = BufferSizeLevelBsr::BufferSize2BsrId (m_ueStoredBSR[rnti])/8;
+      m_schedulerNb->ScheduleUlRlcBufferReq(rnti,dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+      m_ueStoredBSR[rnti]=0;
+  }
 }
 
 void LteEnbMac::DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid){

@@ -135,6 +135,8 @@ public:
   virtual void RecvData (Ptr<Packet> packet) = 0;
 
   virtual void NotifyMessage4()= 0;
+  
+  virtual void NotifyConnectionSuspended()= 0;
 };
 
 
@@ -245,6 +247,7 @@ public:
   virtual void RecvData (Ptr<Packet> packet);
   virtual void NotifyConnectionReleased ();
   virtual void NotifyMessage4();
+  virtual void NotifyConnectionSuspended();
 
 private:
   MemberLteAsSapUser ();
@@ -295,7 +298,12 @@ MemberLteAsSapUser<C>::NotifyMessage4()
 {
   m_owner->DoNotifyMessage4 ();
 }
-
+template <class C>
+void 
+MemberLteAsSapUser<C>::NotifyConnectionSuspended()
+{
+  m_owner->DoNotifyConnectionSuspended();
+}
 } // namespace ns3
 
 #endif // LTE_AS_SAP_H

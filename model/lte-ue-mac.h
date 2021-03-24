@@ -272,6 +272,8 @@ private:
   /// Refresh HARQ processes packet buffer function
   void RefreshHarqProcessesPacketBuffer (void);
 
+  uint64_t GetBufferSize();
+
   /// component carrier Id --> used to address sap
   uint8_t m_componentCarrierId;
 

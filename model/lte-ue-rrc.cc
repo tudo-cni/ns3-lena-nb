@@ -706,11 +706,16 @@ LteUeRrc::DoNotifyRandomAccessSuccessful ()
                                                     this);
         }
         else{
-          NbIotRrcSap::RrcConnectionResumeRequestNb msg;
-          msg.resumeIdentity = m_resumeId;
+          
           m_srb0->m_rlc->SetRnti(m_rnti);
           m_srb1->m_rlc->SetRnti(m_rnti);
           m_srb1->m_pdcp->SetRnti(m_rnti);
+          for(std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.begin(); it != m_drbMap.end(); ++it){
+            it->second->m_pdcp->SetRnti(m_rnti);
+            it->second->m_rlc->SetRnti(m_rnti);
+          }
+          NbIotRrcSap::RrcConnectionResumeRequestNb msg;
+          msg.resumeIdentity = m_resumeId;
           m_rrcSapUser->SendRrcConnectionResumeRequestNb(msg);
         }
       }
@@ -874,8 +879,18 @@ LteUeRrc::DoConnect ()
       NS_LOG_INFO ("already connected");
       break;
     case IDLE_SUSPEND_EDRX:
+      if(!m_eDrxTimeout.IsExpired()){
+        m_eDrxTimeout.Cancel();
+      }
+      StartConnectionNb();
+      break;
     case IDLE_SUSPEND_PSM:
+      if(!m_psmTimeout.IsExpired()){
+        m_psmTimeout.Cancel();
+      }
       m_resumePending = true;
+      m_hasReceivedMibNb = false;
+      SwitchToState(IDLE_WAIT_MIB);
       break;
     default:
       NS_FATAL_ERROR ("unexpected event in state " << ToString (m_state));
@@ -1015,8 +1030,14 @@ LteUeRrc::DoRecvMasterInformationBlockNb (uint16_t cellId,
   switch (m_state)
     {
     case IDLE_WAIT_MIB:
+      if(m_resumePending){
+        // UE has to receive MIB after PSM for Random Access
+        StartConnectionNb();
+      }
+      else{
       // manual attachment
-      SwitchToState (IDLE_CAMPED_NORMALLY);
+        SwitchToState (IDLE_CAMPED_NORMALLY);
+      }
       break;
 
     case IDLE_WAIT_MIB_SIB1:
@@ -1226,9 +1247,6 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
     case IDLE_CONNECTING:
       {
         //ApplyRadioResourceConfigDedicated (msg.radioResourceConfigDedicated);
-        m_srb0->m_rlc->SetRnti(m_rnti);
-        m_srb1->m_rlc->SetRnti(m_rnti);
-        m_srb1->m_pdcp->SetRnti(m_rnti);
         m_connEstFailCount = 0;
         m_connectionTimeout.Cancel ();
         SwitchToState (CONNECTED_NORMALLY);
@@ -1407,6 +1425,7 @@ LteUeRrc::DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg)
 {
   NS_LOG_FUNCTION (this << " RNTI " << m_rnti);
   if (msg.releaseCauseNb == NbIotRrcSap::RrcConnectionReleaseNb::ReleaseCauseNb::rrc_Suspend){
+    m_asSapUser->NotifyConnectionSuspended();
     if (msg.resumeIdentity != 0){
       m_resumeId = msg.resumeIdentity;
     }
@@ -1422,6 +1441,7 @@ LteUeRrc::DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg)
     return;
 
   }
+  m_asSapUser->NotifyConnectionReleased();
   SwitchToState(IDLE_CAMPED_NORMALLY);
   
   /// \todo Currently not implemented, see Section 5.3.8 of 3GPP TS 36.331.
@@ -3376,6 +3396,7 @@ LteUeRrc::StartConnection ()
   //NS_ASSERT (m_hasReceivedMib);
   //NS_ASSERT (m_hasReceivedSib2);
   m_connectionPending = false; // reset the flag
+
   SwitchToState (IDLE_RANDOM_ACCESS);
   m_cmacSapProvider.at (0)->StartContentionBasedRandomAccessProcedure ();
 }
@@ -3386,6 +3407,7 @@ LteUeRrc::StartConnectionNb ()
   NS_ASSERT (m_hasReceivedMibNb);
   NS_ASSERT (m_hasReceivedSib2Nb);
   m_connectionPending = false; // reset the flag
+  m_resumePending = false;
   SwitchToState (IDLE_RANDOM_ACCESS);
   m_cmacSapProvider.at (0)->StartRandomAccessProcedureNb();
 }
@@ -3546,11 +3568,17 @@ LteUeRrc::SwitchToState (State newState)
       break;
     case IDLE_SUSPEND_PSM:
       // Move from eDRX to PSM
-      m_psmTimeout = Simulator::Schedule(m_t3412-m_t3324, &LteUeRrc::SwitchToState, this, CONNECTED_TAU);
+      if(oldState == IDLE_SUSPEND_EDRX){
+        m_psmTimeout = Simulator::Schedule(m_t3412-m_t3324, &LteUeRrc::SwitchToState, this, CONNECTED_TAU);
+      }else{
+        m_psmTimeout = Simulator::Schedule(m_t3412, &LteUeRrc::SwitchToState, this, CONNECTED_TAU);
+      }
       break;
     case CONNECTED_TAU:
       // usually wait for TAU but no TAU implemented yet
-      StartConnectionNb();
+      m_hasReceivedMibNb = false; // UE has to received MasterInformationBlock again after PSM see 3GPP TR 45 820 13_1
+      m_resumePending = true;
+      SwitchToState(IDLE_WAIT_MIB);
       //SwitchToState(IDLE_SUSPEND_PSM);
       break;
     default:

@@ -104,22 +104,22 @@ int
 main (int argc, char *argv[])
 {
   uint16_t numUesCe0 = 1;
-  uint16_t numUesCe1 = 1;
-  uint16_t numUesCe2 = 1;
-  Time simTime = MilliSeconds (3600000);
+  uint16_t numUesCe1 = 0;
+  uint16_t numUesCe2 = 0;
+  Time simTime = MilliSeconds (100000);
   //double distance = 50000.0;
   double distanceCe0 =  469531.7428251784;
   double distanceCe1 = 1484789.7410759863;
   double distanceCe2 = 4695317.428251784;
   
 
-  Time interPacketInterval = MilliSeconds (100);
+  Time interPacketInterval = MilliSeconds (100000);
   bool useCa = false;
-  bool disableDl = false;
+  bool disableDl = true;
   bool disableUl = false;
-  bool disablePl = false;
+  bool disablePl = true;
   bool scenario = false;
-  int seed = 0;
+  int seed = 1;
 
   // Command line arguments
   CommandLine cmd (__FILE__);
@@ -144,7 +144,7 @@ main (int argc, char *argv[])
 
   // parse again so you can override default values from the command line
   cmd.Parse(argc, argv);
-  std::cout << simTime << std::endl;
+  //std::cout << simTime << std::endl;
   if (useCa)
    {
      Config::SetDefault ("ns3::LteHelper::UseCa", BooleanValue (useCa));
@@ -160,7 +160,7 @@ main (int argc, char *argv[])
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::FriisPropagationLossModel"));
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
-  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
+  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (false));
 
   std::vector<double> positions;
   if(scenario){
@@ -178,7 +178,7 @@ main (int argc, char *argv[])
         positions.push_back(stod(fields[3])*1000.0);
       }
     for(std::vector<double>::iterator it = positions.begin(); it != positions.end(); ++it){
-      std::cout << *it << std::endl;
+     // std::cout << *it << std::endl;
     }
   }
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
@@ -201,7 +201,7 @@ main (int argc, char *argv[])
   ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
   Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
   // interface 0 is localhost, 1 is the p2p device
-  //Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
+  Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
 
   Ipv4StaticRoutingHelper ipv4RoutingHelper;
   Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
@@ -221,6 +221,7 @@ main (int argc, char *argv[])
 
 
   positionAlloc->Add (Vector (0, 0, 0));
+
   if(scenario){
       for(std::vector<double>::iterator it = positions.begin(); it != positions.end(); ++it){
       positionAlloc->Add (Vector (*it, 0, 0));
@@ -318,59 +319,66 @@ main (int argc, char *argv[])
     logfile += std::to_string(distanceCe2);
   }
   logfile += ".log";
-  std::cout << logfile << "\n";
+  //std::cout << logfile << "\n";
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
 
     Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
     Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
     ueRrc->SetLogFile(logfile);
   }
-  //// Install and start applications on UEs and remote host
-  //uint16_t dlPort = 1100;
-  //uint16_t ulPort = 2000;
-  //uint16_t otherPort = 3000;
-  //ApplicationContainer clientApps;
-  //ApplicationContainer serverApps;
-  //for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
-  //  {
-  //    if (!disableDl)
-  //      {
-  //        PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), dlPort));
-  //        serverApps.Add (dlPacketSinkHelper.Install (ueNodes.Get (u)));
+  // Install and start applications on UEs and remote host
+  uint16_t dlPort = 1100;
+  uint16_t ulPort = 2000;
+  uint16_t otherPort = 3000;
+  ApplicationContainer clientApps;
+  ApplicationContainer serverApps;
+  for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
+    {
+      if (!disableDl)
+        {
+          PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), dlPort));
+          serverApps.Add (dlPacketSinkHelper.Install (ueNodes.Get (u)));
 
-  //        UdpClientHelper dlClient (ueIpIface.GetAddress (u), dlPort);
-  //        dlClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
-  //        dlClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-  //        clientApps.Add (dlClient.Install (remoteHost));
-  //      }
+          UdpClientHelper dlClient (ueIpIface.GetAddress (u), dlPort);
+          dlClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
+          dlClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
+          dlClient.SetAttribute ("PacketSize", UintegerValue(20));
+          clientApps.Add (dlClient.Install (remoteHost));
+        }
 
-  //    if (!disableUl)
-  //      {
-  //        ++ulPort;
-  //        PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), ulPort));
-  //        serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
+      if (!disableUl)
+        {
+          ++ulPort;
+          UdpEchoServerHelper server (ulPort);
+          serverApps = server.Install (remoteHost);
+        //
+        // Create a UdpEchoClient application to send UDP datagrams from node zero to
+        // node one.
+        //
 
-  //        UdpClientHelper ulClient (remoteHostAddr, ulPort);
-  //        ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
-  //        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-  //        clientApps.Add (ulClient.Install (ueNodes.Get(u)));
-  //      }
 
-  //    if (!disablePl && numNodePairs > 1)
-  //      {
-  //        ++otherPort;
-  //        PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), otherPort));
-  //        serverApps.Add (packetSinkHelper.Install (ueNodes.Get (u)));
+          UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
+          ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
+          ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
+          ulClient.SetAttribute ("PacketSize", UintegerValue(20));
+          clientApps.Add (ulClient.Install (ueNodes.Get(u)));
+        }
 
-  //        UdpClientHelper client (ueIpIface.GetAddress (u), otherPort);
-  //        client.SetAttribute ("Interval", TimeValue (interPacketInterval));
-  //        client.SetAttribute ("MaxPackets", UintegerValue (1000000));
-  //        clientApps.Add (client.Install (ueNodes.Get ((u + 1) % numNodePairs)));
-  //      }
-  //  }
+      if (!disablePl && 2 > 1)
+        {
+          ++otherPort;
+          PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), otherPort));
+          serverApps.Add (packetSinkHelper.Install (ueNodes.Get (u)));
 
-  //serverApps.Start (MilliSeconds (500));
-  //clientApps.Start (MilliSeconds (500));
+          UdpClientHelper client (ueIpIface.GetAddress (u), otherPort);
+          client.SetAttribute ("Interval", TimeValue (interPacketInterval));
+          client.SetAttribute ("MaxPackets", UintegerValue (1000000));
+          clientApps.Add (client.Install (ueNodes.Get ((u + 1) % 2)));
+        }
+    }
+
+  serverApps.Start (MilliSeconds (50000));
+  clientApps.Start (MilliSeconds (50000));
   lteHelper->EnableTraces ();
   // Uncomment to enable PCAP tracing
   //p2ph.EnablePcapAll("lena-simple-epc");

@@ -40,7 +40,9 @@ static const std::string g_ueNasStateName[EpcUeNas::NUM_STATES] =
   "ATTACHING",
   "IDLE_REGISTERED",
   "CONNECTING_TO_EPC",
-  "ACTIVE"
+  "ACTIVE",
+  "CONNECTING",
+  "SUSPENDED"
 };
 
 /**
@@ -161,7 +163,7 @@ void
 EpcUeNas::Connect ()
 {
   NS_LOG_FUNCTION (this);
-
+  SwitchToState(CONNECTING);
   // tell RRC to go into connected mode
   m_asSapProvider->Connect ();
 }
@@ -218,11 +220,12 @@ EpcUeNas::Send (Ptr<Packet> packet, uint16_t protocolNumber)
 
   switch (m_state)
     {
-    case IDLE_REGISTERED:
+    case SUSPENDED:
       {
         // TODO Resume Connection and pass Packets down the line
         Connect();
       }
+    case CONNECTING:
     case ACTIVE:
       {
         uint32_t id = m_tftClassifier.Classify (packet, EpcTft::UPLINK, protocolNumber);
@@ -255,6 +258,13 @@ EpcUeNas::DoNotifyConnectionSuccessful ()
   SwitchToState (ACTIVE); // will eventually activate dedicated bearers
 }
 
+void 
+EpcUeNas::DoNotifyConnectionSuspended()
+{
+  NS_LOG_FUNCTION (this);
+
+  SwitchToState (SUSPENDED); // will eventually activate dedicated bearers
+}
 void
 EpcUeNas::DoNotifyConnectionFailed ()
 {
@@ -327,12 +337,19 @@ EpcUeNas::SwitchToState (State newState)
   switch (m_state)
     {
     case ACTIVE:
-      for (std::list<BearerToBeActivated>::iterator it = m_bearersToBeActivatedList.begin ();
-           it != m_bearersToBeActivatedList.end ();
-           m_bearersToBeActivatedList.erase (it++))
-        {
-          DoActivateEpsBearer (it->bearer, it->tft);
-        }
+      {
+        for (std::list<BearerToBeActivated>::iterator it = m_bearersToBeActivatedList.begin ();
+            it != m_bearersToBeActivatedList.end ();
+            m_bearersToBeActivatedList.erase (it++))
+          {
+            DoActivateEpsBearer (it->bearer, it->tft);
+          }
+        //Send all Data coming in while Connecting
+        for(std::vector<std::pair<Ptr<Packet>,uint16_t>>::iterator it = m_packetBuffer.begin(); it != m_packetBuffer.end(); ++it)
+          {
+            Send(it->first,it->second);
+          }
+      }
       break;
 
     default:

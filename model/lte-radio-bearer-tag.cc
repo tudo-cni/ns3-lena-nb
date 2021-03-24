@@ -89,10 +89,16 @@ LteRadioBearerTag::SetLayer (uint8_t layer)
   m_layer = layer;
 }
 
+void
+LteRadioBearerTag::SetBSR (uint8_t bsrIndex)
+{
+  m_bsrIndex = bsrIndex;
+}
+
 uint32_t
 LteRadioBearerTag::GetSerializedSize (void) const
 {
-  return 4;
+  return 5;
 }
 
 void
@@ -101,6 +107,7 @@ LteRadioBearerTag::Serialize (TagBuffer i) const
   i.WriteU16 (m_rnti);
   i.WriteU8 (m_lcid);
   i.WriteU8 (m_layer);
+  i.WriteU8 (m_bsrIndex);
 }
 
 void
@@ -109,6 +116,7 @@ LteRadioBearerTag::Deserialize (TagBuffer i)
   m_rnti = (uint16_t) i.ReadU16 ();
   m_lcid = (uint8_t) i.ReadU8 ();
   m_layer = (uint8_t) i.ReadU8 ();
+  m_bsrIndex = (uint8_t) i.ReadU8();
 }
 
 uint16_t
@@ -128,7 +136,11 @@ LteRadioBearerTag::GetLayer () const
 {
   return m_layer;
 }
-
+uint8_t
+LteRadioBearerTag::GetBsrIndex() const
+{
+  return m_bsrIndex;
+}
 void
 LteRadioBearerTag::Print (std::ostream &os) const
 {

@@ -545,7 +545,7 @@ private:
   std::map<uint16_t, bool> m_connectionSuccessful;
   std::map<uint16_t, double> m_ulRsrpReceivedNb;
   std::vector<std::vector<double>> m_ulCqiReceivedNb;
-
+  std::map<uint16_t, uint8_t> m_ueStoredBSR;
   EventId m_noDataIndicator;
   };
 

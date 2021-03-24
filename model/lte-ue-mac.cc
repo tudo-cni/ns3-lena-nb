@@ -345,13 +345,32 @@ LteUeMac::SetComponentCarrierId (uint8_t index)
 {
   m_componentCarrierId = index;
 }
-
+uint64_t 
+LteUeMac::GetBufferSize(){
+  std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it;
+  uint64_t buffersize=0;
+  for(it = m_ulBsrReceived.begin(); it != m_ulBsrReceived.end(); ++it){
+    uint64_t data_per_lc =((*it).second.txQueueSize + (*it).second.retxQueueSize + (*it).second.statusPduSize);
+    buffersize += data_per_lc;
+  }
+  return buffersize;
+}
 void
 LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
 {
   NS_LOG_FUNCTION (this);
   NS_ASSERT_MSG (m_rnti == params.rnti, "RNTI mismatch between RLC and MAC");
   LteRadioBearerTag tag (params.rnti, params.lcid, 0 /* UE works in SISO mode*/);
+  uint64_t bsr =0;
+  bsr = GetBufferSize();
+  if(bsr > 0){
+
+    tag.SetBSR(BufferSizeLevelBsr::BufferSize2BsrId (bsr));
+
+    
+  }else{
+    tag.SetBSR(0);
+  }
   params.pdu->AddPacketTag (tag);
   // store pdu in HARQ buffer
   m_miUlHarqProcessesPacket.at (m_harqProcessId)->AddPacket (params.pdu);
@@ -1220,7 +1239,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
               return;
             }
           std::map<uint8_t, LcInfo>::iterator it;
-          uint32_t bytesPerActiveLc = dci.tbs/ activeLcs;
+          uint32_t bytesPerActiveLc = (dci.tbs/8)/ activeLcs;
           bool statusPduPriority = false;
           if ((statusPduMinSize != 0) && (bytesPerActiveLc < statusPduMinSize))
             {
@@ -1228,7 +1247,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
               statusPduPriority = true;
               NS_LOG_DEBUG (this << " Reduced resource -> send only Status, b ytes "
                                  << statusPduMinSize);
-              if (dci.tbs< statusPduMinSize)
+              if (dci.tbs/8< statusPduMinSize)
                 {
                   NS_FATAL_ERROR ("Insufficient Tx Opportunity for sending a status message");
                 }

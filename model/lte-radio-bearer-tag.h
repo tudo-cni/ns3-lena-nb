@@ -81,6 +81,14 @@ public:
   * @param layer the value of the layer to set
   */
   void SetLayer (uint8_t layer);
+  /**
+  * Simplification of BSR-Mac Control-Element of NB-IoT
+  *
+  * @param bsrIndex see 36.321 6.1.3.3
+  */
+  void SetBSR (uint8_t bsrIndex);
+
+
 
 
   virtual void Serialize (TagBuffer i) const;
@@ -106,11 +114,18 @@ public:
    * \returns layer
    */
   uint8_t GetLayer (void) const;
+  /**
+   * Get layer function
+   *
+   * \returns layer
+   */
+  uint8_t GetBsrIndex (void) const;
 
 private:
   uint16_t m_rnti; ///< RNTI
   uint8_t m_lcid; ///< LCID
   uint8_t m_layer; ///< layer
+  uint8_t m_bsrIndex; // 0 < m_dataSize < 64 5G LTE Narrowband IoT p.140
 
 };
 

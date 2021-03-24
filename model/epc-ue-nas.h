@@ -167,6 +167,8 @@ public:
     IDLE_REGISTERED,
     CONNECTING_TO_EPC,
     ACTIVE,
+    CONNECTING,
+    SUSPENDED,
     NUM_STATES
   };
 
@@ -195,6 +197,8 @@ private:
   void DoNotifyConnectionFailed ();
   /// Notify connection released
   void DoNotifyConnectionReleased ();
+
+  void DoNotifyConnectionSuspended ();
 
   void DoNotifyMessage4();
 
@@ -264,6 +268,8 @@ private:
    *
    */
   std::list<BearerToBeActivated> m_bearersToBeActivatedListForReconnection;
+
+  std::vector<std::pair<Ptr<Packet>, uint16_t>> m_packetBuffer;
 
 };
 

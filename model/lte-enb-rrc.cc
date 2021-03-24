@@ -1050,6 +1050,10 @@ UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeReq
               m_srb0->m_rlc->SetRnti(m_rnti);
               m_srb1->m_pdcp->SetRnti(m_rnti);
               m_srb1->m_rlc->SetRnti(m_rnti);
+              for(std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.begin(); it != m_drbMap.end(); ++it){
+                it->second->m_pdcp->SetRnti(m_rnti);
+                it->second->m_rlc->SetRnti(m_rnti);
+              }
               //m_rrc->m_rrcSapUser->ResumeUe(m_rnti, m_resumeId);
               m_rrc->m_rrcSapUser->SendRrcConnectionResumeNb (m_rnti, msg2);
               RecordDataRadioBearersToBeStarted ();
@@ -3185,6 +3189,7 @@ LteEnbRrc::MoveUeToResumed(uint16_t rnti, uint64_t resumeId){
   m_cmacSapProvider.at(0)->MoveUeToResume(rnti, resumeId);
   m_ccmRrcSapProvider->MoveUeToResume(rnti, resumeId);
   m_rrcSapUser->MoveUeToResume(rnti,resumeId);
+  m_s1SapProvider->MoveUeToResume(rnti, resumeId);
 
   RemoveUeNb(rnti, true);
   //// Delete Ue
@@ -3218,13 +3223,14 @@ LteEnbRrc::ResumeUe(uint16_t rnti, uint64_t resumeId){
   m_cmacSapProvider.at (0)->RemoveUe (rnti);
   m_ccmRrcSapProvider-> RemoveUe (rnti);
   m_rrcSapUser->RemoveUe (rnti); // Remove UE context at RRC protocol
-
+  m_s1SapProvider->UeContextRelease(rnti);
   // Resume Old UeManager
   m_ueActiveMap[rnti] = m_ueResumedMap[resumeId];
   m_ueActiveMap[rnti]->SetRnti(rnti);
   m_cmacSapProvider.at(0)->ResumeUe(rnti, resumeId);
   m_rrcSapUser->ResumeUe(rnti,resumeId);
   m_ccmRrcSapProvider->ResumeUe(rnti, resumeId);
+  m_s1SapProvider->ResumeUe(rnti, resumeId);
 
   m_ueResumedMap.erase(resumeId);
   /// HERE WEITER MACHEN 

@@ -219,6 +219,26 @@ EpcEnbApplication::DoUeContextRelease (uint16_t rnti)
 }
 
 void 
+EpcEnbApplication::DoMoveUeToResume (uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  m_resumeRbidTeidMap[resumeId] = m_rbidTeidMap[rnti];
+  m_rbidTeidMap.erase(rnti);
+  
+}
+void 
+EpcEnbApplication::DoResumeUe(uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  m_rbidTeidMap[rnti] = m_resumeRbidTeidMap[resumeId];
+  std::map<uint16_t, std::map<uint8_t, uint32_t> >::iterator it = m_rbidTeidMap.find(rnti);
+  for(std::map<uint8_t, uint32_t>::iterator bidIt = it->second.begin(); bidIt != it->second.end(); ++bidIt){
+    m_teidRbidMap[bidIt->second].m_rnti = rnti;
+  }
+  m_resumeRbidTeidMap.erase(rnti);
+  
+}
+void 
 EpcEnbApplication::DoInitialContextSetupRequest (uint64_t mmeUeS1Id, uint16_t enbUeS1Id, std::list<EpcS1apSapEnb::ErabToBeSetupItem> erabToBeSetupList)
 {
   NS_LOG_FUNCTION (this);
