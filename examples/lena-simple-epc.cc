@@ -103,7 +103,7 @@ std::vector<std::string> readCSVRow (const std::string &row)
 int
 main (int argc, char *argv[])
 {
-  uint16_t numUesCe0 = 1;
+  uint16_t numUesCe0 = 10;
   uint16_t numUesCe1 = 0;
   uint16_t numUesCe2 = 0;
   Time simTime = MilliSeconds (100000);
@@ -271,14 +271,39 @@ main (int argc, char *argv[])
   RngSeedManager::SetSeed (seed);  // Changes seed from default of 1 to 3
   Ptr<UniformRandomVariable> RaUeUniformVariable = CreateObject<UniformRandomVariable> ();
 
+  // Install and start applications on UEs and remote host
+  uint16_t ulPort = 2000;
+  ApplicationContainer clientApps;
+  ApplicationContainer serverApps;
+
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
 
-      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds());
+      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()/4);
       std::cout << access << "\n";
       lteHelper->AttachAtTime (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
       //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
       // side effect: the default EPS bearer will be activated
+      if (!disableUl)
+        {
+        ++ulPort;
+        UdpEchoServerHelper server (ulPort);
+        serverApps.Add(server.Install (remoteHost));
+        //
+        // Create a UdpEchoClient application to send UDP datagrams from node zero to
+        // node one.
+        //
+
+
+        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
+        ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
+        ulClient.SetAttribute ("PacketSize", UintegerValue(20));
+        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+
+        serverApps.Get(i)->SetStartTime (MilliSeconds (access+50000));
+        clientApps.Get(i)->SetStartTime (MilliSeconds (access+50000));
+        }
     }
 
   auto start = std::chrono::system_clock::now(); 
@@ -326,59 +351,8 @@ main (int argc, char *argv[])
     Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
     ueRrc->SetLogFile(logfile);
   }
-  // Install and start applications on UEs and remote host
-  uint16_t dlPort = 1100;
-  uint16_t ulPort = 2000;
-  uint16_t otherPort = 3000;
-  ApplicationContainer clientApps;
-  ApplicationContainer serverApps;
-  for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
-    {
-      if (!disableDl)
-        {
-          PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), dlPort));
-          serverApps.Add (dlPacketSinkHelper.Install (ueNodes.Get (u)));
 
-          UdpClientHelper dlClient (ueIpIface.GetAddress (u), dlPort);
-          dlClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
-          dlClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-          dlClient.SetAttribute ("PacketSize", UintegerValue(20));
-          clientApps.Add (dlClient.Install (remoteHost));
-        }
-
-      if (!disableUl)
-        {
-          ++ulPort;
-          UdpEchoServerHelper server (ulPort);
-          serverApps = server.Install (remoteHost);
-        //
-        // Create a UdpEchoClient application to send UDP datagrams from node zero to
-        // node one.
-        //
-
-
-          UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-          ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
-          ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-          ulClient.SetAttribute ("PacketSize", UintegerValue(20));
-          clientApps.Add (ulClient.Install (ueNodes.Get(u)));
-        }
-
-      if (!disablePl && 2 > 1)
-        {
-          ++otherPort;
-          PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), otherPort));
-          serverApps.Add (packetSinkHelper.Install (ueNodes.Get (u)));
-
-          UdpClientHelper client (ueIpIface.GetAddress (u), otherPort);
-          client.SetAttribute ("Interval", TimeValue (interPacketInterval));
-          client.SetAttribute ("MaxPackets", UintegerValue (1000000));
-          clientApps.Add (client.Install (ueNodes.Get ((u + 1) % 2)));
-        }
-    }
-
-  serverApps.Start (MilliSeconds (50000));
-  clientApps.Start (MilliSeconds (50000));
+  
   lteHelper->EnableTraces ();
   // Uncomment to enable PCAP tracing
   //p2ph.EnablePcapAll("lena-simple-epc");
