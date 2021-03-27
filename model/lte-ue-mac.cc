@@ -350,8 +350,10 @@ LteUeMac::GetBufferSize(){
   std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it;
   uint64_t buffersize=0;
   for(it = m_ulBsrReceived.begin(); it != m_ulBsrReceived.end(); ++it){
-    uint64_t data_per_lc =((*it).second.txQueueSize + (*it).second.retxQueueSize + (*it).second.statusPduSize);
-    buffersize += data_per_lc;
+      if((*it).second.lcid > 2){
+        uint64_t data_per_lc =((*it).second.txQueueSize + (*it).second.retxQueueSize + (*it).second.statusPduSize);
+        buffersize += data_per_lc;
+      }
   }
   return buffersize;
 }
@@ -658,7 +660,7 @@ LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
           NS_FATAL_ERROR ("Function called on wrong componentCarrier");
         }
       LteMacSapUser::TxOpportunityParameters txOpParams;
-      txOpParams.bytes = 11;
+      txOpParams.bytes = raResponse.ulGrant.tbs_size/8;
       txOpParams.layer = 0;
       txOpParams.harqId = 0;
       txOpParams.componentCarrierId = m_componentCarrierId;

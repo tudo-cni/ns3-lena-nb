@@ -192,7 +192,7 @@ UeManager::UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s, uint8_t compon
     m_needPhyMacConfiguration (false),
     m_caSupportConfigured (false),
     m_pendingStartDataRadioBearers (false),
-    m_t3412(MilliSeconds(30000)),
+    m_t3412(MilliSeconds(100000)),
     m_t3324(MilliSeconds(3500)),
     m_dataInactivityInterval(200),
     m_eDrxCycle(0),
@@ -846,6 +846,7 @@ UeManager::SendData (uint8_t bid, Ptr<Packet> p)
     case CONNECTION_REESTABLISHMENT:
     case HANDOVER_PREPARATION:
     case HANDOVER_PATH_SWITCH:
+    case IDLE_SUSPEND_EDRX:
       {
         NS_LOG_LOGIC ("queueing data on PDCP for transmission over the air");
         SendPacket (bid, p);
@@ -1904,7 +1905,7 @@ LteEnbRrc::GetTypeId (void)
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("EpsBearerToRlcMapping", 
                    "Specify which type of RLC will be used for each type of EPS bearer. ",
-                   EnumValue (RLC_SM_ALWAYS),
+                   EnumValue (RLC_AM_ALWAYS),
                    MakeEnumAccessor (&LteEnbRrc::m_epsBearerToRlcMapping),
                    MakeEnumChecker (RLC_SM_ALWAYS, "RlcSmAlways",
                                     RLC_UM_ALWAYS, "RlcUmAlways",

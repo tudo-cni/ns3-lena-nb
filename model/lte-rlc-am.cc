@@ -109,7 +109,7 @@ LteRlcAm::GetTypeId (void)
     .AddAttribute ("ReportBufferStatusTimer",
                    "How much to wait to issue a new Report Buffer Status since the last time "
                    "a new SDU was received",     
-                   TimeValue (MilliSeconds (200)),
+                   TimeValue (MilliSeconds (2000)),
                    MakeTimeAccessor (&LteRlcAm::m_rbsTimerValue),
                    MakeTimeChecker ())
     .AddAttribute ("TxOpportunityForRetxAlwaysBigEnough",

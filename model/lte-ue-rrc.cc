@@ -156,7 +156,7 @@ LteUeRrc::LteUeRrc ()
     m_previousCellId (0),
     m_connEstFailCountLimit (0),
     m_connEstFailCount (0),
-    m_t3412(MilliSeconds(30000)),
+    m_t3412(MilliSeconds(100000)),
     m_t3324(MilliSeconds(3500)),
     m_numberOfComponentCarriers (MIN_NO_CC)
 {

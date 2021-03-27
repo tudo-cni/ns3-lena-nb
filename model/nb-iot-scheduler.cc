@@ -201,6 +201,7 @@ NbiotScheduler::Schedule (int frameNo, int subframeNo)
   m_frameNo = frameNo;
   m_subframeNo = subframeNo;
   std::vector<NbIotRrcSap::NpdcchMessage> ret = std::vector<NbIotRrcSap::NpdcchMessage> ();
+  std::vector<NbIotRrcSap::NpdcchMessage> tmp;
   if (frameNo == 1 && subframeNo == 1)
     {
       return ret;
@@ -208,15 +209,21 @@ NbiotScheduler::Schedule (int frameNo, int subframeNo)
   // check and Schedule DCIs for SearchSpaceType2 (RAR, HARQ, RRC)
   if (IsSeachSpaceType2Begin (m_ce0))
     {
-      ret = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce0);
+      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce0);
+      ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
+      ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
   if (IsSeachSpaceType2Begin (m_ce1))
     {
-      ret = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce1);
+      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce0);
+      ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
+      ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
   if (IsSeachSpaceType2Begin (m_ce2))
     {
-      ret = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce2);
+      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce0);
+      ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
+      ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
 
   return ret;
@@ -437,7 +444,7 @@ NbiotScheduler::Schedule (int frameNo, int subframeNo)
 //}
 
 void NbiotScheduler::AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace){
-  for(std::map<uint16_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it = m_RntiRlcDlBuffer[seachspace].begin();
+  for(std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>>::iterator it = m_RntiRlcDlBuffer[seachspace].begin();
       it != m_RntiRlcDlBuffer[seachspace].end();){
         NbIotRrcSap::NpdcchMessage dci = CreateDciNpdcchMessage(it->first,seachspace,NbIotRrcSap::NpdcchMessage::DciType::n1);
         m_RntiRlcDlBuffer[seachspace].erase(it++);
@@ -539,6 +546,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                                       scheduleSuccessful = true;
                                       rar->rarPayload.ulGrant = ulgrant.first;
                                       rar->rarPayload.ulGrant.subframes = ulgrant.second;
+                                      rar->rarPayload.ulGrant.tbs_size = size_mac_pdu;
                                       NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
                                       NS_BUILD_DEBUG (std::cout << " Subcarrier "
                                                                 << ulgrant.second.first << " ");
@@ -612,7 +620,6 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                             }
                           else
                             {
-                              m_NpdcchQueue.erase (it);
                               continue;
                             }
                         }
@@ -986,8 +993,7 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
       dciN0Repetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
       ceLevel = m_ce0;
     }
-
-
+  
   NbIotRrcSap::NpdcchMessage msg;
   msg.isRar = false;
   msg.rnti = rnti;
@@ -995,26 +1001,32 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
   msg.searchSpaceType = searchspace;
 
   if(dci_type == NbIotRrcSap::NpdcchMessage::DciType::n1){
+    std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it; 
     int tbs = 0;
-    if(m_RntiRlcDlBuffer[searchspace][rnti].txQueueSize*8 > 680){ // max TBS Downlink Rel. 13
-    tbs = 680;
+    uint64_t buffer_size = 0;
+    std::map<uint8_t, uint64_t> buffers;
+    for(it= m_RntiRlcDlBuffer[searchspace][rnti].begin(); it != m_RntiRlcDlBuffer[searchspace][rnti].end(); ++it){
+      buffers[it->second.lcid] =  4+it->second.txQueueSize + it->second.retxQueueSize+it->second.statusPduSize;
+      buffer_size += buffers[it->second.lcid];
     }
-    else{
-      tbs = m_RntiRlcDlBuffer[searchspace][rnti].txQueueSize* 8;
-    }
-    std::pair<NbIotRrcSap::DciN1, int> dci_tbs = m_Amc.getBareboneDciN1 (
-      m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, "inband");
+      if(buffer_size *8 > 680){ // max TBS Downlink Rel. 13
+        tbs = 680;
+      }
+      else{
+        tbs = buffer_size* 8;
+      }
+      std::pair<NbIotRrcSap::DciN1, int> dci_tbs = m_Amc.getBareboneDciN1 (
+        m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, "inband");
 
-    NbIotRrcSap::DciN1 dci = dci_tbs.first;
-    dci.mCS = NbIotRrcSap::DciN1::MCS::one;
-    dci.tbs = dci_tbs.second;
-    dci.NDI = true;
-    dci.dciRepetitions = dciN1Repetitions;
+      NbIotRrcSap::DciN1 dci = dci_tbs.first;
+      dci.mCS = NbIotRrcSap::DciN1::MCS::one;
+      dci.tbs = dci_tbs.second;
+      dci.NDI = true;
+      dci.dciRepetitions = dciN1Repetitions;
 
-    msg.dciType = NbIotRrcSap::NpdcchMessage::DciType::n1;
-    msg.dciN1 = dci;
-    msg.tbs = dci_tbs.second;
-    msg.lcid = m_RntiRlcDlBuffer[searchspace][rnti].lcid;
+      msg.dciType = NbIotRrcSap::NpdcchMessage::DciType::n1;
+      msg.dciN1 = dci;
+      msg.tbs = dci_tbs.second;
 
   }
   else if (dci_type == NbIotRrcSap::NpdcchMessage::DciType::n0){
@@ -1039,8 +1051,7 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
     msg.dciType = NbIotRrcSap::NpdcchMessage::DciType::n0;
     msg.dciN0 = dci;
     msg.tbs = dci_tbs.second;
-    msg.lcid = 1;
-
+    msg.lcid = 0;
   }
 
   return msg;
@@ -1049,17 +1060,17 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
 void
 NbiotScheduler::ScheduleMsg5Req (int rnti)
 {
-  m_RntiRlcUlBuffer[NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2][rnti] = 88;
+  m_RntiRlcUlBuffer[NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2][rnti] = 14;
 }
 void
 NbiotScheduler::ScheduleDlRlcBufferReq (LteMacSapProvider::ReportBufferStatusParameters params,
                                         NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
 {
-  m_RntiRlcDlBuffer[searchspace][params.rnti] = params;
+  m_RntiRlcDlBuffer[searchspace][params.rnti][params.lcid] = params;
 }
 void
 NbiotScheduler::ScheduleUlRlcBufferReq(int rnti, int dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
 {
-  m_RntiRlcUlBuffer[searchspace][rnti] = dataSize;
+  m_RntiRlcUlBuffer[searchspace][rnti] = dataSize+32;
 }
 } // namespace ns3

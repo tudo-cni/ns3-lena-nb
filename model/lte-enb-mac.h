@@ -520,6 +520,7 @@ private:
 
   void DoNotifyConnectionSuccessful(uint16_t rnti);
 
+  void CheckForDataInactivity(uint16_t rnti);
   void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
 
   NbiotScheduler* m_schedulerNb = nullptr;
@@ -546,6 +547,7 @@ private:
   std::map<uint16_t, double> m_ulRsrpReceivedNb;
   std::vector<std::vector<double>> m_ulCqiReceivedNb;
   std::map<uint16_t, uint8_t> m_ueStoredBSR;
+  std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
   EventId m_noDataIndicator;
   };
 

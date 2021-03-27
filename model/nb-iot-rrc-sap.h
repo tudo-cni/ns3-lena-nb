@@ -694,6 +694,7 @@ class NbIotRrcSap{
         } mcsIndex;
         bool success;
         std::pair<uint8_t, std::vector<int>> subframes;
+        uint64_t tbs_size;
         static uint8_t ConvertUlGrantSchedulingDelay2int (UlGrant::SchedulingDelay delay)
         {
             uint8_t res = 0;

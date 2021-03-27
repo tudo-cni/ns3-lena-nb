@@ -93,7 +93,7 @@ protected:
   std::vector<NbIotRrcSap::HarqAckResource::SubcarrierIndex> m_HarqSubcarrierIndex;
   NbIotRrcSap::NprachParametersNb m_ce1;
   NbIotRrcSap::NprachParametersNb m_ce2;
-  std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, LteMacSapProvider::ReportBufferStatusParameters>> m_RntiRlcDlBuffer;
+  std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, std::map<uint8_t,LteMacSapProvider::ReportBufferStatusParameters>>> m_RntiRlcDlBuffer;
   std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, uint>> m_RntiRlcUlBuffer;
   int m_frameNo;
   bool m_only15KhzSpacing = true;
