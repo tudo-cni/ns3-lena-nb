@@ -1050,10 +1050,10 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                 int subframestillDataInactivity = it->dciN1.npdschOpportunity.back()- currentsubframe;
                 m_cmacSapUser->NotifyDataActivitySchedulerNb(it->rnti);
 
-                if(!m_noDataIndicator.IsExpired()){
-                  m_noDataIndicator.Cancel();
+                if(!m_noDataIndicators[it->rnti].IsExpired()){
+                  m_noDataIndicators[it->rnti].Cancel();
                 }
-                m_noDataIndicator = Simulator::Schedule (MilliSeconds (subframestillDataInactivity),
+                m_noDataIndicators[it->rnti] = Simulator::Schedule (MilliSeconds (subframestillDataInactivity),
                                     &LteEnbCmacSapUser::NotifyDataInactivitySchedulerNb,
                                     m_cmacSapUser, it->rnti);
               }
@@ -1072,10 +1072,10 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
             if(it->rnti != 0){
               int subframestillDataInactivity = it->dciN0.npuschOpportunity.back().second.back() - currentsubframe;
               m_cmacSapUser->NotifyDataActivitySchedulerNb(it->rnti);
-              if(!m_noDataIndicator.IsExpired()){
-                  m_noDataIndicator.Cancel();
+              if(!m_noDataIndicators[it->rnti].IsExpired()){
+                  m_noDataIndicators[it->rnti].Cancel();
               }
-              m_noDataIndicator = Simulator::Schedule (MilliSeconds (subframestillDataInactivity),
+              m_noDataIndicators[it->rnti] = Simulator::Schedule (MilliSeconds (subframestillDataInactivity),
                                   &LteEnbCmacSapUser::NotifyDataInactivitySchedulerNb,
                                   m_cmacSapUser, it->rnti);
             }

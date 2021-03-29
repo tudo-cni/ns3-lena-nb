@@ -548,7 +548,7 @@ private:
   std::vector<std::vector<double>> m_ulCqiReceivedNb;
   std::map<uint16_t, uint8_t> m_ueStoredBSR;
   std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
-  EventId m_noDataIndicator;
+  std::map<uint16_t, EventId> m_noDataIndicators;
   };
 
 } // end namespace ns3
