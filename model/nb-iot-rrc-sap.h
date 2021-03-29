@@ -595,8 +595,8 @@ class NbIotRrcSap{
             uint32_t tbs;
             HarqAckResource harqAckResource; 
             // Parameters to reduce simulation complexity
-            std::vector<int> npdschOpportunity;
-            std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
+            std::vector<uint64_t> npdschOpportunity;
+            std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
         };
         struct DciN0{
             bool format = 0;           
@@ -659,7 +659,7 @@ class NbIotRrcSap{
             bool NDI;
             uint32_t tbs;
 
-            std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
+            std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
         };
 
         struct UlGrant{
@@ -693,7 +693,7 @@ class NbIotRrcSap{
             mcs2  // Number RUs = 1 | TBS = 88 bits 
         } mcsIndex;
         bool success;
-        std::pair<uint8_t, std::vector<int>> subframes;
+        std::pair<uint8_t, std::vector<uint64_t>> subframes;
         uint64_t tbs_size;
         static uint8_t ConvertUlGrantSchedulingDelay2int (UlGrant::SchedulingDelay delay)
         {
@@ -752,14 +752,14 @@ class NbIotRrcSap{
         NbIotRrcSap::DciN1 dciN1;
         NbIotRrcSap::DciN0 dciN0;
         std::vector<Rar> rars;
-        std::vector<int> npdschOpportunity;
-        std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
-        std::vector<int> dciRepetitionsubframes;
-        int ranti;
-        int rnti;
-        int tbs; // in bit
+        std::vector<uint64_t> npdschOpportunity;
+        std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
+        std::vector<uint64_t> dciRepetitionsubframes;
+        uint64_t ranti;
+        uint64_t rnti;
+        uint64_t tbs; // in bit
         bool isRar;
-        int lcid;
+        uint64_t lcid;
 
         };
 

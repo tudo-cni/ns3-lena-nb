@@ -212,7 +212,7 @@ public:
   virtual void ReceivePhyPdu (Ptr<Packet> p);
   virtual void SubframeIndication (uint32_t frameNo, uint32_t subframeNo);
   virtual void ReceiveLteControlMessage (Ptr<LteControlMessage> msg);
-  virtual void NotifyAboutHarqOpportunity (std::vector<std::pair<int, std::vector<int>>> subframes);
+  virtual void NotifyAboutHarqOpportunity (std::vector<std::pair<uint64_t, std::vector<uint64_t>>> subframes);
 
 private:
   LteUeMac *m_mac; ///< the UE MAC
@@ -242,7 +242,7 @@ UeMemberLteUePhySapUser::ReceiveLteControlMessage (Ptr<LteControlMessage> msg)
 
 void
 UeMemberLteUePhySapUser::NotifyAboutHarqOpportunity (
-    std::vector<std::pair<int, std::vector<int>>> subframes)
+    std::vector<std::pair<uint64_t, std::vector<uint64_t>>> subframes)
 {
   m_mac->DoNotifyAboutHarqOpportunity (subframes);
 }
@@ -505,10 +505,11 @@ LteUeMac::SendRaPreambleNb (bool contention)
 
   // NPRACH WINDOW STARTS at framenumber mod (NPRACH_PERIOD/10) = 0 (A Tutorial on NB-IoT Physical Layer Design, Mathhieu Kanj, et al.)
   uint16_t window_condition = (m_frameNo - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10);
-  if (window_condition != 0)
+  if (window_condition != 0 || ((m_subframeNo-1) != 0))
     {
-      uint16_t frames_to_wait =
-          ((NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10) - window_condition) * 10;
+      uint16_t frames_to_wait = (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) - window_condition*10) + (10-(m_subframeNo-1))%10;
+      std::cout << m_frameNo*10+m_subframeNo << std::endl;
+      std::cout  << "Frames to wait:" << frames_to_wait << std::endl;
       Simulator::Schedule (MilliSeconds (frames_to_wait), &LteUeMac::SendRaPreambleNb, this,
                            contention);
       return;
@@ -1421,7 +1422,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
     }
 }
 void
-LteUeMac::DoNotifyAboutHarqOpportunity (std::vector<std::pair<int, std::vector<int>>> subframes)
+LteUeMac::DoNotifyAboutHarqOpportunity (std::vector<std::pair<uint64_t, std::vector<uint64_t>>> subframes)
 {
   m_nextPossibleHarqOpportunity = subframes;
 }

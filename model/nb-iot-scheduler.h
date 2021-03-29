@@ -39,7 +39,7 @@ namespace ns3 {
 // Overall size of UlGrant = 15 bit
 
 struct NpdschMessage{
-  int Tb;
+  uint64_t Tb;
 };
 
 class NbiotScheduler : public Object
@@ -57,30 +57,30 @@ bool IsSeachSpaceType2Begin(NbIotRrcSap::NprachParametersNb ce);
 //bool IsSeachSpaceType1Begin(NbIotRrcSap::NprachParametersNb ce);
 //bool IsSeachSpaceUeSpecificBegin(NbIotRrcSap::NprachParametersNb ce);
  
-void ScheduleRarReq(int rnti, int rapid, NbIotRrcSap::NprachParametersNb ue, NbIotRrcSap::DciN1::DciRepetitions rep);
+void ScheduleRarReq(uint64_t rnti, uint64_t rapid, NbIotRrcSap::NprachParametersNb ue, NbIotRrcSap::DciN1::DciRepetitions rep);
 void ScheduleNpdcchMessageReq(NbIotRrcSap::NpdcchMessage msg);
-void ScheduleMsg5Req(int rnti);
+void ScheduleMsg5Req(uint64_t rnti);
 void SetCeLevel(NbIotRrcSap::NprachParametersNb ce0, NbIotRrcSap::NprachParametersNb ce1, NbIotRrcSap::NprachParametersNb ce2);
 void SetRntiRsrpMap(std::map<uint16_t, double> map);
-void ScheduleUlRlcBufferReq(int rnti, int dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace); // Data in Byte
+void ScheduleUlRlcBufferReq(uint64_t rnti, uint64_t dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace); // Data in Byte
 void ScheduleDlRlcBufferReq(LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace); // Data in Byte
 void AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace);
-std::vector<int> GetNextAvailableSearchSpaceCandidate(int SearchSpaceStartFrame, int SearchSpaceStartSubframe, int R_max, int R);
-std::vector<int> GetDlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes);
-std::vector<int> GetUlSubframeRangeWithoutSystemResources(int overallSubframeNo, int numSubframes, int carrier);
-std::vector<int> CheckforNContiniousSubframesDl(std::vector<int> Subframes, int StartSubframe, uint N);
-std::vector<int> CheckforNContiniousSubframesUl(std::vector<int> Subframes, int StartSubframe, uint N, uint carrier);
-std::vector<int> GetNextAvailableNpdschCandidate(int endSubframeDci, int minSchedulingDelay, int numSubframes, int R_max);
-std::vector<std::pair<int,int>> GetAllPossibleSearchSpaceCandidates(std::vector<int> subframes, int R_max);
-std::vector<NbIotRrcSap::NpdcchMessage> Schedule(int frameNo, int subframeNo);
+std::vector<uint64_t> GetNextAvailableSearchSpaceCandidate(uint32_t rnti, uint64_t SearchSpaceStartFrame, uint64_t SearchSpaceStartSubframe, uint64_t R_max, uint64_t R);
+std::vector<uint64_t> GetDlSubframeRangeWithoutSystemResources(uint64_t overallSubframeNo, uint64_t numSubframes);
+std::vector<uint64_t> GetUlSubframeRangeWithoutSystemResources(uint64_t overallSubframeNo, uint64_t numSubframes, uint64_t carrier);
+std::vector<uint64_t> CheckforNContiniousSubframesDl(std::vector<uint64_t> Subframes, uint64_t StartSubframe, uint64_t N);
+std::vector<uint64_t> CheckforNContiniousSubframesUl(std::vector<uint64_t> Subframes, uint64_t StartSubframe, uint64_t N, uint64_t carrier);
+std::vector<uint64_t> GetNextAvailableNpdschCandidate(uint64_t endSubframeDci, uint64_t minSchedulingDelay, uint64_t numSubframes, uint64_t R_max);
+std::vector<std::pair<uint64_t,uint64_t>> GetAllPossibleSearchSpaceCandidates(std::vector<uint64_t> subframes, uint64_t R_max);
+std::vector<NbIotRrcSap::NpdcchMessage> Schedule(uint64_t frameNo, uint64_t subframeNo);
 std::vector<NbIotRrcSap::NpdcchMessage> ScheduleSearchSpace(NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NprachParametersNb ce);
-std::vector<std::pair<int, std::vector<int>>> GetNextAvailableNpuschCandidate(int endSubframeNpdsch, int minSchedulingDelay, int numSubframes, bool isHarq);
-std::pair<NbIotRrcSap::UlGrant, std::pair<int,std::vector<int>>> GetNextAvailableMsg3UlGrantCandidate(int endSubframeMsg2, int numSubframes);
+std::vector<std::pair<uint64_t, std::vector<uint64_t>>> GetNextAvailableNpuschCandidate(uint64_t endSubframeNpdsch, uint64_t minSchedulingDelay, uint64_t numSubframes, bool isHarq);
+std::pair<NbIotRrcSap::UlGrant, std::pair<uint64_t,std::vector<uint64_t>>> GetNextAvailableMsg3UlGrantCandidate(uint64_t endSubframeMsg2, uint64_t numSubframes);
 NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NpdcchMessage::DciType dci_type);
-std::vector<int8_t> m_downlink;
+std::vector<int> m_downlink;
 NbIotRrcSap::NprachParametersNb m_ce0;
 protected:
-  std::vector<std::vector<int8_t>> m_uplink;
+  std::vector<std::vector<int>> m_uplink;
   std::vector<NbIotRrcSap::NpdcchMessage> m_rars_to_schedule;
   std::vector<NbIotRrcSap::NpdcchMessage> m_NpdcchQueue;
   std::vector<NbIotRrcSap::NpdcchMessage> m_NpdschQueue;
@@ -91,16 +91,17 @@ protected:
   std::vector<NbIotRrcSap::DciN0::NpuschSchedulingDelay> m_DciTimeOffsetUplink;
   std::vector<NbIotRrcSap::HarqAckResource::TimeOffset> m_HarqTimeOffsets;
   std::vector<NbIotRrcSap::HarqAckResource::SubcarrierIndex> m_HarqSubcarrierIndex;
+  std::map<uint16_t, uint64_t> m_lastUlSubframe;
   NbIotRrcSap::NprachParametersNb m_ce1;
   NbIotRrcSap::NprachParametersNb m_ce2;
   std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, std::map<uint8_t,LteMacSapProvider::ReportBufferStatusParameters>>> m_RntiRlcDlBuffer;
-  std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, uint>> m_RntiRlcUlBuffer;
-  int m_frameNo;
+  std::map<NbIotRrcSap::NpdcchMessage::SearchSpaceType, std::map<uint16_t, uint64_t>> m_RntiRlcUlBuffer;
+  uint64_t m_frameNo;
   bool m_only15KhzSpacing = true;
-  int m_subframeNo;
+  uint64_t m_subframeNo;
   int m_currenthyperindex;
-  const int m_minSchedulingDelayDci2Downlink = 4;
-  const int m_minSchedulingDelayDci2Uplink = 8;
+  const uint64_t m_minSchedulingDelayDci2Downlink = 4;
+  const uint64_t m_minSchedulingDelayDci2Uplink = 8;
   bool m_log;
   std::map<uint16_t,double> m_rntiRsrpMap;
   NbiotAmc m_Amc;

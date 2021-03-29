@@ -223,7 +223,7 @@ private:
   */
   void DoReceiveLteControlMessage (Ptr<LteControlMessage> msg);
 
-  void DoNotifyAboutHarqOpportunity (std::vector<std::pair<int,std::vector<int>>> subframes);
+  void DoNotifyAboutHarqOpportunity (std::vector<std::pair<uint64_t,std::vector<uint64_t>>> subframes);
   
   // internal methods
   /// Randomly select and send RA preamble function
@@ -329,7 +329,7 @@ private:
   bool m_waitingForRaResponse; ///< waiting for RA response
 
   NbIotRrcSap::NprachParametersNb m_CeLevel;
-  std::vector<std::pair<int, std::vector<int>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
+  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
   bool m_simplifiedNprach;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
