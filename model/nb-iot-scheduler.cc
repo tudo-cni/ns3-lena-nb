@@ -554,7 +554,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                                   subframesNpusch = m_Amc.getMsg3Subframes (
                                       couplingloss, size_mac_pdu, 15000, 15);
                                   ulgrant = GetNextAvailableMsg3UlGrantCandidate (
-                                      *(npdschsubframes.end () - 1), subframesNpusch);
+                                      npdschsubframes.back(), subframesNpusch);
                                   if (ulgrant.first.success) // WE GOT AN UPLINK MSG3 CANDIDATE
                                     {
                                       scheduleSuccessful = true;
@@ -629,6 +629,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
 
                               it->dciRepetitionsubframes = test;
                               it->dciN1.npdschOpportunity = npdschsubframes;
+                              it->dciN1.dciSubframes = test;
                               scheduledMessages.push_back (*(it));
                               NS_BUILD_DEBUG (std::cout << "\n");
 
@@ -637,7 +638,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                             }
                           else
                             {
-                              continue;
+
                             }
                         }
                     }
@@ -647,7 +648,6 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                   std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (it->rnti,
                     m_frameNo - 1, m_subframeNo - 1, R_max,
                     NbIotRrcSap::ConvertDciN0Repetitions2int (it->dciN0));
-
                   if (test.size () > 0)
                     {
                       uint64_t subframesNpusch =
@@ -672,7 +672,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
 
                           it->dciRepetitionsubframes = test;
                           it->dciN0.npuschOpportunity = npuschsubframes;
-
+                          it->dciN0.dciSubframes = test;
                           m_lastUlSubframe[it->rnti] = npuschsubframes[0].second.back();
                           scheduledMessages.push_back (*(it));
                           NS_BUILD_DEBUG (std::cout << "\n");
@@ -729,7 +729,7 @@ NbiotScheduler::GetNextAvailableNpuschCandidate (uint64_t endSubframeNpdsch, uin
               NbIotRrcSap::DciN0 tmp;
               tmp.npuschSchedulingDelay = i;
               uint64_t candidate =
-                  endSubframeNpdsch + NbIotRrcSap::ConvertNpuschSchedulingDelay2int (tmp);
+                  endSubframeNpdsch + NbIotRrcSap::ConvertNpuschSchedulingDelay2int (tmp)+1; // Start on next frame aber minSchedulingDelay
               std::vector<uint64_t> subframesOccupied =
                   GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j);
               subframesOccupied =
@@ -752,7 +752,7 @@ NbiotScheduler::GetNextAvailableMsg3UlGrantCandidate (uint64_t endSubframeMsg2, 
       for (size_t j = 0; j < m_uplink.size (); ++j)
         {
           uint64_t candidate =
-              endSubframeMsg2 + NbIotRrcSap::UlGrant::ConvertUlGrantSchedulingDelay2int (i);
+              endSubframeMsg2 + NbIotRrcSap::UlGrant::ConvertUlGrantSchedulingDelay2int (i)+1; // Start one subframe after delay
           std::vector<uint64_t> subframesOccupied =
               GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j);
           subframesOccupied =
@@ -779,7 +779,10 @@ NbiotScheduler::GetNextAvailableNpdschCandidate (uint64_t endSubframeDci, uint64
                                                  uint64_t numSubframes, uint64_t R_max)
 {
 
-  uint64_t npdschCandidate = endSubframeDci + minSchedulingDelay;
+  uint64_t npdschCandidate = endSubframeDci + minSchedulingDelay + 1; // Start on the next Subframe of afer minSchedulingDelay
+                                                                      // |0|1|2|3|4|5|6|7|8|9|10|
+                                                                      //     |^  |^      |^     |
+                                                                      //     |DCI|Delay  |NPDSCH|
   if (R_max < 128)
     {
       for (auto &i : m_DciTimeOffsetRmaxSmall)
@@ -821,7 +824,7 @@ std::vector<uint64_t>
 NbiotScheduler::GetDlSubframeRangeWithoutSystemResources (uint64_t overallSubframeNo, uint64_t numSubframes)
 {
   std::vector<uint64_t> subframeIndexes;
-  size_t i = 0;
+  size_t i = 0; // Starting on the given Subframe
   m_currenthyperindex = 1;
   while (numSubframes > 0)
     {

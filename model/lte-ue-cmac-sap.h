@@ -26,6 +26,7 @@
 #include <ns3/eps-bearer.h>
 #include <ns3/lte-common.h>
 #include "nb-iot-rrc-sap.h"
+#include "nb-iot-energy.h"
 
 namespace ns3 {
 
@@ -135,6 +136,12 @@ public:
    */
   virtual void SetImsi (uint64_t imsi) = 0;
 
+  /**
+   * \brief A method call by UE RRC to communicate the IMSI to the UE MAC
+   * \param imsi the IMSI of the UE
+   */
+  virtual void NotifyEdrx() = 0;
+  virtual void NotifyPsm() = 0;
 };
 
 
@@ -168,6 +175,10 @@ public:
    * 
    */
   virtual void NotifyRandomAccessFailed () = 0;
+
+  virtual void NotifyEnergyState(NbiotEnergyModel::PowerState state)= 0;
+
+  virtual NbiotEnergyModel::PowerState GetEnergyState() = 0;
 
 };
 

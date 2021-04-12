@@ -1250,6 +1250,8 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
 //       ns3::LteUePhy*, short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool
 
           SetSubChannelsForReception (std::vector<int>({0}));
+
+          m_uePhySapUser->ReceiveLteControlMessage (msg);
         }
       else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
         {

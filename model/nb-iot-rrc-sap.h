@@ -597,6 +597,7 @@ class NbIotRrcSap{
             // Parameters to reduce simulation complexity
             std::vector<uint64_t> npdschOpportunity;
             std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
+            std::vector<uint64_t> dciSubframes;
         };
         struct DciN0{
             bool format = 0;           
@@ -660,6 +661,7 @@ class NbIotRrcSap{
             uint32_t tbs;
 
             std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
+            std::vector<uint64_t> dciSubframes;
         };
 
         struct UlGrant{

@@ -37,6 +37,7 @@
 #include <ns3/traced-callback.h>
 #include "ns3/component-carrier-ue.h"
 #include <ns3/lte-ue-ccm-rrc-sap.h>
+#include "nb-iot-energy.h"
 #include <vector>
 
 #include <map>
@@ -1389,6 +1390,7 @@ private:
   // NBIOT SPECIFIC
   // Temporary Logging method for successful random access
   void LogRA(bool success, Time timetillconnection);
+  void LogDataTransmission(Time timetillconnection);
   std::string m_logfile;
 
   uint64_t m_resumeId;
@@ -1405,9 +1407,16 @@ public:
   /** 
    * The number of component carriers.
    */
+  void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
+
+  NbiotEnergyModel::PowerState DoGetEnergyState();
+
   uint16_t m_numberOfComponentCarriers;
   void SetLogFile(std::string filename);
   Time m_connectStartTime;
+  Time m_dataSendTime;
+
+  NbiotEnergyModel m_energyModel;
 
 }; // end of class LteUeRrc
 

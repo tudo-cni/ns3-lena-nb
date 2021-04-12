@@ -70,6 +70,8 @@ public:
   virtual void Reset ();
   virtual void NotifyConnectionSuccessful ();
   virtual void SetImsi (uint64_t imsi);
+  virtual void NotifyEdrx();
+  virtual void NotifyPsm();
 
 private:
   LteUeMac *m_mac; ///< the UE MAC
@@ -144,6 +146,18 @@ UeMemberLteUeCmacSapProvider::SetImsi (uint64_t imsi)
 {
   m_mac->DoSetImsi (imsi);
 }
+
+void
+UeMemberLteUeCmacSapProvider::NotifyEdrx()
+{
+  m_mac->DoNotifyEdrx();
+}
+void
+UeMemberLteUeCmacSapProvider::NotifyPsm()
+{
+  m_mac->DoNotifyPsm();
+}
+
 
 /// UeMemberLteMacSapProvider class
 class UeMemberLteMacSapProvider : public LteMacSapProvider
@@ -275,7 +289,9 @@ LteUeMac::LteUeMac ()
       m_rnti (0),
       m_imsi (0),
       m_rachConfigured (false),
-      m_waitingForRaResponse (false)
+      m_waitingForRaResponse (false),
+      m_transmissionScheduled(false),
+      m_listenToSearchSpaces(false)
 
 {
   NS_LOG_FUNCTION (this);
@@ -357,6 +373,16 @@ LteUeMac::GetBufferSize(){
   }
   return buffersize;
 }
+uint64_t 
+LteUeMac::GetBufferSizeComplete(){
+  std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it;
+  uint64_t buffersize=0;
+  for(it = m_ulBsrReceived.begin(); it != m_ulBsrReceived.end(); ++it){
+        uint64_t data_per_lc =((*it).second.txQueueSize + (*it).second.retxQueueSize + (*it).second.statusPduSize);
+        buffersize += data_per_lc;
+  }
+  return buffersize;
+}
 void
 LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
 {
@@ -364,6 +390,7 @@ LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
   NS_ASSERT_MSG (m_rnti == params.rnti, "RNTI mismatch between RLC and MAC");
   LteRadioBearerTag tag (params.rnti, params.lcid, 0 /* UE works in SISO mode*/);
   uint64_t bsr =0;
+  //DoSetTransmissionScheduled(false);
   bsr = GetBufferSize();
   if(bsr > 0){
 
@@ -473,7 +500,33 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
   // assume that there is no Random Access Preambles group B
   m_raPreambleId = m_raPreambleUniformVariable->GetInteger (0, NbIotRrcSap::ConvertNprachNumSubcarriers2int (m_CeLevel) - 1);
   bool contention = true;
-  SendRaPreambleNb (contention);
+
+  // NPRACH WINDOW STARTS at framenumber mod (NPRACH_PERIOD/10) = 0 (A Tutorial on NB-IoT Physical Layer Design, Mathhieu Kanj, et al.)
+  //uint32_t currentsubframe = (m_frameNo - 1)*10 +(m_subframeNo-1);
+  uint32_t currentsubframe = Simulator::Now().GetMilliSeconds();
+  uint16_t window_condition = ( currentsubframe/10 - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10);
+  uint32_t lastPeriodStart = (currentsubframe/10 - 1) - window_condition;
+  uint32_t startSubframeNprachOccasion = lastPeriodStart*10 + NbIotRrcSap::ConvertNprachStartTime2int(m_CeLevel);
+  if (startSubframeNprachOccasion != currentsubframe)
+    {
+      uint16_t subframesToWait = 0;
+      if(currentsubframe < startSubframeNprachOccasion){
+        subframesToWait = startSubframeNprachOccasion-currentsubframe;
+      }else{
+        subframesToWait = (NbIotRrcSap::ConvertNprachPeriodicity2int(m_CeLevel) - (currentsubframe % NbIotRrcSap::ConvertNprachPeriodicity2int(m_CeLevel)))+NbIotRrcSap::ConvertNprachStartTime2int(m_CeLevel);
+      }
+
+      //uint16_t frames_to_wait = (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) - window_condition*10) + (10-(m_subframeNo-1))%10;
+      std::cout << m_frameNo*10+m_subframeNo << std::endl;
+      m_logging.push_back(currentsubframe+subframesToWait);
+      std::cout  << "Frames to wait:" << subframesToWait << std::endl;
+      Simulator::Schedule (MilliSeconds (subframesToWait), &LteUeMac::SendRaPreambleNb, this,
+                           contention);
+    }
+  else{
+    SendRaPreambleNb(contention);
+  }
+
 }
 void
 LteUeMac::SendRaPreamble (bool contention)
@@ -502,19 +555,6 @@ LteUeMac::SendRaPreambleNb (bool contention)
 {
   NS_LOG_FUNCTION (this << (uint32_t) m_raPreambleId << contention);
 
-
-  // NPRACH WINDOW STARTS at framenumber mod (NPRACH_PERIOD/10) = 0 (A Tutorial on NB-IoT Physical Layer Design, Mathhieu Kanj, et al.)
-  uint16_t window_condition = (m_frameNo - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10);
-  if (window_condition != 0 || ((m_subframeNo-1) != 0))
-    {
-      uint16_t frames_to_wait = (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) - window_condition*10) + (10-(m_subframeNo-1))%10;
-      std::cout << m_frameNo*10+m_subframeNo << std::endl;
-      std::cout  << "Frames to wait:" << frames_to_wait << std::endl;
-      Simulator::Schedule (MilliSeconds (frames_to_wait), &LteUeMac::SendRaPreambleNb, this,
-                           contention);
-      return;
-    }
-
   NS_ASSERT (m_frameNo > 0); // sanity check for subframe starting at 1
 
   // ETSI 36.321 5.1.4
@@ -522,7 +562,6 @@ LteUeMac::SendRaPreambleNb (bool contention)
 
   m_radioResourceConfig.nprachConfig.nprachCpLength =
       NbIotRrcSap::NprachConfig::NprachCpLength::us266dot7;
-  int sendingTime = NbIotRrcSap::ConvertNprachStartTime2int (m_CeLevel);
   double ts = 1000.0 / (15000.0 * 2048.0);
   double preambleSymbolTime = 8192.0 * ts;
   double preambleGroupTimeNoCP = 5.0 * preambleSymbolTime;
@@ -530,9 +569,12 @@ LteUeMac::SendRaPreambleNb (bool contention)
       NbIotRrcSap::ConvertNprachCpLenght2double (m_radioResourceConfig.nprachConfig) +
       preambleGroupTimeNoCP;
   double preambleRepetition = 4.0 * preambleGroupTime;
-  double time = sendingTime + NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int (m_CeLevel) *
+  double time = NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int (m_CeLevel) *
                                   preambleRepetition;
-
+  
+  m_cmacSapUser->NotifyEnergyState(NbiotEnergyModel::PowerState::RRC_CONNECTED_SENDING_NPRACH);
+  //Schedule EnergyStateChange on the next subframe after transmission
+  Simulator::Schedule (MilliSeconds (time+1), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
   Simulator::Schedule (MilliSeconds (time), &LteUePhySapProvider::SendNprachPreamble,
                        m_uePhySapProvider, m_raPreambleId, m_raRnti,
                        NbIotRrcSap::ConvertNprachSubcarrierOffset2int (m_CeLevel));
@@ -567,6 +609,7 @@ LteUeMac::SendRaPreambleNb (bool contention)
   //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
   std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time << std::endl;
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
+  m_listenToSearchSpaces = true;
   m_noRaResponseReceivedEvent =
       Simulator::Schedule (raWindowEnd, &LteUeMac::RaResponseTimeoutNb, this, contention);
 }
@@ -667,8 +710,17 @@ LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
       txOpParams.componentCarrierId = m_componentCarrierId;
       txOpParams.rnti = m_rnti;
       txOpParams.lcid = lc0Lcid;
-      int subframes = *(raResponse.ulGrant.subframes.second.end () - 1) -
+      int subframes = raResponse.ulGrant.subframes.second.back() -
                       (10 * (m_frameNo - 1) + m_subframeNo - 1);
+
+      uint32_t subframesTillNpusch = raResponse.ulGrant.subframes.second.front() - (10*(m_frameNo-1)+m_subframeNo-1);
+
+      m_transmissionScheduled = true;
+      Simulator::Schedule(MilliSeconds(subframesTillNpusch), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_SENDING_NPUSCH);
+
+      //EnergyStateChange on the next Subframe after Transmission Completed
+      Simulator::Schedule(MilliSeconds(subframes+1), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
+
       Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
                            lc0InfoIt->second.macSapUser, txOpParams);
       lc0BsrIt->second.txQueueSize = 0;
@@ -899,14 +951,17 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
           // NB-IOT Specific Send HARQ at advertised Subframe
           if (m_nextPossibleHarqOpportunity.size () > 0)
             {
-              int currentsubframe = 10 * (m_frameNo - 1) + (m_subframeNo - 1);
-              int subframestowait =
-                  *(m_nextPossibleHarqOpportunity[0].second.end () - 1) - currentsubframe;
+              uint32_t currentsubframe = 10 * (m_frameNo - 1) + (m_subframeNo - 1);
+              uint32_t subframestillHarqF2 = m_nextPossibleHarqOpportunity[0].second.front()- currentsubframe;
+              uint32_t subframestowait = m_nextPossibleHarqOpportunity[0].second.back() - currentsubframe;
               NS_BUILD_DEBUG (std::cout << "Sending HARQ Response at "
                                         << currentsubframe + subframestowait << std::endl);
+
               Simulator::Schedule (MilliSeconds (subframestowait),
                                    &LteUePhySapProvider::SendHarqAckResponse, m_uePhySapProvider,
                                    true);
+              Simulator::Schedule(MilliSeconds(subframestillHarqF2),&LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_SENDING_NPUSCH_F2);
+              Simulator::Schedule(MilliSeconds(subframestowait+1),&LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
               m_nextPossibleHarqOpportunity.clear();
               NS_BUILD_DEBUG (std::cout << m_rnti << " Got to MSG4-HARQ \n");
             }
@@ -916,6 +971,10 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
           NS_LOG_WARN ("received packet with unknown lcid " << (uint32_t) tag.GetLcid ());
         }
     }
+}
+void 
+LteUeMac::DoSetTransmissionScheduled(bool scheduled){
+  m_transmissionScheduled = scheduled;
 }
 
 void
@@ -1175,41 +1234,48 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
             }
         }
     }
+  else if (msg->GetMessageType () == LteControlMessage::DL_DCI_NB){
+      Ptr<DlDciN1NbiotControlMessage> msg2 = DynamicCast<DlDciN1NbiotControlMessage> (msg);
+      NbIotRrcSap::DciN1 dci = msg2->GetDci ();
+      //Handle Energy State Dci Reception
+      m_cmacSapUser->NotifyEnergyState(NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
+
+      uint32_t subframesTillNpdschBegin = dci.npdschOpportunity.front() - (10*(m_frameNo-1)+m_subframeNo-1);
+      uint32_t subframesTillNpdschEnd = dci.npdschOpportunity.back() - (10 * (m_frameNo - 1) + m_subframeNo - 1);
+      m_transmissionScheduled = true;
+      Simulator::Schedule(MilliSeconds(subframesTillNpdschBegin), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_RECEIVING_NPDSCH);
+      Simulator::Schedule(MilliSeconds(subframesTillNpdschEnd+1), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
+
+      // Liberg p. 286 "After the device completes its NPUSCH Format 2 transmission, it is not required to monitor NPDCCH search space for 3 ms."
+      if (m_nextPossibleHarqOpportunity.size() > 0){
+        uint32_t subframesTransmissionEnd = m_nextPossibleHarqOpportunity[0].second.back() - (10*(m_frameNo-1)+m_subframeNo-1);
+        Simulator::Schedule(MilliSeconds(subframesTransmissionEnd+3),&LteUeMac::DoSetTransmissionScheduled, this,false); // Transmission done, ready to listen to new NPDCCH
+      }else{
+        Simulator::Schedule(MilliSeconds(subframesTillNpdschEnd+3), &LteUeMac::DoSetTransmissionScheduled, this, false);
+      }
+
+
+  }
   else if (msg->GetMessageType () == LteControlMessage::UL_DCI_NB)
     {
-      //Ptr<UlDciN0NbiotControlMessage> dci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
-      //const uint8_t lc0Lcid = 1;
-      //std::map<uint8_t, LcInfo>::iterator lc0InfoIt = m_lcInfoMap.find (lc0Lcid);
-      //NS_ASSERT (lc0InfoIt != m_lcInfoMap.end ());
-      //std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator lc0BsrIt =
-      //    m_ulBsrReceived.find (lc0Lcid);
-      ////if ((lc0BsrIt != m_ulBsrReceived.end ()) && (lc0BsrIt->second.txQueueSize > 0))
-      //  
-      //    // NS_ASSERT_MSG (raResponse.m_grant.m_tbSize > lc0BsrIt->second.txQueueSize,
-      //    //               "segmentation of Message 3 is not allowed");
-      //    // this function can be called only from primary carrier
-      //    if (m_componentCarrierId > 0)
-      //      {
-      //        NS_FATAL_ERROR ("Function called on wrong componentCarrier");
-      //      }
-      //    LteMacSapUser::TxOpportunityParameters txOpParams;
-      //    txOpParams.bytes = dci->GetDci().tbs/8;
-      //    txOpParams.layer = 0;
-      //    txOpParams.harqId = 0;
-      //    txOpParams.componentCarrierId = m_componentCarrierId;
-      //    txOpParams.rnti = m_rnti;
-      //    txOpParams.lcid = lc0Lcid;
-      //    int subframes = *(dci->GetDci().npuschOpportunity[0].second.end () - 1) -
-      //                    (10 * (m_frameNo - 1) + m_subframeNo - 1);
-      //    Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
-      //                        lc0InfoIt->second.macSapUser, txOpParams);
-      //    //lc0InfoIt->second.macSapUser->NotifyTxOpportunity(txOpParams);
-      //    lc0BsrIt->second.txQueueSize = 0;
       Ptr<UlDciN0NbiotControlMessage> msg2 = DynamicCast<UlDciN0NbiotControlMessage> (msg);
       NbIotRrcSap::DciN0 dci = msg2->GetDci ();
 
-      int subframes = *(dci.npuschOpportunity[0].second.end () - 1) -
+      m_cmacSapUser->NotifyEnergyState(NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
+
+      uint32_t subframesTillNpusch = dci.npuschOpportunity[0].second.front() - (10*(m_frameNo-1)+m_subframeNo-1);
+      uint32_t subframes = *(dci.npuschOpportunity[0].second.end () - 1) -
           (10 * (m_frameNo - 1) + m_subframeNo - 1);
+
+      m_transmissionScheduled = true;
+      Simulator::Schedule(MilliSeconds(subframesTillNpusch), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_SENDING_NPUSCH);
+      Simulator::Schedule(MilliSeconds(subframes+1), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
+
+
+      // Liberg p. 283 "After the device completes its NPUSCH transmission, there is at least a 3-ms gap to allow the device to switch from transmission mode to reception mode and be ready for monitoring the next NPDCCH search space candidate."
+      uint32_t subframesTransmissionEnd = dci.npuschOpportunity[0].second.back() - (10*(m_frameNo-1)+m_subframeNo-1);
+      Simulator::Schedule(MilliSeconds(subframesTransmissionEnd+3),&LteUeMac::DoSetTransmissionScheduled, this,false); // Transmission done, ready to listen to new NPDCCH
+
       if (dci.NDI)
         {
           // New transmission -> empty pkt buffer queue (for deleting eventual pkts not acked )
@@ -1458,6 +1524,53 @@ LteUeMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
   m_frameNo = frameNo;
   m_subframeNo = subframeNo;
   RefreshHarqProcessesPacketBuffer ();
+  //
+  if(m_edrx && GetBufferSizeComplete() == 0 && !m_transmissionScheduled){
+    m_listenToSearchSpaces = false;
+    m_cmacSapUser->NotifyEnergyState(NbiotEnergyModel::PowerState::RRC_SUSPENDED_EDRX);
+    m_edrx = false;
+    // TODO Activate Paging Occasion listening
+  }
+  if(m_psm && GetBufferSizeComplete() == 0 && !m_transmissionScheduled){
+    m_listenToSearchSpaces = false;
+    m_cmacSapUser->NotifyEnergyState(NbiotEnergyModel::PowerState::RRC_SUSPENDED_PSM);
+    // TODO Activate Paging Occasion listening
+    m_psm = false;
+  }
+  if(m_listenToSearchSpaces){
+    // Energy Model Start Receiving on my SearchSpaceBegin
+    uint32_t searchSpacePeriodicity = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (m_CeLevel) *
+                                      NbIotRrcSap::ConvertNpdcchStartSfCssRa2double (m_CeLevel);
+    uint32_t searchSpaceConditionLeftSide =
+        (10 * (m_frameNo - 1) + (m_subframeNo - 1)) % searchSpacePeriodicity;
+    uint32_t searchSpaceConditionRightSide =
+        NbIotRrcSap::ConvertNpdcchOffsetRa2double (m_CeLevel) * searchSpacePeriodicity;
+
+    if (searchSpaceConditionLeftSide == searchSpaceConditionRightSide) 
+      {
+        m_inSearchSpace=true;
+        m_subframesInSearchSpace = 0;
+      }
+    if (m_inSearchSpace){ 
+      if(!m_transmissionScheduled && m_cmacSapUser->GetEnergyState() == NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE){
+        // We just moved from another state into IDLE
+        // According to Liberg p.286 we still have to monitor the rest of the NPDCCH
+        // Offset like the 3ms after NPUSCH F2 schould be handled by the m_transmissionScheduled flag
+        m_cmacSapUser->NotifyEnergyState(NbiotEnergyModel::PowerState::RRC_CONNECTED_RECEIVING_NPDCCH);
+      }
+      if (((m_subframeNo-1) != 0) && ((m_subframeNo-1) != 5) && !((m_subframeNo-1) == 9 && ((m_frameNo-1) % 2) == 1)) // Current Subframe is not NPBCH, NPSS and NSSS, and SI #TODO add SI
+        {
+          m_subframesInSearchSpace++; 
+        }
+      if(m_subframesInSearchSpace == NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (m_CeLevel)){
+        m_inSearchSpace = false;
+        m_subframesInSearchSpace = 0;
+        if(m_cmacSapUser->GetEnergyState() == NbiotEnergyModel::PowerState::RRC_CONNECTED_RECEIVING_NPDCCH){
+          m_cmacSapUser->NotifyEnergyState(NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE); // Device listened to the whole SearchSpace without Dci scheduled
+        }
+      }
+    }
+  }
   if ((Simulator::Now () >= m_bsrLast + m_bsrPeriodicity) && (m_freshUlBsr == true))
     {
       if (m_componentCarrierId == 0)
@@ -1478,5 +1591,13 @@ LteUeMac::AssignStreams (int64_t stream)
   m_raPreambleUniformVariable->SetStream (stream);
   return 1;
 }
+void 
+LteUeMac::DoNotifyEdrx(){
+  m_edrx = true;
+}
 
+void 
+LteUeMac::DoNotifyPsm(){
+  m_psm = true;
+}
 } // namespace ns3

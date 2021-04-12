@@ -273,7 +273,12 @@ private:
   void RefreshHarqProcessesPacketBuffer (void);
 
   uint64_t GetBufferSize();
+  uint64_t GetBufferSizeComplete();
 
+  void DoSetTransmissionScheduled(bool scheduled);
+
+  void DoNotifyEdrx();
+  void DoNotifyPsm();
   /// component carrier Id --> used to address sap
   uint8_t m_componentCarrierId;
 
@@ -331,6 +336,13 @@ private:
   NbIotRrcSap::NprachParametersNb m_CeLevel;
   std::vector<std::pair<uint64_t, std::vector<uint64_t>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
   bool m_simplifiedNprach;
+  bool m_inSearchSpace;
+  bool m_transmissionScheduled;
+  bool m_listenToSearchSpaces;
+  bool m_edrx;
+  bool m_psm;
+  uint32_t m_subframesInSearchSpace;
+  std::vector<uint32_t> m_logging;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
    * Exporting IMSI, contention flag, preamble transmission counter

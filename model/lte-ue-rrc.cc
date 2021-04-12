@@ -64,6 +64,8 @@ public:
   virtual void SetTemporaryCellRnti (uint16_t rnti);
   virtual void NotifyRandomAccessSuccessful ();
   virtual void NotifyRandomAccessFailed ();
+  virtual void NotifyEnergyState(NbiotEnergyModel::PowerState state);
+  virtual NbiotEnergyModel::PowerState GetEnergyState();
 
 private:
   LteUeRrc* m_rrc; ///< the RRC class
@@ -93,7 +95,17 @@ UeMemberLteUeCmacSapUser::NotifyRandomAccessFailed ()
   m_rrc->DoNotifyRandomAccessFailed ();
 }
 
+void
+UeMemberLteUeCmacSapUser::NotifyEnergyState(NbiotEnergyModel::PowerState state)
+{
+  m_rrc->DoNotifyEnergyState(state);
+}
 
+NbiotEnergyModel::PowerState
+UeMemberLteUeCmacSapUser::GetEnergyState()
+{
+  return m_rrc->DoGetEnergyState();
+}
 
 
 
@@ -158,7 +170,8 @@ LteUeRrc::LteUeRrc ()
     m_connEstFailCount (0),
     m_t3412(MilliSeconds(100000)),
     m_t3324(MilliSeconds(3500)),
-    m_numberOfComponentCarriers (MIN_NO_CC)
+    m_numberOfComponentCarriers (MIN_NO_CC),
+    m_energyModel(NbiotEnergyModel(BG96()))
 {
   NS_LOG_FUNCTION (this);
   m_cphySapUser.push_back (new MemberLteUeCphySapUser<LteUeRrc> (this));
@@ -604,6 +617,13 @@ void LteUeRrc::LogRA(bool success, Time timetillconnection){
         logfile.close();
 }
 
+void LteUeRrc::LogDataTransmission(Time timetillconnection){
+        std::ofstream logfile;
+        logfile.open(m_logfile, std::ios_base::app);
+        logfile << timetillconnection.GetMilliSeconds() << "\n";
+        logfile.close();
+}
+
 void LteUeRrc::SetLogFile(std::string filename){
   m_logfile = filename;
 }
@@ -613,7 +633,7 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
   NS_LOG_FUNCTION (this << packet);
 
   uint8_t drbid = Bid2Drbid (bid);
-
+  m_dataSendTime = Simulator::Now();
   if (drbid != 0)
     {
   std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.find (drbid);
@@ -670,6 +690,7 @@ LteUeRrc::DoDisconnect ()
 void
 LteUeRrc::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params)
 {
+  LogDataTransmission(Simulator::Now()-m_dataSendTime);
   NS_LOG_FUNCTION (this);
   m_asSapUser->RecvData (params.pdcpSdu);
 }
@@ -1437,6 +1458,7 @@ LteUeRrc::DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg)
     else if(m_enablePSM){
       //Start PSM Timer
       SwitchToState(IDLE_SUSPEND_PSM);
+      
     }
     return;
 
@@ -3560,14 +3582,30 @@ LteUeRrc::SwitchToState (State newState)
     case CONNECTED_REESTABLISHING:
       break;
     case IDLE_SUSPEND_EDRX:
+      if(oldState != IDLE_SUSPEND_EDRX){
+        for (uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
+          {
+            m_cmacSapProvider.at(i)->NotifyEdrx(); // reset the MAC
+          }
+      }
       if(m_enablePSM){
         m_eDrxTimeout = Simulator::Schedule(m_t3324, &LteUeRrc::SwitchToState, this, IDLE_SUSPEND_PSM);
+        for (uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
+          {
+            m_cmacSapProvider.at(i)->NotifyEdrx(); // reset the MAC
+          }
       }else{
         m_eDrxTimeout = Simulator::Schedule(m_t3324, &LteUeRrc::SwitchToState, this, IDLE_SUSPEND_EDRX);
       }
       break;
     case IDLE_SUSPEND_PSM:
       // Move from eDRX to PSM
+      if(oldState != IDLE_SUSPEND_PSM){
+        for (uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
+          {
+            m_cmacSapProvider.at(i)->NotifyPsm(); // reset the MAC
+          }
+      }
       if(oldState == IDLE_SUSPEND_EDRX){
         m_psmTimeout = Simulator::Schedule(m_t3412-m_t3324, &LteUeRrc::SwitchToState, this, CONNECTED_TAU);
       }else{
@@ -3710,7 +3748,14 @@ LteUeRrc::ResetRlfParams ()
   m_cphySapProvider.at (0)->ResetRlfParams ();
 }
 
-
+void 
+LteUeRrc::DoNotifyEnergyState(NbiotEnergyModel::PowerState state){
+  m_energyModel.DoNotifyStateChange(state);
+}
+NbiotEnergyModel::PowerState
+LteUeRrc::DoGetEnergyState(){
+  return m_energyModel.DoGetState();
+}
 
 } // namespace ns3
 
