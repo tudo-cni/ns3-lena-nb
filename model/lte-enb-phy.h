@@ -221,6 +221,15 @@ public:
 
   /**
   * \brief Create the UL CQI feedback from SINR values perceived at
+  * the physical layer with the PUSCH signal received from eNB
+  * \param sinr SINR values vector
+  * \return UL CQI feedback in the format usable by an FF MAC scheduler
+  */
+  std::vector<double> CreateNpuschCqiReport (const SpectrumValue& sinr);
+
+
+  /**
+  * \brief Create the UL CQI feedback from SINR values perceived at
   * the physical layer with the SRS signal received from eNB
   * \param sinr SINR values vector
   * \return UL CQI feedback in the format usable by an FF MAC scheduler
@@ -281,6 +290,7 @@ public:
   // inherited from LtePhy
   virtual void GenerateCtrlCqiReport (const SpectrumValue& sinr);
   virtual void GenerateDataCqiReport (const SpectrumValue& sinr);
+  virtual void GenerateCqiReportNb (const SpectrumValue& sinr);
   virtual void ReportInterference (const SpectrumValue& interf);
   virtual void ReportRsReceivedPower (const SpectrumValue& power);
 
@@ -554,6 +564,7 @@ private:
   bool m_sib1NbPeriod; // No NB-IoT
   uint8_t m_mibNbRepetitionsCounter;
   uint8_t m_sib1NbRepetitions;
+  std::vector<int> m_controlmessagescount;
 }; // end of `class LteEnbPhy`
 
 

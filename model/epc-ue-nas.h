@@ -24,6 +24,7 @@
 
 #include <ns3/object.h>
 #include <ns3/lte-as-sap.h>
+#include <ns3/lte-ue-net-device.h>
 #include <ns3/epc-tft-classifier.h>
 
 namespace ns3 {
@@ -166,6 +167,8 @@ public:
     IDLE_REGISTERED,
     CONNECTING_TO_EPC,
     ACTIVE,
+    CONNECTING,
+    SUSPENDED,
     NUM_STATES
   };
 
@@ -182,7 +185,9 @@ public:
    */
   typedef void (* StateTracedCallback)
     (const State oldState, const State newState);
- 
+
+ void SetUeNetDevice(Ptr<LteUeNetDevice> dev);
+
 private:
 
   // LTE AS SAP methods
@@ -192,6 +197,12 @@ private:
   void DoNotifyConnectionFailed ();
   /// Notify connection released
   void DoNotifyConnectionReleased ();
+
+  void DoNotifyConnectionSuspended ();
+
+  void DoNotifyMessage4();
+
+  void DoNotifyDie();
   /**
    * Receive data
    * \param packet the packet
@@ -224,6 +235,8 @@ private:
   /// The UE NetDevice.
   Ptr<NetDevice> m_device;
 
+  Ptr<LteUeNetDevice> m_netdevice;
+
   /// The unique UE identifier.
   uint64_t m_imsi;
 
@@ -255,6 +268,8 @@ private:
    *
    */
   std::list<BearerToBeActivated> m_bearersToBeActivatedListForReconnection;
+
+  std::vector<std::pair<Ptr<Packet>, uint16_t>> m_packetBuffer;
 
 };
 

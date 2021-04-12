@@ -116,7 +116,11 @@ public:
    * \param ulcqi the UL-CQI (see FF MAC API 4.3.29)
    */
   virtual void UlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi) = 0;
-
+  /**
+   * \brief Returns to MAC level the UL-CQI evaluated
+   * \param ulcqi the UL-CQI (see FF MAC API 4.3.29)
+   */
+  virtual void UlCqiReportNb (std::vector<double> ulcqi) = 0;
   /**
    * Notify the HARQ on the UL tranmission status
    *

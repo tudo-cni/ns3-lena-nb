@@ -111,6 +111,12 @@ protected:
    *
    * \param txOpParams the LteMacSapUser::TxOpportunityParameters
    */
+  virtual void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
+  /**
+   * \brief Notify transmit opportunity.
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
   /**
    * \brief Receive PDU.
@@ -125,6 +131,16 @@ protected:
    * \param rnti the RNTI
    */
   virtual void DoRemoveUe (uint16_t rnti);
+  /**
+   * \brief Remove UE.
+   * \param rnti the RNTI
+   */
+  virtual void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
+   * \brief Remove UE.
+   * \param rnti the RNTI
+   */
+  virtual void DoResumeUe(uint16_t rnti, uint64_t resumeId);
   /**
    * \brief Release data radio bearer.
    * \param rnti the RNTI
@@ -162,6 +178,10 @@ protected:
 protected:
 
   std::map <uint8_t, double > m_ccPrbOccupancy;//!< The physical resource block occupancy per carrier.
+  std::map <uint64_t, std::map<uint8_t, LteMacSapUser*> > m_resumeUeAttached;//!< The map that contains the rnti, lcid, SAP of the RLC instance
+  std::map <uint64_t, std::map<uint8_t, LteEnbCmacSapProvider::LcInfo> > m_resumeRlcLcInstantiated; //!< This map contains logical channel configuration per flow Id (rnti, lcid).
+  std::map <uint64_t, uint8_t> m_resumeEnabledComponentCarrier; //!< This map tells for each RNTI the number of enabled component carriers.
+  std::map <uint64_t, uint8_t> m_resumeUeState; //!< Map of RRC states per UE (rnti, state), e.g. CONNECTED_NORMALLY
 
 }; // end of class NoOpComponentCarrierManager
 

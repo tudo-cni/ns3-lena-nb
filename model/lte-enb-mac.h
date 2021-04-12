@@ -231,6 +231,16 @@ private:
   */
   void DoRemoveUe (uint16_t rnti);
   /**
+  * \brief Remove UE function
+  * \param rnti the RNTI
+  */
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
+  * \brief Remove UE function
+  * \param rnti the RNTI
+  */
+  void DoResumeUe(uint16_t rnti, uint64_t resumeId);
+  /**
   * \brief Add LC function
   * \param lcinfo the LC info
   * \param msu the LTE MAC SAP user
@@ -281,7 +291,6 @@ private:
   */
   void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
 
-  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
 
   // forwarded from FfMacCchedSapUser
@@ -340,22 +349,12 @@ private:
   * \param subframeNo subframe number
   */
   void DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo);
-  /**
-  * \brief Subrame Indication function
-  * \param frameNo frame number
-  * \param subframeNo subframe number
-  */
-  void DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo);
-  /**
+    /**
   * \brief Receive RACH Preamble function
   * \param prachId PRACH ID number
   */
   void DoReceiveRachPreamble (uint8_t prachId);
-  /**
-  * \brief Receive RACH Preamble function
-  * \param prachId PRACH ID number
-  */
-  void DoReceiveNprachPreamble (uint8_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
+  
   // forwarded by LteCcmMacSapProvider
   /**
    * Report MAC CE to scheduler
@@ -374,9 +373,6 @@ private:
     NS_UNUSED (rnti);
   }
   
-  void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
-  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce);
-  void VerySimpleNbiotDownlinkScheduler();
 public:
   /**
    * legacy public for use the Phy callback
@@ -398,6 +394,7 @@ private:
 
   /// RNTI, LC ID, SAP of the RLC instance
   std::map <uint16_t, std::map<uint8_t, LteMacSapUser*> > m_rlcAttached;
+  std::map <uint64_t, std::map<uint8_t, LteMacSapUser*> > m_resumeRlcAttached;
 
   std::vector <CqiListElement_s> m_dlCqiReceived; ///< DL-CQI received
   std::vector <FfMacSchedSapProvider::SchedUlCqiInfoReqParameters> m_ulCqiReceived; ///< UL-CQI received
@@ -434,7 +431,6 @@ private:
   LteCcmMacSapProvider* m_ccmMacSapProvider; ///< CCM MAC SAP provider
   LteCcmMacSapUser* m_ccmMacSapUser; ///< CCM MAC SAP user
 
-  NbiotScheduler* m_schedulerNb = nullptr;
   /**
    * frame number of current subframe indication
    */
@@ -492,14 +488,47 @@ private:
   std::map<uint8_t, NcRaPreambleInfo> m_allocatedNcRaPreambleMap;
  
   std::map<uint8_t, uint32_t> m_receivedRachPreambleCount; ///< received RACH preamble count
-  std::map<uint8_t, std::map<uint8_t, uint32_t>> m_receivedNprachPreambleCount;
 
   std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
-  std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
-  std::map<uint16_t, bool> m_rapIdCollisionMap; // Used when contention resolution is involved
-  bool m_dropPreambleCollision;
   /// component carrier Id used to address sap
   uint8_t m_componentCarrierId;
+  
+
+  /*
+  Nb-Iot Specific methods and members
+  */
+
+  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+
+  /**
+  * \brief Subrame Indication function
+  * \param frameNo frame number
+  * \param subframeNo subframe number
+  */
+  void DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo);
+
+  // Temp, might not be needed later
+  void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
+  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce);
+  void VerySimpleNbiotDownlinkScheduler();
+  /**
+  * \brief Receive RACH Preamble function
+  * \param prachId PRACH ID number
+  */
+  void DoReceiveNprachPreamble (uint8_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
+  void DoUlCqiReportNb (std::vector<double> cqi);
+
+  void DoNotifyConnectionSuccessful(uint16_t rnti);
+
+  void CheckForDataInactivity(uint16_t rnti);
+  void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
+
+  NbiotScheduler* m_schedulerNb = nullptr;
+  std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
+  std::map<uint32_t, NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel> m_RntiCeMap;
+  std::map<uint16_t, bool> m_rapIdCollisionMap; // Used when contention resolution is involved
+  std::map<uint8_t, std::map<uint8_t, uint32_t>> m_receivedNprachPreambleCount;
+  bool m_dropPreambleCollision;
   std::map<uint8_t, std::vector<NbIotRrcSap::DciN1>> m_DlDcis;
   NbIotRrcSap::SystemInformationBlockType2Nb m_sib2Nb;
   NbIotRrcSap::NprachParametersNb m_ce0Parameter;
@@ -515,8 +544,12 @@ private:
   uint8_t R;
   std::vector<Ptr<LteControlMessage>> m_hyperframe;
   std::map<uint16_t, bool> m_connectionSuccessful;
-
-};
+  std::map<uint16_t, double> m_ulRsrpReceivedNb;
+  std::vector<std::vector<double>> m_ulCqiReceivedNb;
+  std::map<uint16_t, uint8_t> m_ueStoredBSR;
+  std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
+  std::map<uint16_t, EventId> m_noDataIndicators;
+  };
 
 } // end namespace ns3
 

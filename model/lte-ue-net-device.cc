@@ -94,7 +94,7 @@ TypeId LteUeNetDevice::GetTypeId (void)
     .AddAttribute ("DlEarfcn",
                    "Downlink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (100),
+                   UintegerValue (6300),
                    MakeUintegerAccessor (&LteUeNetDevice::SetDlEarfcn,
                                          &LteUeNetDevice::GetDlEarfcn),
                    MakeUintegerChecker<uint32_t> (0, 262143))
@@ -116,6 +116,7 @@ TypeId LteUeNetDevice::GetTypeId (void)
 LteUeNetDevice::LteUeNetDevice (void)
   : m_isConstructed (false)
 {
+
   NS_LOG_FUNCTION (this);
 }
 
@@ -281,6 +282,7 @@ LteUeNetDevice::DoInitialize (void)
       it->second->GetMac ()->Initialize ();
     }
   m_rrc->Initialize ();
+  m_nas->SetUeNetDevice(this->GetObject<LteUeNetDevice>());
 }
 
 bool

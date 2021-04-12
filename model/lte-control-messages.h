@@ -163,7 +163,7 @@ class DlCqiLteControlMessage : public LteControlMessage
 public:
   DlCqiLteControlMessage (void);
   virtual ~DlCqiLteControlMessage (void);
-
+  double rsrp; // TEMPORARY
   /**
   * \brief add a DL-CQI feedback record into the message.
   * \param dlcqi the DL cqi feedback
@@ -676,6 +676,33 @@ private:
 
 };
 
+class UlDciN0NbiotControlMessage : public LteControlMessage
+{
+public:
+  UlDciN0NbiotControlMessage (void);
+  virtual ~UlDciN0NbiotControlMessage (void);
+
+  /**
+  * \brief add a DCI into the message
+  * \param dci the dci
+  */
+  void SetDci (NbIotRrcSap::DciN0 dci);
+  void SetRnti (uint32_t rnti);
+  void SetLc(uint8_t lc);
+
+  /**
+  * \brief Get dic information
+  * \return dci messages
+  */
+  NbIotRrcSap::DciN0 GetDci (void);
+  uint32_t GetRnti (void);
+  uint8_t GetLc();
+
+private:
+  NbIotRrcSap::DciN0 m_dci; ///< DCI
+  uint m_rnti;
+  uint8_t m_lc;
+};
 
 } // namespace ns3
 

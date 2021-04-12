@@ -72,6 +72,14 @@ public:
   void SetLtePdcpSapUser (LtePdcpSapUser * s);
 
   /**
+   * // Resume
+   *
+   * \param s the PDCP SAP user to be used by this LTE_PDCP
+   */
+  LtePdcpSapUser* GetLtePdcpSapUser ();
+
+
+  /**
    *
    *
    * \return the PDCP SAP Provider interface offered to the RRC by this LTE_PDCP

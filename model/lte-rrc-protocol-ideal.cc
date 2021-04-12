@@ -116,10 +116,35 @@ LteUeRrcProtocolIdeal::DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionReque
 }
 
 void 
+LteUeRrcProtocolIdeal::DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  //no ideal rrc for Nb-iot
+  // initialize the RNTI and get the EnbLteRrcSapProvider for the
+  // eNB we are currently attached to
+  //m_rnti = m_rrc->GetRnti ();
+  //SetEnbRrcSapProvider ();
+    
+  //Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+  //                     &LteEnbRrcSapProvider::RecvRrcConnectionRequest,
+  //                     m_enbRrcSapProvider,
+  //                     m_rnti, 
+  //                     msg);
+}
+void 
 LteUeRrcProtocolIdeal::DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg)
 {
   Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
 		       &LteEnbRrcSapProvider::RecvRrcConnectionSetupCompleted,
+                       m_enbRrcSapProvider,
+		       m_rnti, 
+		       msg);
+}
+
+void 
+LteUeRrcProtocolIdeal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteEnbRrcSapProvider::RecvRrcConnectionResumeCompletedNb,
                        m_enbRrcSapProvider,
 		       m_rnti, 
 		       msg);
@@ -303,6 +328,16 @@ LteEnbRrcProtocolIdeal::SetUeRrcSapProvider (uint16_t rnti, LteUeRrcSapProvider*
                                          << " could not find RNTI = " << rnti);
   it->second = p;
 }
+void 
+LteEnbRrcProtocolIdeal::DoResumeUe (uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+}
+void 
+LteEnbRrcProtocolIdeal::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+}
 
 void 
 LteEnbRrcProtocolIdeal::DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParameters params)
@@ -352,7 +387,12 @@ LteEnbRrcProtocolIdeal::DoRemoveUe (uint16_t rnti)
   NS_LOG_FUNCTION (this << rnti);
   m_enbRrcSapProviderMap.erase (rnti);
 }
-
+void 
+LteEnbRrcProtocolIdeal::DoRemoveUe (uint16_t rnti, bool resumed)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  m_enbRrcSapProviderMap.erase (rnti);
+}
 void 
 LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::SystemInformation msg)
 {
@@ -383,6 +423,7 @@ LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::Sys
         }
     } 
 }
+
 void 
 LteEnbRrcProtocolIdeal::DoSendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg)
 {
@@ -423,6 +464,14 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcC
 }
 
 void 
+LteEnbRrcProtocolIdeal::DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteUeRrcSapProvider::RecvRrcConnectionResumeNb,
+		       GetUeRrcSapProvider (rnti), 
+		       msg);
+}
+void 
 LteEnbRrcProtocolIdeal::DoSendRrcConnectionReconfiguration (uint16_t rnti, LteRrcSap::RrcConnectionReconfiguration msg)
 {
   Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
@@ -458,6 +507,14 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::Rr
 		       msg);
 }
 
+void 
+LteEnbRrcProtocolIdeal::DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteUeRrcSapProvider::RecvRrcConnectionReleaseNb,
+		       GetUeRrcSapProvider (rnti), 
+		       msg);
+}
 void 
 LteEnbRrcProtocolIdeal::DoSendRrcConnectionReject (uint16_t rnti, LteRrcSap::RrcConnectionReject msg)
 {

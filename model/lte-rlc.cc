@@ -147,6 +147,12 @@ LteRlc::SetLteRlcSapUser (LteRlcSapUser * s)
   m_rlcSapUser = s;
 }
 
+LteRlcSapUser*
+LteRlc::GetLteRlcSapUser ()
+{
+  NS_LOG_FUNCTION (this);
+  return m_rlcSapUser;
+}
 LteRlcSapProvider*
 LteRlc::GetLteRlcSapProvider ()
 {

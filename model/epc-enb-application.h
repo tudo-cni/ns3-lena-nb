@@ -151,6 +151,7 @@ public:
   {
     uint16_t  m_rnti; ///< RNTI
     uint8_t   m_bid; ///< Bid, the EPS Bearer IDentifier
+    uint64_t m_imsi; // For NB-IoT Connection Resume eDRX
 
   public:
     EpsFlowId_t ();
@@ -160,7 +161,7 @@ public:
      * \param a RNTI
      * \param b bid
      */
-    EpsFlowId_t (const uint16_t a, const uint8_t b);
+    EpsFlowId_t (const uint16_t a, const uint8_t b, const uint64_t c);
 
     /**
      * Comparison operator
@@ -200,7 +201,16 @@ private:
    * \param rnti the RNTI
    */
   void DoUeContextRelease (uint16_t rnti);
-  
+  /**
+   * UE Context Release function
+   * \param rnti the RNTI
+   */
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
+   * UE Context Release function
+   * \param rnti the RNTI
+   */
+  void DoResumeUe(uint16_t rnti, uint64_t resumeId);
   // S1-AP SAP ENB methods
   /**
    * Initial Context Setup Request 
@@ -234,7 +244,7 @@ private:
    * \param rnti maps to enbUeS1Id
    * \param bid the EPS Bearer IDentifier
    */
-  void SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid);
+  void SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid, uint64_t imsi);
 
 
   /** 
@@ -324,6 +334,7 @@ private:
    * 
    */
   std::map<uint64_t, uint16_t> m_imsiRntiMap;
+  std::map<uint64_t, std::map<uint8_t, uint32_t> > m_resumeRbidTeidMap; // NBIOT LIMITATION 2^32-1 Teid devices
 
   uint16_t m_cellId; ///< cell ID
 

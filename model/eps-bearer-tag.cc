@@ -58,7 +58,7 @@ EpsBearerTag::EpsBearerTag ()
     m_bid (0)
 {
 }
-EpsBearerTag::EpsBearerTag (uint16_t rnti, uint8_t bid)
+EpsBearerTag::EpsBearerTag (uint16_t rnti, uint8_t bid, uint64_t imsi)
   : m_rnti (rnti),
     m_bid (bid)
 {
@@ -76,10 +76,15 @@ EpsBearerTag::SetBid (uint8_t bid)
   m_bid = bid;
 }
 
+void
+EpsBearerTag::SetImsi(uint64_t imsi)
+{
+  m_imsi = imsi;
+}
 uint32_t
 EpsBearerTag::GetSerializedSize (void) const
 {
-  return 3;
+  return 11;
 }
 
 void
@@ -87,6 +92,7 @@ EpsBearerTag::Serialize (TagBuffer i) const
 {
   i.WriteU16 (m_rnti);
   i.WriteU8 (m_bid);
+  i.WriteU64(m_imsi);
 }
 
 void
@@ -94,6 +100,7 @@ EpsBearerTag::Deserialize (TagBuffer i)
 {
   m_rnti = (uint16_t) i.ReadU16 ();
   m_bid = (uint8_t) i.ReadU8 ();
+  m_imsi = (uint64_t) i.ReadU64 ();
 }
 
 uint16_t
@@ -107,7 +114,11 @@ EpsBearerTag::GetBid () const
 {
   return m_bid;
 }
-
+uint64_t
+EpsBearerTag::GetImsi () const
+{
+  return m_imsi;
+}
 void
 EpsBearerTag::Print (std::ostream &os) const
 {

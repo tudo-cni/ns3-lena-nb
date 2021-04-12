@@ -88,6 +88,8 @@ public:
    * \param rnti 
    */
   virtual void UeContextRelease (uint16_t rnti) = 0;
+  virtual void MoveUeToResume (uint16_t rnti, uint64_t resumeId) = 0;
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId) = 0;
     
 };
   
@@ -181,6 +183,8 @@ public:
 
   virtual void PathSwitchRequest (PathSwitchRequestParameters params);
   virtual void UeContextRelease (uint16_t rnti);
+  virtual void MoveUeToResume (uint16_t rnti, uint64_t resumeId);
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId);
 
 private:
   MemberEpcEnbS1SapProvider ();
@@ -222,7 +226,16 @@ void MemberEpcEnbS1SapProvider<C>::UeContextRelease (uint16_t rnti)
 {
   m_owner->DoUeContextRelease (rnti);
 }
-
+template <class C>
+void MemberEpcEnbS1SapProvider<C>::MoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoMoveUeToResume(rnti,resumeId);
+}
+template <class C>
+void MemberEpcEnbS1SapProvider<C>::ResumeUe (uint16_t rnti,uint64_t resumeId)
+{
+  m_owner->DoResumeUe(rnti, resumeId);
+}
 /**
  * Template for the implementation of the EpcEnbS1SapUser as a member
  * of an owner class of type C to which all methods are forwarded

@@ -135,7 +135,8 @@ def build(bld):
         'model/component-carrier-ue.cc',
         'model/component-carrier-enb.cc',
         'model/nb-iot-rrc-sap.cc',
-        'model/nb-iot-scheduler.cc'
+        'model/nb-iot-scheduler.cc',
+        'model/nb-iot-amc.cc'
         ]
 
     module_test = bld.create_ns3_module_test_library('lte')
@@ -336,7 +337,8 @@ def build(bld):
         'model/component-carrier-ue.h',
         'model/component-carrier-enb.h',
         'model/nb-iot-rrc-sap.h',
-        'model/nb-iot-scheduler.h'
+        'model/nb-iot-scheduler.h',
+        'model/nb-iot-amc.h'
         ]
 
     if (bld.env['ENABLE_EMU']):

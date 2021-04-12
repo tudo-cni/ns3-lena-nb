@@ -84,6 +84,20 @@ public:
   virtual void AddUe (uint16_t rnti, uint8_t state) = 0;
 
   /**
+   * \brief Add a new UE in the LteEnbComponentCarrierManager.
+   * \param rnti Radio Network Temporary Identity, an integer identifying the UE.
+   * \param state The current rrc state of the UE.
+   */
+  virtual void MoveUeToResume (uint16_t rnti, uint64_t resumeId) = 0;
+
+  /**
+   * \brief Add a new UE in the LteEnbComponentCarrierManager.
+   * \param rnti Radio Network Temporary Identity, an integer identifying the UE.
+   * \param state The current rrc state of the UE.
+   */
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId) = 0;
+
+  /**
    * \brief Add a new logical channel.
    * \param lcInfo - information about newly created logical channel
    * \param msu - pointer to corresponding rlc interface
@@ -235,6 +249,8 @@ public:
   // inherited from LteCcmRrcSapProvider
   virtual void ReportUeMeas (uint16_t rnti, LteRrcSap::MeasResults measResults);
   virtual void AddUe (uint16_t rnti, uint8_t state);
+  virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  virtual void ResumeUe(uint16_t rnti, uint64_t resumeId);
   virtual void AddLc (LteEnbCmacSapProvider::LcInfo lcInfo, LteMacSapUser* msu);
   virtual void RemoveUe (uint16_t rnti);
   virtual std::vector<LteCcmRrcSapProvider::LcsConfig> SetupDataRadioBearer (EpsBearer bearer, uint8_t bearerId, uint16_t rnti, uint8_t lcid, uint8_t lcGroup, LteMacSapUser *msu);
@@ -262,7 +278,16 @@ void MemberLteCcmRrcSapProvider<C>::AddUe (uint16_t rnti, uint8_t state)
 {
   m_owner->DoAddUe (rnti, state);
 }
-
+template <class C>
+void MemberLteCcmRrcSapProvider<C>::MoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoMoveUeToResume(rnti, resumeId);
+}
+template <class C>
+void MemberLteCcmRrcSapProvider<C>::ResumeUe(uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoResumeUe(rnti, resumeId);
+}
 template <class C>
 void MemberLteCcmRrcSapProvider<C>::AddLc (LteEnbCmacSapProvider::LcInfo lcInfo, LteMacSapUser* msu)
 {
@@ -358,7 +383,7 @@ template <class C>
 Ptr<UeManager>
 MemberLteCcmRrcSapUser<C>::GetUeManager (uint16_t rnti)
 {
-  return m_owner->GetUeManager (rnti);
+  return m_owner->GetUeManagerbyRnti (rnti);
 }
 
 template <class C>

@@ -44,6 +44,7 @@
 #include <ns3/pointer.h>
 #include <ns3/boolean.h>
 #include <ns3/lte-ue-power-control.h>
+#include <ns3/build-profile.h>
 
 namespace ns3 {
 
@@ -222,7 +223,7 @@ LteUePhy::GetTypeId (void)
     .AddConstructor<LteUePhy> ()
     .AddAttribute ("TxPower",
                    "Transmission power in dBm",
-                   DoubleValue (10.0),
+                   DoubleValue (20.0),
                    MakeDoubleAccessor (&LteUePhy::SetTxPower, 
                                        &LteUePhy::GetTxPower),
                    MakeDoubleChecker<double> ())
@@ -234,7 +235,8 @@ LteUePhy::GetTypeId (void)
                    " ideal receiver with the same overall gain and bandwidth when the receivers "
                    " are connected to sources at the standard noise temperature T0.\" "
                    "In this model, we consider T0 = 290K.",
-                   DoubleValue (9.0),
+                   //DoubleValue (9.0),
+                   DoubleValue (0.0),
                    MakeDoubleAccessor (&LteUePhy::SetNoiseFigure, 
                                        &LteUePhy::GetNoiseFigure),
                    MakeDoubleChecker<double> ())
@@ -606,6 +608,8 @@ LteUePhy::GenerateCqiRsrpRsrq (const SpectrumValue& sinr)
                        << " ms. Last reported at : " << m_p10CqiLast.GetMilliSeconds() << " ms");
           Ptr<LteUeNetDevice> thisDevice = GetDevice ()->GetObject<LteUeNetDevice> ();
           Ptr<DlCqiLteControlMessage> msg = CreateDlCqiFeedbackMessage (sinr);
+          // ONLY FOR NOW
+          msg->rsrp = DoGetRSRP();
           if (msg)
             {
               DoSendLteControlMessage (msg);
@@ -1246,6 +1250,8 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
 //       ns3::LteUePhy*, short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool
 
           SetSubChannelsForReception (std::vector<int>({0}));
+
+          m_uePhySapUser->ReceiveLteControlMessage (msg);
         }
       else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
         {
@@ -1263,7 +1269,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
                   else
                     {
 
-                      std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n";
+                      NS_BUILD_DEBUG(std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n");
                       NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
                       // set the uplink bandwidth according to the UL grant
                       //std::vector <int> ulRb;
@@ -1283,6 +1289,31 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
                       m_raRnti = 11;
                     }
                 }
+            }
+        }
+      else if (msg->GetMessageType () == LteControlMessage::UL_DCI_NB)
+        {
+          Ptr<UlDciN0NbiotControlMessage> dci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
+          if (dci->GetRnti() == m_rnti)
+            {
+              NS_BUILD_DEBUG(std::cout << "Received My NPUSCH Schedule at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n");
+              NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
+              // set the uplink bandwidth according to the UL grant
+              //std::vector <int> ulRb;
+              //for (int i = 0; i < it->rarPayload.m_grant.m_rbLen; i++)
+              //  {
+              //    ulRb.push_back (i + it->rarPayload.m_grant.m_rbStart);
+              //  }
+
+              //Simulator::Schedule() QueueSubChannelsForTransmission (std::vector<int>{0});
+              // pass the info to the MACo
+              int subframes = *(dci->GetDci().npuschOpportunity[0].second.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
+              int subcarrier =dci->GetDci().npuschOpportunity[0].first;
+              Simulator::Schedule (MilliSeconds(subframes), &LteUePhy::QueueSubChannelsForTransmission, this, std::vector<int>{subcarrier});
+              m_uePhySapUser->ReceiveLteControlMessage (msg);
+              // reset RACH variables with out of range values
+                    
+                
             }
         }
       else

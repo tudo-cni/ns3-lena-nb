@@ -120,6 +120,7 @@ LteFfrAlgorithm::SetDlBandwidth (uint16_t bw)
   NS_LOG_FUNCTION (this << bw);
   switch (bw)
     {
+    case 1:
     case 6:
     case 15:
     case 25:

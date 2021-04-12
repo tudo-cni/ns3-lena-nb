@@ -556,6 +556,9 @@ LteHelper::InstallSingleEnbDevice (Ptr<Node> n)
 
       Ptr<LteChunkProcessor> pData = Create<LteChunkProcessor> ();
       pData->AddCallback (MakeCallback (&LteEnbPhy::GenerateDataCqiReport, phy));
+
+      //Change for NB-Iot
+      //pData->AddCallback (MakeCallback (&LteEnbPhy::GenerateCqiReportNb, phy));
       pData->AddCallback (MakeCallback (&LteSpectrumPhy::UpdateSinrPerceived, ulPhy));
       ulPhy->AddDataSinrChunkProcessor (pData);   // for evaluating PUSCH UL-CQI
 
@@ -1220,7 +1223,7 @@ DrbActivator::ActivateDrb (uint64_t imsi, uint16_t cellId, uint16_t rnti)
       Ptr<LteEnbNetDevice> enbLteDevice = m_ueDevice->GetObject<LteUeNetDevice> ()->GetTargetEnb ();
       Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetObject<LteEnbNetDevice> ()->GetRrc ();
       NS_ASSERT (ueRrc->GetCellId () == enbLteDevice->GetCellId ());
-      Ptr<UeManager> ueManager = enbRrc->GetUeManager (rnti);
+      Ptr<UeManager> ueManager = enbRrc->GetUeManagerbyRnti (rnti);
       NS_ASSERT (ueManager->GetState () == UeManager::CONNECTED_NORMALLY
                  || ueManager->GetState () == UeManager::CONNECTION_RECONFIGURATION);
       EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters params;

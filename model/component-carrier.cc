@@ -45,21 +45,21 @@ TypeId ComponentCarrier::GetTypeId (void)
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("DlBandwidth",
                    "Downlink Transmission Bandwidth Configuration in number of Resource Blocks",
-                   UintegerValue (25),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&ComponentCarrier::SetDlBandwidth,
                                          &ComponentCarrier::GetDlBandwidth),
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("DlEarfcn",
                    "Downlink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (100),
+                   UintegerValue (6300),
                    MakeUintegerAccessor (&ComponentCarrier::SetDlEarfcn,
                                          &ComponentCarrier::GetDlEarfcn),
                    MakeUintegerChecker<uint32_t> (0, 262143))
     .AddAttribute ("UlEarfcn",
                    "Uplink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (18100),
+                   UintegerValue (24300),
                    MakeUintegerAccessor (&ComponentCarrier::SetUlEarfcn,
                                          &ComponentCarrier::GetUlEarfcn),
                    MakeUintegerChecker<uint32_t> (18000, 262143))
@@ -143,6 +143,7 @@ ComponentCarrier::SetDlBandwidth (uint16_t bw)
   NS_LOG_FUNCTION (this << bw);
   switch (bw)
     {
+    case 1:
     case 6:
     case 15:
     case 25:

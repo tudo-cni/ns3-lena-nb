@@ -100,11 +100,23 @@ private:
    */
   void DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg);
   /**
+   * Send RRC connection request function
+   *
+   * \param msg LteRrcSap::RrcConnectionRequest 
+   */
+  void DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+  /**
    * Send RRC connection setup completed function
    *
    * \param msg LteRrcSap::RrcConnectionSetupCompleted 
    */
   void DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg);
+  /**
+   * Send RRC connection setup completed function
+   *
+   * \param msg LteRrcSap::RrcConnectionSetupCompleted 
+   */
+  void DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
   /**
    * Send RRC connection reconfiguration completed function
    *
@@ -222,12 +234,34 @@ private:
    * \param params LteEnbRrcSapUser::SetupUeParameters 
    */
   void DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParameters params);
+
+  // methods forwarded from LteEnbRrcSapUser
+  /**
+   * Setup UE function
+   *
+   * \param rnti the RNTI
+   * \param params LteEnbRrcSapUser::SetupUeParameters 
+   */
+  void DoResumeUe (uint16_t rnti, uint64_t resumeId);
+  /**
+   * Setup UE function
+   *
+   * \param rnti the RNTI
+   * \param params LteEnbRrcSapUser::SetupUeParameters 
+   */
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
   /**
    * Remove UE function
    *
    * \param rnti the RNTI
    */
   void DoRemoveUe (uint16_t rnti);
+  /**
+   * Remove UE function
+   *
+   * \param rnti the RNTI
+   */
+  void DoRemoveUe (uint16_t rnti, bool resumed);
   /**
    * Send system information function
    *
@@ -256,6 +290,13 @@ private:
    */
   void DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcConnectionSetup msg);
   /**
+   * Send RRC connection setup function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionSetup
+   */
+  void DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
    * Send RRC connection reconfiguration function
    *
    * \param rnti the RNTI
@@ -283,6 +324,13 @@ private:
    * \param msg LteRrcSap::RrcConnectionRelease
    */
   void DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::RrcConnectionRelease msg);
+  /**
+   * Send RRC connection release function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionRelease
+   */
+  void DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg);
   /**
    * Send RRC connection reject function
    *

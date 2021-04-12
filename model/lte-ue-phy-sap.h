@@ -118,7 +118,7 @@ public:
    */
   virtual void ReceiveLteControlMessage (Ptr<LteControlMessage> msg) = 0;
 
-  virtual void NotifyAboutHarqOpportunity(std::vector<std::pair<int, std::vector<int>>> subframes) = 0;
+  virtual void NotifyAboutHarqOpportunity(std::vector<std::pair<uint64_t, std::vector<uint64_t>>> subframes) = 0;
 };
 
 

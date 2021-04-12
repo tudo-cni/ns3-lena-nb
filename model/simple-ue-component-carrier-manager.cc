@@ -52,6 +52,7 @@ public:
   virtual void TransmitPdu (LteMacSapProvider::TransmitPduParameters params);
   virtual void ReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
   virtual void ReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+  virtual void ReportNoTransmissionNb (uint16_t rnti,uint8_t lcid);
 
 private:
   SimpleUeComponentCarrierManager* m_mac; ///< the component carrier manager
@@ -78,6 +79,11 @@ void
 SimpleUeCcmMacSapProvider::ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
 {
   m_mac->DoReportBufferStatus (params);
+}
+void
+SimpleUeCcmMacSapProvider::ReportNoTransmissionNb(uint16_t rnti, uint8_t lcid)
+{
+  // For simplicity, not needed
 }
 ///////////////////////////////////////////////////////////
 // MAC SAP USER SAP forwarders

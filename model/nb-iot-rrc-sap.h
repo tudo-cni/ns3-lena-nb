@@ -311,6 +311,11 @@ class NbIotRrcSap{
         };
 
         struct NprachParametersNb{
+           enum class CoverageEnhancementLevel{
+               zero,
+               one,
+               two
+           } coverageEnhancementLevel;
            enum class NprachPeriodicity{
                ms40,
                ms80,
@@ -530,10 +535,19 @@ class NbIotRrcSap{
                 ms1024 // Only for R_max >= 128
             } npdcchTimeOffset;
             enum class DciRepetitions{
-                r1,
-                r2,
-                r4,
-                r8 // not sure about this value
+               r1,
+               r2,
+               r4,
+               r8,
+               r16,
+               r32,
+               r64,
+               r128,
+               r256,
+               r512,
+               r1024,
+               r2048,
+
             } dciRepetitions; 
             enum class NumNpdschSubframesPerRepetition{
                 s1,
@@ -578,10 +592,12 @@ class NbIotRrcSap{
                 twelve
             } mCS;
             bool NDI;
+            uint32_t tbs;
             HarqAckResource harqAckResource; 
             // Parameters to reduce simulation complexity
-            std::vector<int> npdschOpportunity;
-            std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
+            std::vector<uint64_t> npdschOpportunity;
+            std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
+            std::vector<uint64_t> dciSubframes;
         };
         struct DciN0{
             bool format = 0;           
@@ -593,10 +609,18 @@ class NbIotRrcSap{
                 ms64
             } npuschSchedulingDelay;
             enum class DciRepetitions{
-                r1,
-                r2,
-                r4,
-                r8 // not sure about this value
+               r1,
+               r2,
+               r4,
+               r8,
+               r16,
+               r32,
+               r64,
+               r128,
+               r256,
+               r512,
+               r1024,
+               r2048,
             } dciRepetitions; 
             enum class NumResourceUnits{
                 ru1,
@@ -634,6 +658,10 @@ class NbIotRrcSap{
             } mCS;
             bool redundandyVersion;
             bool NDI;
+            uint32_t tbs;
+
+            std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
+            std::vector<uint64_t> dciSubframes;
         };
 
         struct UlGrant{
@@ -667,7 +695,8 @@ class NbIotRrcSap{
             mcs2  // Number RUs = 1 | TBS = 88 bits 
         } mcsIndex;
         bool success;
-        std::pair<uint8_t, std::vector<int>> subframes;
+        std::pair<uint8_t, std::vector<uint64_t>> subframes;
+        uint64_t tbs_size;
         static uint8_t ConvertUlGrantSchedulingDelay2int (UlGrant::SchedulingDelay delay)
         {
             uint8_t res = 0;
@@ -725,13 +754,50 @@ class NbIotRrcSap{
         NbIotRrcSap::DciN1 dciN1;
         NbIotRrcSap::DciN0 dciN0;
         std::vector<Rar> rars;
-        std::vector<int> npdschOpportunity;
-        std::vector<std::pair<int,std::vector<int>>> npuschOpportunity;
-        std::vector<int> dciRepetitionsubframes;
-        int ranti;
-        int rnti;
-        int tbs; // in bit
+        std::vector<uint64_t> npdschOpportunity;
+        std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
+        std::vector<uint64_t> dciRepetitionsubframes;
+        uint64_t ranti;
+        uint64_t rnti;
+        uint64_t tbs; // in bit
         bool isRar;
+        uint64_t lcid;
+
+        };
+
+        struct RrcConnectionResumeRequestNb{
+            uint32_t resumeIdentity; // 40 bits
+            enum class EstablishmentCauseNb{
+                mtAcces,
+                moSignalling,
+                moData,
+                moExceptionData,
+                delayTolerantAccess,
+               // mtEdt // Not Release 13
+            } establishmentCauseNb;
+
+        };
+
+        struct RrcConnectionResumeNb{
+            uint8_t rrcTransactionIdentifier;
+            // rest is optional 
+            //critical extensions possible
+        };
+
+        struct RrcConnectionResumeCompleteNb{
+            uint8_t rrcTransactionIdentifier;
+
+        };
+
+        struct RrcConnectionReleaseNb{
+            uint8_t rrcTransactionIdentifier;
+            enum class ReleaseCauseNb{
+                loadBalancingTAUrequired, 
+                other, 
+                rrc_Suspend,
+                spare1
+            } releaseCauseNb;
+            uint64_t resumeIdentity;
 
         };
         static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)
@@ -1200,8 +1266,8 @@ class NbIotRrcSap{
              }
             return res;
         }
-        static uint8_t ConvertDciRepetitions2int (DciN1 dci){
-            uint8_t res = 0;
+        static uint16_t ConvertDciN1Repetitions2int (DciN1 dci){
+            uint16_t res = 0;
             switch(dci.dciRepetitions){
                 case DciN1::DciRepetitions::r1:
                     res = 1;
@@ -1213,7 +1279,31 @@ class NbIotRrcSap{
                     res = 4;
                     break;
                 case DciN1::DciRepetitions::r8:
-                    res = 4;
+                    res = 8;
+                    break;
+                case DciN1::DciRepetitions::r16:
+                    res = 16;
+                    break;
+                case DciN1::DciRepetitions::r32:
+                    res = 32;
+                    break;
+                case DciN1::DciRepetitions::r64:
+                    res = 64;
+                    break;
+                case DciN1::DciRepetitions::r128:
+                    res = 128;
+                    break;
+                case DciN1::DciRepetitions::r256:
+                    res = 256;
+                    break;
+                case DciN1::DciRepetitions::r512:
+                    res = 512;
+                    break;
+                case DciN1::DciRepetitions::r1024:
+                    res = 1024;
+                    break;
+                case DciN1::DciRepetitions::r2048:
+                    res = 2048;
                     break;
                 default:
                     break;
@@ -1309,7 +1399,170 @@ class NbIotRrcSap{
              }
             return res;
         }
+    static uint8_t ConvertRaResponseWindowSize2int(RachInfo rach){
+            uint8_t res = 0;
+            switch(rach.RaResponseWindowSize){
+                case RachInfo::RaResponseWindowSize::pp2:
+                    res = 2;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp3:
+                    res = 3;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp4:
+                    res = 4;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp5:
+                    res = 5;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp6:
+                    res = 6;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp7:
+                    res = 7;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp8:
+                    res = 8;
+                    break;
+                case RachInfo::RaResponseWindowSize::pp10:
+                    res = 10;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
 
+    static uint16_t ConvertDciN0Repetitions2int(DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.dciRepetitions){
+                case DciN0::DciRepetitions::r1:
+                    res = 1;
+                    break;
+                case DciN0::DciRepetitions::r2:
+                    res = 2;
+                    break;
+                case DciN0::DciRepetitions::r4:
+                    res = 4;
+                    break;
+                case DciN0::DciRepetitions::r8:
+                    res = 8;
+                    break;
+                case DciN0::DciRepetitions::r16:
+                    res = 16;
+                    break;
+                case DciN0::DciRepetitions::r32:
+                    res = 32;
+                    break;
+                case DciN0::DciRepetitions::r64:
+                    res = 64;
+                    break;
+                case DciN0::DciRepetitions::r128:
+                    res = 128;
+                    break;
+                case DciN0::DciRepetitions::r256:
+                    res = 256;
+                    break;
+                case DciN0::DciRepetitions::r512:
+                    res = 512;
+                    break;
+                case DciN0::DciRepetitions::r1024:
+                    res = 1024;
+                    break;
+                case DciN0::DciRepetitions::r2048:
+                    res = 2048;
+                    break;
+                default:
+                    break;
+
+             }
+            return res;
+        }
+        static uint16_t ConvertNpuschSchedulingDelay2int (DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.npuschSchedulingDelay){
+                case DciN0::NpuschSchedulingDelay::ms8:
+                    res = 8;
+                    break;
+                case DciN0::NpuschSchedulingDelay::ms16:
+                    res = 16;
+                    break;
+                case DciN0::NpuschSchedulingDelay::ms32:
+                    res = 32;
+                    break;
+                case DciN0::NpuschSchedulingDelay::ms64:
+                    res = 64;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNumResourceUnits2int(DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.numResourceUnits){
+                case DciN0::NumResourceUnits::ru1:
+                    res = 1;
+                    break;
+                case DciN0::NumResourceUnits::ru2:
+                    res = 2;
+                    break;
+                case DciN0::NumResourceUnits::ru3:
+                    res = 3;
+                    break;
+                case DciN0::NumResourceUnits::ru4:
+                    res = 4;
+                    break;
+                case DciN0::NumResourceUnits::ru5:
+                    res = 5;
+                    break;
+                case DciN0::NumResourceUnits::ru6:
+                    res = 6;
+                    break;
+                case DciN0::NumResourceUnits::ru8:
+                    res = 8;
+                    break;
+                case DciN0::NumResourceUnits::ru10:
+                    res = 10;
+                    break;
+                default:
+                    break;
+            }
+            return res;
+        }
+        static uint16_t ConvertNumNpuschRepetitions2int (DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.numNpuschRepetitions){
+                case DciN0::NumNpuschRepetitions::r1:
+                    res = 1;
+                    break;
+                case DciN0::NumNpuschRepetitions::r2:
+                    res = 2;
+                    break;
+                case DciN0::NumNpuschRepetitions::r4:
+                    res = 4;
+                    break;
+                case DciN0::NumNpuschRepetitions::r8:
+                    res = 8;
+                    break;
+                case DciN0::NumNpuschRepetitions::r16:
+                    res = 16;
+                    break;
+                case DciN0::NumNpuschRepetitions::r32:
+                    res = 32;
+                    break;
+                case DciN0::NumNpuschRepetitions::r64:
+                    res = 64;
+                    break;
+                case DciN0::NumNpuschRepetitions::r128:
+                    res = 128;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+
+ 
 
 };
 }

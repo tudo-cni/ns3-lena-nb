@@ -238,12 +238,12 @@ LteSpectrumPhy::GetTypeId (void)
                      "ns3::Packet::TracedCallback")
     .AddAttribute ("DataErrorModelEnabled",
                     "Activate/Deactivate the error model of data (TBs of PDSCH and PUSCH) [by default is active].",
-                    BooleanValue (true),
+                    BooleanValue (false),
                    MakeBooleanAccessor (&LteSpectrumPhy::m_dataErrorModelEnabled),
                     MakeBooleanChecker ())
     .AddAttribute ("CtrlErrorModelEnabled",
                     "Activate/Deactivate the error model of control (PCFICH-PDCCH decodification) [by default is active].",
-                    BooleanValue (true),
+                    BooleanValue (false),
                     MakeBooleanAccessor (&LteSpectrumPhy::m_ctrlErrorModelEnabled),
                     MakeBooleanChecker ())
     .AddTraceSource ("DlPhyReception",
@@ -1013,7 +1013,8 @@ LteSpectrumPhy::EndRxData ()
             }
           TbStats_t tbStats = LteMiErrorModel::GetTbDecodificationStats (m_sinrPerceived, (*itTb).second.rbBitmap, (*itTb).second.size, (*itTb).second.mcs, harqInfoList);
           (*itTb).second.mi = tbStats.mi;
-          (*itTb).second.corrupt = m_random->GetValue () > tbStats.tbler ? false : true;
+          //(*itTb).second.corrupt = m_random->GetValue () > tbStats.tbler ? false : true;
+          // COMMENT IN LATER
           NS_LOG_DEBUG (this << "RNTI " << (*itTb).first.m_rnti << " size " << (*itTb).second.size << " mcs " << (uint32_t)(*itTb).second.mcs << " bitmap " << (*itTb).second.rbBitmap.size () << " layer " << (uint16_t)(*itTb).first.m_layer << " TBLER " << tbStats.tbler << " corrupted " << (*itTb).second.corrupt);
           // fire traces on DL/UL reception PHY stats
           PhyReceptionStatParameters params;

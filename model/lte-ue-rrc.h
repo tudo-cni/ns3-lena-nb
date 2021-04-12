@@ -37,6 +37,7 @@
 #include <ns3/traced-callback.h>
 #include "ns3/component-carrier-ue.h"
 #include <ns3/lte-ue-ccm-rrc-sap.h>
+#include "nb-iot-energy.h"
 #include <vector>
 
 #include <map>
@@ -117,6 +118,9 @@ public:
     CONNECTED_HANDOVER,
     CONNECTED_PHY_PROBLEM,
     CONNECTED_REESTABLISHING,
+    IDLE_SUSPEND_EDRX,
+    IDLE_SUSPEND_PSM,
+    CONNECTED_TAU,
     NUM_STATES
   };
 
@@ -525,6 +529,11 @@ private:
    */
   void DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg);
   /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
+   * \param msg the LteRrcSap::RrcConnectionSetup
+   */
+  void DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReconfiguration interface.
    * \param msg the LteRrcSap::RrcConnectionReconfiguration
    */
@@ -544,6 +553,11 @@ private:
    * \param msg LteRrcSap::RrcConnectionRelease
    */
   void DoRecvRrcConnectionRelease (LteRrcSap::RrcConnectionRelease msg);
+  /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionRelease interface.
+   * \param msg LteRrcSap::RrcConnectionRelease
+   */
+  void DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReject interface.
    * \param msg the LteRrcSap::RrcConnectionReject
@@ -1373,11 +1387,36 @@ private:
    */
   void ResetRlfParams ();
 
+  // NBIOT SPECIFIC
+  // Temporary Logging method for successful random access
+  void LogRA(bool success, Time timetillconnection);
+  void LogDataTransmission(Time timetillconnection);
+  std::string m_logfile;
+
+  uint64_t m_resumeId;
+  bool m_resumePending;
+  bool m_enablePSM;
+  bool m_enableEDRX;
+
+  EventId m_eDrxTimeout;
+
+  EventId m_psmTimeout;
+  Time m_t3412;
+  Time m_t3324;
 public:
   /** 
    * The number of component carriers.
    */
+  void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
+
+  NbiotEnergyModel::PowerState DoGetEnergyState();
+
   uint16_t m_numberOfComponentCarriers;
+  void SetLogFile(std::string filename);
+  Time m_connectStartTime;
+  Time m_dataSendTime;
+
+  NbiotEnergyModel m_energyModel;
 
 }; // end of class LteUeRrc
 

@@ -155,7 +155,7 @@ private:
   *
   * \param rc LteUeCmacSapProvider::RachConfig
   */
-  void DoConfigureNprach (NbIotRrcSap::NprachConfig rc);
+  void DoConfigureRadioResourceConfig (NbIotRrcSap::RadioResourceConfigCommonNb rc);
  /**
   * Start contention based random access procedure function
   */
@@ -201,6 +201,7 @@ private:
    * establishment.
    */
   void DoNotifyConnectionSuccessful ();
+
   /**
    * Set IMSI
    *
@@ -222,7 +223,7 @@ private:
   */
   void DoReceiveLteControlMessage (Ptr<LteControlMessage> msg);
 
-  void DoNotifyAboutHarqOpportunity (std::vector<std::pair<int,std::vector<int>>> subframes);
+  void DoNotifyAboutHarqOpportunity (std::vector<std::pair<uint64_t,std::vector<uint64_t>>> subframes);
   
   // internal methods
   /// Randomly select and send RA preamble function
@@ -271,6 +272,13 @@ private:
   /// Refresh HARQ processes packet buffer function
   void RefreshHarqProcessesPacketBuffer (void);
 
+  uint64_t GetBufferSize();
+  uint64_t GetBufferSizeComplete();
+
+  void DoSetTransmissionScheduled(bool scheduled);
+
+  void DoNotifyEdrx();
+  void DoNotifyPsm();
   /// component carrier Id --> used to address sap
   uint8_t m_componentCarrierId;
 
@@ -311,7 +319,8 @@ private:
   bool m_rachConfigured; ///< is RACH configured?
   bool m_nprachConfigured; ///< is RACH configured?
   LteUeCmacSapProvider::RachConfig m_rachConfig; ///< RACH configuration
-  NbIotRrcSap::NprachConfig m_nprachConfig; ///< RACH configuration
+  NbIotRrcSap::RachInfo m_rachConfigCe; ///< RACH configuration
+  NbIotRrcSap::RadioResourceConfigCommonNb m_radioResourceConfig; ///< RACH configuration
   uint8_t m_raPreambleId; ///< RA preamble ID
   uint8_t m_preambleTransmissionCounter; ///< preamble tranamission counter
   uint8_t m_preambleTransmissionCounterCe; ///< preamble tranamission counter
@@ -325,8 +334,15 @@ private:
   bool m_waitingForRaResponse; ///< waiting for RA response
 
   NbIotRrcSap::NprachParametersNb m_CeLevel;
-  std::vector<std::pair<int, std::vector<int>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
+  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
   bool m_simplifiedNprach;
+  bool m_inSearchSpace;
+  bool m_transmissionScheduled;
+  bool m_listenToSearchSpaces;
+  bool m_edrx;
+  bool m_psm;
+  uint32_t m_subframesInSearchSpace;
+  std::vector<uint32_t> m_logging;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
    * Exporting IMSI, contention flag, preamble transmission counter
