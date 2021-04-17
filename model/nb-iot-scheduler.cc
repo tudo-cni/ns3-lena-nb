@@ -144,35 +144,18 @@ NbiotScheduler::SetUssSearchSpaces(NbIotRrcSap::NpdcchConfigDedicatedNb uss0,
   m_uss2 = uss2;
 }
 bool
-NbiotScheduler::IsSeachSpaceType2Begin (NbIotRrcSap::NprachParametersNb ce)
+NbiotScheduler::IsSearchSpaceBegin (SearchSpaceConfig ssc)
 {
-  uint32_t searchSpacePeriodicity = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (ce) *
-                                    NbIotRrcSap::ConvertNpdcchStartSfCssRa2double (ce);
-  uint32_t searchSpaceConditionLeftSide =
-      (10 * (m_frameNo - 1) + (m_subframeNo - 1)) % searchSpacePeriodicity;
-  uint32_t searchSpaceConditionRightSide =
-      NbIotRrcSap::ConvertNpdcchOffsetRa2double (ce) * searchSpacePeriodicity;
+  uint32_t searchSpacePeriodicity = ssc.R_max * ssc.startSf;
+  uint32_t searchSpaceConditionLeftSide = (10 * (m_frameNo - 1) + (m_subframeNo - 1)) % searchSpacePeriodicity;
+  uint32_t searchSpaceConditionRightSide = ssc.offset * searchSpacePeriodicity;
   if (searchSpaceConditionLeftSide == searchSpaceConditionRightSide)
     {
       return true;
     }
   return false;
 }
-bool
-NbiotScheduler::IsUserSeachSpaceBegin (NbIotRrcSap::NpdcchConfigDedicatedNb npdcch)
-{
-  uint32_t searchSpacePeriodicity = NbIotRrcSap::ConvertNpdcchNumRepetitions2int (npdcch) *
-                                    NbIotRrcSap::ConvertNpdcchStartSfUss2double (npdcch);
-  uint32_t searchSpaceConditionLeftSide =
-      (10 * (m_frameNo - 1) + (m_subframeNo - 1)) % searchSpacePeriodicity;
-  uint32_t searchSpaceConditionRightSide =
-      NbIotRrcSap::ConvertNpdcchOffsetUss2double (npdcch) * searchSpacePeriodicity;
-  if (searchSpaceConditionLeftSide == searchSpaceConditionRightSide)
-    {
-      return true;
-    }
-  return false;
-}
+
 
 void
 NbiotScheduler::SetRntiRsrpMap (std::map<uint16_t, double> map)
@@ -202,17 +185,17 @@ void
 NbiotScheduler::ScheduleNpdcchMessageReq (NbIotRrcSap::NpdcchMessage msg)
 {
   // NPDCCH Parameters taken from Liberg, Olof, et al. The Cellular Internet of Things 2017 p.305, In-Band-Deployment Table 8.9
-  if (msg.ce.nprachSubcarrierOffset == m_ce0.nprachSubcarrierOffset)
+  if (msg.ce == m_ce0.coverageEnhancementLevel)
     {
       msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
       msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
     }
-  else if (msg.ce.nprachSubcarrierOffset == m_ce1.nprachSubcarrierOffset)
+  else if (msg.ce == m_ce1.coverageEnhancementLevel)
     {
       msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r32;
       msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r32;
     }
-  else if (msg.ce.nprachSubcarrierOffset == m_ce2.nprachSubcarrierOffset)
+  else if (msg.ce== m_ce2.coverageEnhancementLevel)
     {
       msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r256;
       msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r256;
@@ -235,21 +218,21 @@ NbiotScheduler::Schedule (uint64_t frameNo, uint64_t subframeNo)
       return ret;
     }
   // check and Schedule DCIs for SearchSpaceType2 (RAR, HARQ, RRC)
-  if (IsSeachSpaceType2Begin (m_ce0))
+  if (IsSearchSpaceBegin (ConvertNprachParametersNb2SearchSpaceConfig(m_ce0)))
     {
-      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce0);
+      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, ConvertNprachParametersNb2SearchSpaceConfig(m_ce0));
       ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
       ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
-  if (IsSeachSpaceType2Begin (m_ce1))
+  if (IsSearchSpaceBegin(ConvertNprachParametersNb2SearchSpaceConfig(m_ce1)))
     {
-      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce1);
+      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, ConvertNprachParametersNb2SearchSpaceConfig(m_ce1));
       ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
       ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
-  if (IsSeachSpaceType2Begin (m_ce2))
+  if (IsSearchSpaceBegin(ConvertNprachParametersNb2SearchSpaceConfig(m_ce2)))
     {
-      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, m_ce2);
+      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2,ConvertNprachParametersNb2SearchSpaceConfig(m_ce2));
       ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
       ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
@@ -524,16 +507,12 @@ void NbiotScheduler::AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::Search
 
 std::vector<NbIotRrcSap::NpdcchMessage>
 NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace,
-                                     NbIotRrcSap::NprachParametersNb ce)
+                                     SearchSpaceConfig ssc)
 {
   bool scheduleSuccessful = false;
-  uint64_t R_max = 0;
   std::vector<NbIotRrcSap::NpdcchMessage> scheduledMessages;
   AddRntiDatatoNpdcchQueue(seachspace);
-  if (seachspace == NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2)
-    {
-      R_max = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (ce);
-    }
+  
   /*
   Scheduling Magic. For now FIFO
   */
@@ -543,12 +522,12 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
     {
       if (it->searchSpaceType == seachspace)
         {
-          if (it->ce.nprachSubcarrierOffset == ce.nprachSubcarrierOffset)
+          if (it->ce == ssc.ce)
             {
               if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n1)
                 {
                   std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (it->rnti,
-                    m_frameNo - 1, m_subframeNo - 1, R_max,
+                    m_frameNo - 1, m_subframeNo - 1, ssc.R_max,
                     NbIotRrcSap::ConvertDciN1Repetitions2int (it->dciN1));
                   if (test.size () > 0) // WE GOT A DOWNLINK NPDCCH CANDIDATE
                     {
@@ -558,7 +537,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                           NbIotRrcSap::ConvertNumNpdschRepetitions2int (it->dciN1);
                       std::vector<uint64_t> npdschsubframes = GetNextAvailableNpdschCandidate (
                           *(test.end () - 1), m_minSchedulingDelayDci2Downlink, subframesNpdsch,
-                          R_max);
+                          ssc.R_max);
                       if (npdschsubframes.size () > 0) // WE GOT A DOWNLINK CANDIDATE
                         {
                           uint64_t subframesNpusch;
@@ -696,7 +675,7 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
               else if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n0)
                 {
                   std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (it->rnti,
-                    m_frameNo - 1, m_subframeNo - 1, R_max,
+                    m_frameNo - 1, m_subframeNo - 1, ssc.R_max,
                     NbIotRrcSap::ConvertDciN0Repetitions2int (it->dciN0));
                   if (test.size () > 0)
                     {
@@ -907,40 +886,6 @@ NbiotScheduler::GetUlSubframeRangeWithoutSystemResources (uint64_t overallSubfra
     }
   return subframeIndexes;
 }
-std::vector<std::pair<uint64_t, uint64_t>>
-NbiotScheduler::GetAllPossibleSearchSpaceCandidates (std::vector<uint64_t> subframes, uint64_t R_max)
-{
-  std::vector<std::pair<uint64_t, uint64_t>> candidates;
-  m_currenthyperindex = 1;
-  uint64_t start_sf;
-  uint64_t length = 0;
-  uint64_t i = 0;
-  start_sf = subframes[0];
-  while (R_max > 0)
-    {
-      if (m_downlink[subframes[i]] != m_currenthyperindex)
-        {
-          length++;
-        }
-      else
-        {
-          if (length > 0)
-            {
-              candidates.push_back (std::make_pair (start_sf, length));
-            }
-          start_sf = subframes[i];
-          length = 0;
-        }
-      R_max--;
-      i++;
-    }
-  if (candidates.size () == 0 && length > 0)
-    {
-      candidates.push_back (std::make_pair (start_sf, length));
-    }
-  return candidates;
-}
-
 std::vector<uint64_t>
 NbiotScheduler::CheckforNContiniousSubframesDl (std::vector<uint64_t> Subframes, uint64_t StartSubframe,
                                                 uint64_t N)
@@ -1041,7 +986,7 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
   NS_BUILD_DEBUG (std::cout << "MCL of " << rnti << " is "
                             << m_rntiRsrpMap[rnti] - 43.0 - correction_factor << std::endl);
 
-  NbIotRrcSap::NprachParametersNb ceLevel;
+  NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel ceLevel;
   NbIotRrcSap::DciN1::DciRepetitions dciN1Repetitions;
   NbIotRrcSap::DciN0::DciRepetitions dciN0Repetitions;
 
@@ -1050,26 +995,26 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
     {
       dciN1Repetitions = NbIotRrcSap::DciN1::DciRepetitions::r256;
       dciN0Repetitions = NbIotRrcSap::DciN0::DciRepetitions::r256;
-      ceLevel = m_ce2;
+      ceLevel = m_ce2.coverageEnhancementLevel;
     }
   else if (m_rntiRsrpMap[rnti] < m_sib2config.radioResourceConfigCommon.nprachConfig
                                             .rsrpThresholdsPrachInfoList.ce1_lowerbound)
     {
       dciN1Repetitions = NbIotRrcSap::DciN1::DciRepetitions::r32;
       dciN0Repetitions = NbIotRrcSap::DciN0::DciRepetitions::r32;
-      ceLevel = m_ce1;
+      ceLevel = m_ce1.coverageEnhancementLevel;
     }
   else if (m_rntiRsrpMap[rnti] > m_sib2config.radioResourceConfigCommon.nprachConfig
                                               .rsrpThresholdsPrachInfoList.ce1_lowerbound)
     {
       dciN1Repetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
       dciN0Repetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
-      ceLevel = m_ce0;
+      ceLevel = m_ce0.coverageEnhancementLevel;
     }
   else{
       dciN1Repetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
       dciN0Repetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
-      ceLevel = m_ce0;
+      ceLevel = m_ce0.coverageEnhancementLevel;
   }
   
   NbIotRrcSap::NpdcchMessage msg;
@@ -1154,4 +1099,62 @@ NbiotScheduler::ScheduleUlRlcBufferReq(uint64_t rnti, uint64_t dataSize,NbIotRrc
 {
   m_RntiRlcUlBuffer[searchspace][rnti] = dataSize+32;
 }
+
+SearchSpaceConfig NbiotScheduler::ConvertNpdcchConfigDedicatedNb2SearchSpaceConfig(NbIotRrcSap::NpdcchConfigDedicatedNb configDedicated){
+  SearchSpaceConfig ssc;
+  ssc.R_max = NbIotRrcSap::ConvertNpdcchNumRepetitions2int (configDedicated);
+  ssc.startSf = NbIotRrcSap::ConvertNpdcchStartSfUss2double (configDedicated);
+  ssc.offset =NbIotRrcSap::ConvertNpdcchOffsetUss2double (configDedicated); 
+  // CE Level not used in USS, but for simplicity set to ce0
+  ssc.ce = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
+  return ssc;
+}
+SearchSpaceConfig NbiotScheduler::ConvertNprachParametersNb2SearchSpaceConfig(NbIotRrcSap::NprachParametersNb ce){
+  SearchSpaceConfig ssc;
+  ssc.R_max = NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (ce);
+  ssc.startSf = NbIotRrcSap::ConvertNpdcchStartSfCssRa2double (ce);
+  ssc.offset =NbIotRrcSap::ConvertNpdcchOffsetRa2double (ce); 
+  ssc.ce = ce.coverageEnhancementLevel;
+  return ssc;
+}
+
+
+// Stuff that could be useful later... could(!!!!!)
+
+
+//std::vector<std::pair<uint64_t, uint64_t>>
+//NbiotScheduler::GetAllPossibleSearchSpaceCandidates (std::vector<uint64_t> subframes, uint64_t R_max)
+//{
+//  std::vector<std::pair<uint64_t, uint64_t>> candidates;
+//  m_currenthyperindex = 1;
+//  uint64_t start_sf;
+//  uint64_t length = 0;
+//  uint64_t i = 0;
+//  start_sf = subframes[0];
+//  while (R_max > 0)
+//    {
+//      if (m_downlink[subframes[i]] != m_currenthyperindex)
+//        {
+//          length++;
+//        }
+//      else
+//        {
+//          if (length > 0)
+//            {
+//              candidates.push_back (std::make_pair (start_sf, length));
+//            }
+//          start_sf = subframes[i];
+//          length = 0;
+//        }
+//      R_max--;
+//      i++;
+//    }
+//  if (candidates.size () == 0 && length > 0)
+//    {
+//      candidates.push_back (std::make_pair (start_sf, length));
+//    }
+//  return candidates;
+//}
+
+
 } // namespace ns3

@@ -750,7 +750,7 @@ class NbIotRrcSap{
             n1,
             n2
         } dciType;
-        NbIotRrcSap::NprachParametersNb ce;
+        NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel ce;
         NbIotRrcSap::DciN1 dciN1;
         NbIotRrcSap::DciN0 dciN0;
         std::vector<Rar> rars;

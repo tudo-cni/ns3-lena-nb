@@ -735,7 +735,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
               rar_dcis.back ().npdcchFormat = NbIotRrcSap::NpdcchMessage::NpdcchFormat::format1;
               rar_dcis.back ().dciType = NbIotRrcSap::NpdcchMessage::DciType::n1;
               rar_dcis.back ().searchSpaceType = NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2;
-              rar_dcis.back ().ce = ce;
+              rar_dcis.back ().ce = ce.coverageEnhancementLevel;
               rar_dcis.back ().isRar = true;
               rar_dcis.back ().dciN1.numNpdschSubframesPerRepetition =
                   NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
