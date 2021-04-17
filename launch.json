@@ -10,7 +10,7 @@
             "type": "cppdbg",
             "request": "launch",
                       // my build folder is ${workspaceFolder}/build, substitute yours
-            "program": "${workspaceFolder}/build/utils/ns3-dev-test-runner-debug",
+            "program": "${workspaceFolder}/build/src/lte/examples/ns3.32-lena-simple-epc",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

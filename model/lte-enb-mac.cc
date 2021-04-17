@@ -676,7 +676,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
 
               NS_BUILD_DEBUG (std::cout << "Preamble received of offset " << int (subcarrierOffset)
                                         << " at Subframe "
-                                        << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << "\n");
+                                        << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << std::endl);
               NbIotRrcSap::Rar rar;
               rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
               rar.rapId = subcarrierOffset + iter->first;
@@ -703,7 +703,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
                   m_rapIdCollisionMap[subcarrierOffset + iter->first] = true;
                   NS_BUILD_DEBUG (std::cout << "Preamble received of offset "
                                             << int (subcarrierOffset) << " at Subframe "
-                                            << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << "\n");
+                                            << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << std::endl);
                   NbIotRrcSap::Rar rar;
                   rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
                   rar.rapId = subcarrierOffset + iter->first;
@@ -1298,7 +1298,7 @@ LteEnbMac::DoUlCqiReportNb (std::vector<double> cqi)
     {
       NS_BUILD_DEBUG (std::cout << *it << " ");
     }
-  NS_BUILD_DEBUG (std::cout << "\n");
+  NS_BUILD_DEBUG (std::cout << std::endl);
   m_ulCqiReceivedNb.push_back (cqi);
 }
 
@@ -1737,8 +1737,8 @@ LteEnbMac::DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParamete
                                    NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
 {
   NS_LOG_FUNCTION (this);
-  m_schedulerNb->ScheduleDlRlcBufferReq (params, searchspace);
   m_lastDlBSR[params.rnti][params.lcid] = params;
+  m_schedulerNb->ScheduleDlRlcBufferReq(params.rnti, m_lastDlBSR[params.rnti], searchspace);
   
 }
 // ////////////////////////////////////////////

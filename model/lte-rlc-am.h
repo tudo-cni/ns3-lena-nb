@@ -64,6 +64,7 @@ public:
   virtual void DoNotifyHarqDeliveryFailure ();
   virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
 
+  virtual void DoReset();
 private:
   /**
    * This method will schedule a timeout at WaitReplyTimeout interval
@@ -105,6 +106,9 @@ private:
    * Report buffer status
    */
   void DoReportBufferStatus ();
+
+
+
 
 private:
   /**

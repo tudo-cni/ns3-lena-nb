@@ -81,7 +81,14 @@ LteRlcUm::DoDispose ()
 
   LteRlc::DoDispose ();
 }
+void
+LteRlcUm::DoReset()
+{
+  NS_LOG_FUNCTION (this);
+  m_reorderingTimer.Cancel ();
+  m_rbsTimer.Cancel ();
 
+}
 /**
  * RLC SAP
  */

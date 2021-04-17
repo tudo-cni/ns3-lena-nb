@@ -68,6 +68,11 @@ LteRlcTm::DoDispose ()
   LteRlc::DoDispose ();
 }
 
+void 
+LteRlcTm::DoReset(){
+  m_rbsTimer.Cancel();
+  m_txBuffer.clear();
+}
 
 /**
  * RLC SAP

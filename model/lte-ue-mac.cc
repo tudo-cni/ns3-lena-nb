@@ -825,7 +825,7 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   // Check CE Level
   double rsrp = m_uePhySapProvider->GetRSRP ();
   NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm"
-                            << "\n");
+                            << std::endl);
   // TODO Grenzfälle
   if (rsrp < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
     {

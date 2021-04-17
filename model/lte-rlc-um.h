@@ -50,6 +50,7 @@ public:
    * \param p packet
    */
   virtual void DoTransmitPdcpPdu (Ptr<Packet> p);
+  virtual void DoReset();
 
   /**
    * MAC SAP

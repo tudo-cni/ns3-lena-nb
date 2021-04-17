@@ -777,7 +777,42 @@ class NbIotRrcSap{
             } establishmentCauseNb;
 
         };
-
+        struct NpdcchConfigDedicatedNb{
+            enum class NpdcchNumRepetitions{
+                r1,
+                r2,
+                r4,
+                r8,
+                r16,
+                r32,
+                r64,
+                r128,
+                r256,
+                r512,
+                r1024,
+                r2048,
+                spare4,
+                spare3,
+                spare2,
+                spare1
+            } npdcchNumRepetitions;
+            enum class NpdcchStartSfUss{
+                v1dot5,
+                v2,
+                v4,
+                v8,
+                v16,
+                v32,
+                v48,
+                v64
+            } npdcchStartSfUss;
+            enum class NpdcchOffsetUss{
+                zero,
+                oneEighth,
+                oneFourth,
+                threeEighth
+            } npdcchOffsetUss;
+        };
         struct RrcConnectionResumeNb{
             uint8_t rrcTransactionIdentifier;
             // rest is optional 
@@ -1144,6 +1179,102 @@ class NbIotRrcSap{
                     res = 0.25;
                     break;
                 case NprachParametersNb::NpdcchOffsetRa::threeEighth:
+                    res = 0.375;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertNpdcchNumRepetitions2int (NpdcchConfigDedicatedNb configDedicated){
+            uint16_t res = 0;
+            switch(configDedicated.npdcchNumRepetitions){
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r1:
+                    res = 1;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r2:
+                    res = 2;
+                    break;    
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r4:
+                    res = 4;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r8:
+                    res = 8;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r16:
+                    res = 16;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r32:
+                    res = 32;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r64:
+                    res = 64;
+                    break;               
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r128:
+                    res = 128;
+                    break;               
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r256:
+                    res = 256;
+                    break;               
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r512:
+                    res = 512;
+                    break;               
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r1024:
+                    res = 1024;
+                    break;               
+                case NpdcchConfigDedicatedNb::NpdcchNumRepetitions::r2048:
+                    res = 2048;
+                    break;               
+                default:
+                    break;
+             }
+            return res;
+        }
+        static double ConvertNpdcchStartSfUss2double (NpdcchConfigDedicatedNb configDedicated){
+            double res = 0;
+            switch(configDedicated.npdcchStartSfUss){
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v1dot5:
+                    res = 1.5;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v2:
+                    res = 2;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v4:
+                    res = 4;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v8:
+                    res = 8;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v16:
+                    res = 16;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v32:
+                    res = 32;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v48:
+                    res = 48;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchStartSfUss::v64:
+                    res = 64;
+                    break;              
+                default:
+                    break;
+             }
+            return res;
+        }
+        static double ConvertNpdcchOffsetUss2double (NpdcchConfigDedicatedNb configDedicated){
+            double res = 0;
+            switch(configDedicated.npdcchOffsetUss){
+                case NpdcchConfigDedicatedNb::NpdcchOffsetUss::zero:
+                    res = 0;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchOffsetUss::oneEighth:
+                    res = 0.125;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchOffsetUss::oneFourth:
+                    res = 0.25;
+                    break;
+                case NpdcchConfigDedicatedNb::NpdcchOffsetUss::threeEighth:
                     res = 0.375;
                     break;
                 default:

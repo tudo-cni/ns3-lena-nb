@@ -168,7 +168,7 @@ LteUeRrc::LteUeRrc ()
     m_previousCellId (0),
     m_connEstFailCountLimit (0),
     m_connEstFailCount (0),
-    m_t3412(MilliSeconds(100000)),
+    m_t3412(Days(5)),
     m_t3324(MilliSeconds(3500)),
     m_numberOfComponentCarriers (MIN_NO_CC),
     m_energyModel(NbiotEnergyModel(BG96()))
@@ -244,7 +244,7 @@ LteUeRrc::GetTypeId (void)
                    "Timer for the RRC Connection Establishment procedure "
                    "(i.e., the procedure is deemed as failed if it takes longer than this). "
                    "Standard values: 100ms, 200ms, 300ms, 400ms, 600ms, 1000ms, 1500ms, 2000ms",
-                   TimeValue (MilliSeconds (60000)), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   TimeValue (MilliSeconds (30000)), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
                    MakeTimeAccessor (&LteUeRrc::m_t300),
                    MakeTimeChecker (MilliSeconds (2500), MilliSeconds (60000)))
     .AddAttribute ("T310",
@@ -610,9 +610,9 @@ void LteUeRrc::LogRA(bool success, Time timetillconnection){
         std::ofstream logfile;
         logfile.open(m_logfile, std::ios_base::app);
         if(success){
-          logfile << success << ", " << timetillconnection.GetMilliSeconds() << "\n";
+          logfile << m_imsi << ", " << timetillconnection.GetMilliSeconds() << "\n";
         }else{
-          logfile << success << ", " << -1 << "\n";
+          logfile << m_imsi << ", " << -1 << "\n";
         } 
         logfile.close();
 }
@@ -820,6 +820,7 @@ LteUeRrc::DoStartCellSelection (uint32_t dlEarfcn)
                  "cannot start cell selection from state " << ToString (m_state));
   m_dlEarfcn = dlEarfcn;
   m_cphySapProvider.at(0)->StartCellSearch (dlEarfcn);
+  m_connectStartTime = Simulator::Now();
   SwitchToState (IDLE_CELL_SEARCH);
 }
 
@@ -872,7 +873,6 @@ void
 LteUeRrc::DoConnect ()
 {
   NS_LOG_FUNCTION (this << m_imsi);
-  m_connectStartTime = Simulator::Now();
   switch (m_state)
     {
     case IDLE_START:
@@ -903,12 +903,15 @@ LteUeRrc::DoConnect ()
       if(!m_eDrxTimeout.IsExpired()){
         m_eDrxTimeout.Cancel();
       }
+      m_connectStartTime = Simulator::Now();
       StartConnectionNb();
       break;
     case IDLE_SUSPEND_PSM:
+    case CONNECTED_TAU:
       if(!m_psmTimeout.IsExpired()){
         m_psmTimeout.Cancel();
       }
+      m_connectStartTime = Simulator::Now();
       m_resumePending = true;
       m_hasReceivedMibNb = false;
       SwitchToState(IDLE_WAIT_MIB);
@@ -3501,6 +3504,8 @@ LteUeRrc::ConnectionTimeout ()
           }
         m_hasReceivedSib2 = false;         // invalidate the previously received SIB2
         SwitchToState (IDLE_CAMPED_NORMALLY);
+        m_srb0->m_rlc->DoReset();
+        m_srb1->m_rlc->DoReset();
         m_connectionTimeoutTrace (m_imsi, m_cellId, m_rnti, m_connEstFailCount);
         //Following call to UE NAS will force the UE to immediately
         //perform the random access to the same cell again.
@@ -3614,10 +3619,9 @@ LteUeRrc::SwitchToState (State newState)
       break;
     case CONNECTED_TAU:
       // usually wait for TAU but no TAU implemented yet
-      m_hasReceivedMibNb = false; // UE has to received MasterInformationBlock again after PSM see 3GPP TR 45 820 13_1
-      m_resumePending = true;
-      SwitchToState(IDLE_WAIT_MIB);
-      //SwitchToState(IDLE_SUSPEND_PSM);
+      //m_hasReceivedMibNb = false; // UE has to received MasterInformationBlock again after PSM see 3GPP TR 45 820 13_1
+      //m_resumePending = true;
+      DoConnect();
       break;
     default:
       break;

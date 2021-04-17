@@ -192,7 +192,7 @@ UeManager::UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s, uint8_t compon
     m_needPhyMacConfiguration (false),
     m_caSupportConfigured (false),
     m_pendingStartDataRadioBearers (false),
-    m_t3412(MilliSeconds(100000)),
+    m_t3412(Days(5)),
     m_t3324(MilliSeconds(3500)),
     m_dataInactivityInterval(200),
     m_eDrxCycle(0),
@@ -1025,7 +1025,9 @@ UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
           }
       }
       break;
-
+    case CONNECTION_RESUME: 
+    case CONNECTION_SETUP:
+      break;
     default:
       NS_FATAL_ERROR ("method unexpected in state " << ToString (m_state));
       break;
@@ -1933,7 +1935,7 @@ LteEnbRrc::GetTypeId (void)
               MakeIntegerChecker<int32_t> ())
     .AddAttribute ("RrcReleaseInterval",
               "Rrc Release Interval in ms",
-              UintegerValue(10000),
+              UintegerValue(30000),
               MakeUintegerAccessor (&LteEnbRrc::m_dataInactivityInterval),
               MakeUintegerChecker<uint16_t> (0, 60000) )
     .AddAttribute ("EnablePSM",
@@ -1958,7 +1960,7 @@ LteEnbRrc::GetTypeId (void)
                    "Must account for reception of RAR and transmission of "
                    "RRC CONNECTION REQUEST over UL GRANT. The value of this"
                    "timer should not be greater than T300 timer at UE RRC",
-                   TimeValue (MilliSeconds (50000)),
+                   TimeValue (MilliSeconds (30000)),
                    MakeTimeAccessor (&LteEnbRrc::m_connectionRequestTimeoutDuration),
                    MakeTimeChecker (MilliSeconds (1), MilliSeconds (50000)))
     .AddAttribute ("ConnectionSetupTimeoutDuration",
@@ -1967,7 +1969,7 @@ LteEnbRrc::GetTypeId (void)
                    "context is destroyed. Must account for the UE's reception "
                    "of RRC CONNECTION SETUP and transmission of RRC CONNECTION "
                    "SETUP COMPLETE.",
-                   TimeValue (MilliSeconds (50000)),
+                   TimeValue (MilliSeconds (30000)),
                    MakeTimeAccessor (&LteEnbRrc::m_connectionSetupTimeoutDuration),
                    MakeTimeChecker ())
     .AddAttribute ("ConnectionResumeTimeoutDuration",
@@ -1976,7 +1978,7 @@ LteEnbRrc::GetTypeId (void)
                    "context is destroyed. Must account for the UE's reception "
                    "of RRC CONNECTION SETUP and transmission of RRC CONNECTION "
                    "SETUP COMPLETE.",
-                   TimeValue (MilliSeconds (50000)),
+                   TimeValue (MilliSeconds (30000)),
                    MakeTimeAccessor (&LteEnbRrc::m_connectionResumeTimeoutDuration),
                    MakeTimeChecker ())
     .AddAttribute ("ConnectionRejectedTimeoutDuration",
@@ -2633,9 +2635,9 @@ LteEnbRrc::ConnectionResumeTimeout (uint16_t rnti)
   NS_LOG_FUNCTION (this << rnti);
   NS_ASSERT_MSG (GetUeManagerbyRnti (rnti)->GetState () == UeManager::CONNECTION_RESUME,
                  "ConnectionSetupTimeout in unexpected state " << ToString (GetUeManagerbyRnti (rnti)->GetState ()));
-  m_rrcTimeoutTrace (GetUeManagerbyRnti (rnti)->GetImsi (), rnti,
-                     ComponentCarrierToCellId (GetUeManagerbyRnti (rnti)->GetComponentCarrierId ()), "ConnectionResumeTimeout");
-  RemoveUe (rnti);
+  //m_rrcTimeoutTrace (GetUeManagerbyRnti (rnti)->GetImsi (), rnti,
+  //                   ComponentCarrierToCellId (GetUeManagerbyRnti (rnti)->GetComponentCarrierId ()), "ConnectionResumeTimeout");
+  //RemoveUe (rnti);
 }
 void
 LteEnbRrc::ConnectionRejectedTimeout (uint16_t rnti)

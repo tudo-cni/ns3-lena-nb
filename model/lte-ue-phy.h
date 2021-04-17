@@ -856,6 +856,13 @@ private:
   uint64_t m_imsi; ///< the IMSI of the UE
   bool m_enableRlfDetection; ///< Flag to enable/disable RLF detection
 
+  // for NB-IoT
+  // In NB-IoT the UE needs to receive multiple repetitions before it can decode the transmission
+  // for RRC and data messages the procedure is implemented on eNB site  
+  // following necessary infos for MIB-NB und SIB-NB
+  uint8_t m_requiredRepetitionsMibNb;
+  uint8_t m_requiredRepetitionsSib1Nb;
+  uint8_t m_requiredRepetitionsSib2Nb;
 }; // end of `class LteUePhy`
 
 

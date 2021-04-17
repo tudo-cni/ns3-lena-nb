@@ -1211,6 +1211,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           NS_LOG_INFO ("received MIB_NB");
           NS_ASSERT (m_cellId > 0);
           Ptr<MibNbiotControlMessage> msg2 = DynamicCast<MibNbiotControlMessage> (msg);
+          // implement time for aquirering MIB-NB 
           m_ueCphySapUser->RecvMasterInformationBlockNb (m_cellId, msg2->GetMib());
         }
       else if (msg->GetMessageType () == LteControlMessage::SIB1_NB)
@@ -1269,7 +1270,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
                   else
                     {
 
-                      NS_BUILD_DEBUG(std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n");
+                      NS_BUILD_DEBUG(std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
                       NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
                       // set the uplink bandwidth according to the UL grant
                       //std::vector <int> ulRb;
@@ -1296,7 +1297,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           Ptr<UlDciN0NbiotControlMessage> dci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
           if (dci->GetRnti() == m_rnti)
             {
-              NS_BUILD_DEBUG(std::cout << "Received My NPUSCH Schedule at " << 10*(m_frameNo-1) +(m_subframeNo-1) << "\n");
+              NS_BUILD_DEBUG(std::cout << "Received My NPUSCH Schedule at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
               NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
               // set the uplink bandwidth according to the UL grant
               //std::vector <int> ulRb;

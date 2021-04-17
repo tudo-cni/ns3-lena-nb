@@ -109,7 +109,7 @@ LteRlcAm::GetTypeId (void)
     .AddAttribute ("ReportBufferStatusTimer",
                    "How much to wait to issue a new Report Buffer Status since the last time "
                    "a new SDU was received",     
-                   TimeValue (MilliSeconds (2000)),
+                   TimeValue (MilliSeconds (10000)),
                    MakeTimeAccessor (&LteRlcAm::m_rbsTimerValue),
                    MakeTimeChecker ())
     .AddAttribute ("TxOpportunityForRetxAlwaysBigEnough",
@@ -147,6 +147,27 @@ LteRlcAm::DoDispose ()
   LteRlc::DoDispose ();
 }
 
+void
+LteRlcAm::DoReset()
+{
+  NS_LOG_FUNCTION (this);
+  m_pollRetransmitTimer.Cancel ();
+  m_reorderingTimer.Cancel ();
+  m_statusProhibitTimer.Cancel ();
+  m_rbsTimer.Cancel ();
+
+  m_txonBuffer.clear ();
+  m_txonBufferSize = 0;
+  m_txedBuffer.clear ();
+  m_txedBufferSize = 0;
+  m_retxBuffer.clear ();
+  m_retxBufferSize = 0;
+  m_rxonBuffer.clear ();
+  m_sdusBuffer.clear ();
+  m_keepS0 = 0;
+  m_controlPduBuffer = 0;
+
+}
 
 /**
  * RLC SAP

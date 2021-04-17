@@ -106,11 +106,12 @@ main (int argc, char *argv[])
   uint16_t numUesCe0 = 10;
   uint16_t numUesCe1 = 0;
   uint16_t numUesCe2 = 0;
-  Time simTime = MilliSeconds (100000);
+  Time simTime = Minutes(10);
   //double distance = 50000.0;
   double distanceCe0 =  469531.7428251784;
   double distanceCe1 = 1484789.7410759863;
-  double distanceCe2 = 4695317.428251784;
+  //double distanceCe2 = 4695317.428251784;
+  double distanceCe2 = 4690000.428251784;
   
 
   Time interPacketInterval = MilliSeconds (100000);
@@ -119,7 +120,7 @@ main (int argc, char *argv[])
   bool disableUl = false;
   bool disablePl = true;
   bool scenario = false;
-  int seed = 1;
+  int seed = 240;
 
   // Command line arguments
   CommandLine cmd (__FILE__);
@@ -279,7 +280,7 @@ main (int argc, char *argv[])
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
 
-      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()/4);
+      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()/2);
       std::cout << access << "\n";
       lteHelper->AttachAtTime (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
       //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
@@ -301,8 +302,8 @@ main (int argc, char *argv[])
         ulClient.SetAttribute ("PacketSize", UintegerValue(20));
         clientApps.Add (ulClient.Install (ueNodes.Get(i)));
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access+50000));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access+50000));
+        serverApps.Get(i)->SetStartTime (MilliSeconds (access)+simTime/2);
+        clientApps.Get(i)->SetStartTime (MilliSeconds (access)+simTime/2);
         }
     }
 
@@ -318,7 +319,8 @@ main (int argc, char *argv[])
   logfile += "_";
   logfile += std::to_string(simTime.GetInteger());
   makedir += logfile; 
-  std::system(makedir.c_str());
+  int a = std::system(makedir.c_str());
+  std::cout << a << std::endl;
   logfile += "/";
   auto tm = *std::localtime(&start_time);
   std::stringstream ss;
@@ -353,11 +355,11 @@ main (int argc, char *argv[])
   }
 
   
-  lteHelper->EnableTraces ();
+  //lteHelper->EnableTraces ();
   // Uncomment to enable PCAP tracing
   //p2ph.EnablePcapAll("lena-simple-epc");
 
-  Simulator::Stop (simTime);
+  Simulator::Stop (simTime+Seconds(50));
   Simulator::Run ();
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
