@@ -41,6 +41,7 @@
 #include <fstream>
 #include <cmath>
 #include <ns3/build-profile.h>
+#include <iomanip> 
 
 namespace ns3 {
 
@@ -632,7 +633,7 @@ void LteUeRrc::LogEnergyRemaining(){
         std::string logfile_path = m_logdir+"Energy.log";
         std::ofstream logfile;
         logfile.open(logfile_path, std::ios_base::app);
-        logfile <<  m_imsi << "," << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< "," << m_energyModel.GetEnergyRemaining() << "," << m_energyModel.GetEnergyRemainingFraction() <<"\n";
+        logfile <<  m_imsi << "," << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< "," << std::setprecision(15) << m_energyModel.GetEnergyRemaining() << "," << m_energyModel.GetEnergyRemainingFraction() <<"\n";
         logfile.close();
 }
 

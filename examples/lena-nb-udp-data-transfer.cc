@@ -280,7 +280,7 @@ main (int argc, char *argv[])
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
 
-      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds());
+      int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds()/2);
       lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
 
       //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
