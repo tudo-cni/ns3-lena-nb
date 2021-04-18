@@ -103,10 +103,10 @@ std::vector<std::string> readCSVRow (const std::string &row)
 int
 main (int argc, char *argv[])
 {
-  uint16_t numUesCe0 = 10;
+  uint16_t numUesCe0 = 90;
   uint16_t numUesCe1 = 10;
-  uint16_t numUesCe2 = 10;
-  Time simTime = Minutes(10);
+  uint16_t numUesCe2 = 0;
+  Time simTime = Minutes(5);
   //double distance = 50000.0;
   double distanceCe0 =  469531.7428251784;
   double distanceCe1 = 1484789.7410759863;
@@ -260,58 +260,63 @@ main (int argc, char *argv[])
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
 
-      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()/2);
+      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()*(3.0/4));
       std::cout << access << "\n";
-      lteHelper->AttachAtTime (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
+      lteHelper->AttachAtTimeNb (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
 
     }
 
   auto start = std::chrono::system_clock::now(); 
   std::time_t start_time = std::chrono::system_clock::to_time_t(start);
   std::cout << "started computation at " << std::ctime(&start_time);
-  std::string logfile = "logs/";
+   std::string logdir = "logs/";
   std::string makedir = "mkdir -p ";
   //auto start = std::chrono::system_clock::now();
 
-  logfile += "RA_";
-  logfile += std::to_string(ueNodes.GetN());
-  logfile += "_";
-  logfile += std::to_string(simTime.GetInteger());
-  makedir += logfile; 
-  int a = std::system(makedir.c_str());
+  logdir += std::to_string(ueNodes.GetN());
+  logdir += "_";
+  logdir += std::to_string(simTime.GetInteger());
+  std::string top_dirmakedir = makedir+logdir; 
+  int a = std::system(top_dirmakedir.c_str());
   std::cout << a << std::endl;
-  logfile += "/";
-  auto tm = *std::localtime(&start_time);
-  std::stringstream ss;
-  ss << std::put_time(&tm, "ra_%d_%m_%Y_%H_%M_%S");
-  logfile += ss.str();
+  logdir += "/";
+
   if (scenario){
-    logfile += "_";
-    logfile += "predifined_scenario";
-    logfile += "_";
+    logdir += "_";
+    logdir += "predifined_scenario";
   }
   else{
-    logfile += "_";
-    logfile += std::to_string(numUesCe0);
-    logfile += "_";
-    logfile += std::to_string(distanceCe0);
-    logfile += "_";
-    logfile += std::to_string(numUesCe1);
-    logfile += "_";
-    logfile += std::to_string(distanceCe1);
-    logfile += "_";
-    logfile += std::to_string(numUesCe2);
-    logfile += "_";
-    logfile += std::to_string(distanceCe2);
+    logdir += std::to_string(numUesCe0);
+    logdir += "_";
+    logdir += std::to_string(distanceCe0);
+    logdir += "_";
+    logdir += std::to_string(numUesCe1);
+    logdir += "_";
+    logdir += std::to_string(distanceCe1);
+    logdir += "_";
+    logdir += std::to_string(numUesCe2);
+    logdir += "_";
+    logdir += std::to_string(distanceCe2);
   }
-  logfile += ".log";
+  std::string second_dirmakedir = makedir+logdir; 
+  a = std::system(second_dirmakedir.c_str());
+  std::cout << a << std::endl;
+  logdir += "/";
+  auto tm = *std::localtime(&start_time);
+  std::stringstream ss;
+  ss << std::put_time(&tm, "%d_%m_%Y_%H_%M_%S");
+  logdir += ss.str();
+  logdir += "_";
   //std::cout << logfile << "\n";
+
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
 
     Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
     Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
-    ueRrc->SetLogFile(logfile);
+    ueRrc->SetLogDir(logdir); // Will be changed to real ns3 traces later on
   }
+
+  
 
   
   //lteHelper->EnableTraces ();

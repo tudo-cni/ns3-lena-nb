@@ -427,6 +427,9 @@ UeManager::InitialContextSetupRequest ()
     {
       SwitchToState (CONNECTED_NORMALLY);
     }
+  else if (m_state == IDLE_SUSPEND_PSM){
+    return; 
+  }
   else
     {
       NS_FATAL_ERROR ("method unexpected in state " << ToString (m_state));
@@ -666,7 +669,8 @@ UeManager::ScheduleRrcConnectionReconfiguration ()
         SwitchToState (CONNECTION_RECONFIGURATION);
       }
       break;
-
+    case IDLE_SUSPEND_PSM:
+      break;
     default:
       NS_FATAL_ERROR ("method unexpected in state " << ToString (m_state));
       break;
@@ -1032,6 +1036,33 @@ UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
       NS_FATAL_ERROR ("method unexpected in state " << ToString (m_state));
       break;
     }
+}
+
+uint64_t
+UeManager::AttachSuspendedNb(uint32_t imsi){
+
+  // Fast forward Connection Setup StateMachine
+
+  // Receiving MSG 3 and Sending MSG4
+
+  //LteRrcSap::RrcConnectionSetup msg2;
+  //msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
+  //msg2.radioResourceConfigDedicated = BuildRadioResourceConfigDedicated ();
+
+  //m_rrc->m_rrcSapUser->SendRrcConnectionSetup (m_rnti, msg2);
+
+  m_imsi = imsi;
+  RecordDataRadioBearersToBeStarted ();
+  if (m_rrc->m_s1SapProvider != 0)
+      {
+        Simulator::Schedule(MicroSeconds(500), &EpcEnbS1SapProvider::InitialUeMessage,m_rrc->m_s1SapProvider,m_imsi,m_rnti);
+      }
+  m_pendingRrcConnectionReconfiguration = false;
+  StartDataRadioBearers();
+  m_resumeId = m_rrc->DoAllocateTemporaryResumeId();
+  SwitchToState(IDLE_SUSPEND_PSM);
+  Simulator::Schedule(MilliSeconds(10), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti,m_resumeId);
+  return m_resumeId;
 }
 
 void
@@ -2763,8 +2794,11 @@ void
 LteEnbRrc::DoInitialContextSetupRequest (EpcEnbS1SapUser::InitialContextSetupRequestParameters msg)
 {
   NS_LOG_FUNCTION (this);
+  std::map<uint16_t, Ptr<UeManager> >::iterator it = m_ueActiveMap.find (msg.rnti);
+  if(it != m_ueActiveMap.end()){
   Ptr<UeManager> ueManager = GetUeManagerbyRnti (msg.rnti);
   ueManager->InitialContextSetupRequest ();
+  }
 }
 
 void 
@@ -3738,6 +3772,101 @@ LteEnbRrc::IsRandomAccessCompleted (uint16_t rnti)
     }
 }
 
+uint64_t LteEnbRrc::AttachSuspendedUeNb(uint32_t imsi){
+  uint16_t rnti = AddUe(UeManager::INITIAL_RANDOM_ACCESS,0);
+  return GetUeManagerbyRnti(rnti)->AttachSuspendedNb(imsi);
+}
 
+NbIotRrcSap::SystemInformationBlockType1Nb LteEnbRrc::GetSib1Nb(){
+  return m_sib1Nb.back();
+}
+NbIotRrcSap::SystemInformationNb LteEnbRrc::GetSiNb(){
+  NbIotRrcSap::SystemInformationNb si;
+  for (auto &it: m_componentCarrierPhyConf)
+    {
+      uint8_t ccId = it.first;
+
+      si.haveSib2 = true;
+      si.sib2.freqInfo.ulCarrierFreq = it.second->GetUlEarfcn ();
+      si.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower = m_cphySapProvider.at (ccId)->GetReferenceSignalPower ();
+
+      //LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
+      NbIotRrcSap::RachInfo rachce0;
+      rachce0.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp10;
+      rachce0.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachInfo rachce1;
+      rachce1.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+      rachce1.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachInfo rachce2;
+      rachce2.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+      rachce2.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+      NbIotRrcSap::RachConfigCommon rc;
+      rc.preambleTransMaxCE = 10;
+      rc.powerRampingParameters.powerRampingStep = NbIotRrcSap::PowerRampingParameters::PowerRampingStep::dB4;
+      rc.powerRampingParameters.preambleInitialReceivedTargetPower = NbIotRrcSap::PowerRampingParameters::PreambleInitialReceivedTargetPower::dbm_110;
+      rc.connEstFailOffset = 0;
+      rc.rachInfoList.rachInfo1 = rachce0;
+      rc.rachInfoList.rachInfo2 = rachce1;
+      rc.rachInfoList.rachInfo3 = rachce2;
+
+      si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
+      NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
+      // From Vodafone wireshark
+      rsrpprachinfolist.ce1_lowerbound = -115.5;
+      rsrpprachinfolist.ce2_lowerbound = -127.5;
+
+      si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
+      // Values from Vodafone Cell / temporary
+      NbIotRrcSap::NprachParametersNb ce0;
+      ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
+      ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+      ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+      ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
+      ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
+      ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+      ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+      NbIotRrcSap::NprachParametersNb ce1;
+      ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
+      ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+      ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
+      ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
+      ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
+      ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
+      ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+
+      NbIotRrcSap::NprachParametersNb ce2;
+      ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
+      ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
+      ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+      ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
+      ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+      ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+      ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+      ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32;
+      ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
+      ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
+      ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
+      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
+      si.sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
+    }
+
+  return si;
+}
 } // namespace ns3
 

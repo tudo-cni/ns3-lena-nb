@@ -72,6 +72,7 @@ public:
   virtual void SetImsi (uint64_t imsi);
   virtual void NotifyEdrx();
   virtual void NotifyPsm();
+  virtual NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel GetCoverageEnhancementLevel();
 
 private:
   LteUeMac *m_mac; ///< the UE MAC
@@ -158,6 +159,9 @@ UeMemberLteUeCmacSapProvider::NotifyPsm()
   m_mac->DoNotifyPsm();
 }
 
+NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel UeMemberLteUeCmacSapProvider::GetCoverageEnhancementLevel(){
+  return m_mac->DoGetCoverageEnhancementLevel();
+}
 
 /// UeMemberLteMacSapProvider class
 class UeMemberLteMacSapProvider : public LteMacSapProvider
@@ -1599,5 +1603,10 @@ LteUeMac::DoNotifyEdrx(){
 void 
 LteUeMac::DoNotifyPsm(){
   m_psm = true;
+}
+
+NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel 
+LteUeMac::DoGetCoverageEnhancementLevel(){
+  return m_CeLevel.coverageEnhancementLevel;
 }
 } // namespace ns3

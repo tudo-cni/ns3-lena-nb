@@ -279,6 +279,8 @@ private:
 
   void DoNotifyEdrx();
   void DoNotifyPsm();
+
+  NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel DoGetCoverageEnhancementLevel();
   /// component carrier Id --> used to address sap
   uint8_t m_componentCarrierId;
 

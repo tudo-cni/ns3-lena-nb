@@ -104,8 +104,8 @@ int
 main (int argc, char *argv[])
 {
   uint16_t numUesCe0 = 10;
-  uint16_t numUesCe1 = 0;
-  uint16_t numUesCe2 = 0;
+  uint16_t numUesCe1 = 10;
+  uint16_t numUesCe2 = 10;
   Time simTime = Minutes(10);
   //double distance = 50000.0;
   double distanceCe0 =  469531.7428251784;
@@ -120,7 +120,7 @@ main (int argc, char *argv[])
   bool disableUl = false;
   bool disablePl = true;
   bool scenario = false;
-  int seed = 240;
+  int seed = 1;
 
   // Command line arguments
   CommandLine cmd (__FILE__);
@@ -282,7 +282,7 @@ main (int argc, char *argv[])
 
       int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()/2);
       std::cout << access << "\n";
-      lteHelper->AttachAtTime (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
+      lteHelper->AttachAtTimeNb (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
       //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
       // side effect: the default EPS bearer will be activated
       if (!disableUl)
@@ -310,48 +310,46 @@ main (int argc, char *argv[])
   auto start = std::chrono::system_clock::now(); 
   std::time_t start_time = std::chrono::system_clock::to_time_t(start);
   std::cout << "started computation at " << std::ctime(&start_time);
-  std::string logfile = "logs/";
+  std::string logdir = "logs/";
   std::string makedir = "mkdir -p ";
   //auto start = std::chrono::system_clock::now();
 
-  logfile += "RA_";
-  logfile += std::to_string(ueNodes.GetN());
-  logfile += "_";
-  logfile += std::to_string(simTime.GetInteger());
-  makedir += logfile; 
+  logdir += std::to_string(ueNodes.GetN());
+  logdir += "_";
+  logdir += std::to_string(simTime.GetInteger());
+  makedir += logdir; 
   int a = std::system(makedir.c_str());
   std::cout << a << std::endl;
-  logfile += "/";
+  logdir += "/";
   auto tm = *std::localtime(&start_time);
   std::stringstream ss;
   ss << std::put_time(&tm, "ra_%d_%m_%Y_%H_%M_%S");
-  logfile += ss.str();
+  logdir += ss.str();
   if (scenario){
-    logfile += "_";
-    logfile += "predifined_scenario";
-    logfile += "_";
+    logdir += "_";
+    logdir += "predifined_scenario";
   }
   else{
-    logfile += "_";
-    logfile += std::to_string(numUesCe0);
-    logfile += "_";
-    logfile += std::to_string(distanceCe0);
-    logfile += "_";
-    logfile += std::to_string(numUesCe1);
-    logfile += "_";
-    logfile += std::to_string(distanceCe1);
-    logfile += "_";
-    logfile += std::to_string(numUesCe2);
-    logfile += "_";
-    logfile += std::to_string(distanceCe2);
+    logdir += "_";
+    logdir += std::to_string(numUesCe0);
+    logdir += "_";
+    logdir += std::to_string(distanceCe0);
+    logdir += "_";
+    logdir += std::to_string(numUesCe1);
+    logdir += "_";
+    logdir += std::to_string(distanceCe1);
+    logdir += "_";
+    logdir += std::to_string(numUesCe2);
+    logdir += "_";
+    logdir += std::to_string(distanceCe2);
   }
-  logfile += ".log";
+  logdir += "/";
   //std::cout << logfile << "\n";
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
 
     Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
     Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
-    ueRrc->SetLogFile(logfile);
+    ueRrc->SetLogDir(logdir); // Will be changed to real ns3 traces later on
   }
 
   

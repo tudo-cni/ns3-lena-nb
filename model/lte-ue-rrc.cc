@@ -171,7 +171,7 @@ LteUeRrc::LteUeRrc ()
     m_t3412(Days(5)),
     m_t3324(MilliSeconds(3500)),
     m_numberOfComponentCarriers (MIN_NO_CC),
-    m_energyModel(NbiotEnergyModel(BG96()))
+    m_energyModel(NbiotEnergyModel(BG96(),0))
 {
   NS_LOG_FUNCTION (this);
   m_cphySapUser.push_back (new MemberLteUeCphySapUser<LteUeRrc> (this));
@@ -193,6 +193,7 @@ void
 LteUeRrc::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
+  LogEnergyRemaining();
   for ( uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
    {
       delete m_cphySapUser.at(i);
@@ -467,6 +468,7 @@ LteUeRrc::SetImsi (uint64_t imsi)
 {
   NS_LOG_FUNCTION (this << imsi);
   m_imsi = imsi;
+  m_energyModel.SetImsi(m_imsi);
 
   //Communicate the IMSI to MACs and PHYs for all the component carriers
   for (uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
@@ -607,25 +609,35 @@ LteUeRrc::InitializeSap (void)
     }
 }
 void LteUeRrc::LogRA(bool success, Time timetillconnection){
+        std::string logfile_path = m_logdir+"RA.log";
         std::ofstream logfile;
-        logfile.open(m_logfile, std::ios_base::app);
+        logfile.open(logfile_path, std::ios_base::app);
         if(success){
-          logfile << m_imsi << ", " << timetillconnection.GetMilliSeconds() << "\n";
+          logfile << m_imsi << "," << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< ","<< timetillconnection.GetMilliSeconds() << "\n";
         }else{
-          logfile << m_imsi << ", " << -1 << "\n";
+          logfile << m_imsi << "," << -1 << "\n";
         } 
         logfile.close();
 }
 
 void LteUeRrc::LogDataTransmission(Time timetillconnection){
+        std::string logfile_path = m_logdir+"Data.log";
         std::ofstream logfile;
-        logfile.open(m_logfile, std::ios_base::app);
-        logfile << timetillconnection.GetMilliSeconds() << "\n";
+        logfile.open(logfile_path, std::ios_base::app);
+        logfile <<  m_imsi << ","  << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< ","<< timetillconnection.GetMilliSeconds() << "\n";
         logfile.close();
 }
 
-void LteUeRrc::SetLogFile(std::string filename){
-  m_logfile = filename;
+void LteUeRrc::LogEnergyRemaining(){
+        std::string logfile_path = m_logdir+"Energy.log";
+        std::ofstream logfile;
+        logfile.open(logfile_path, std::ios_base::app);
+        logfile <<  m_imsi << "," << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< "," << m_energyModel.GetEnergyRemaining() << "," << m_energyModel.GetEnergyRemainingFraction() <<"\n";
+        logfile.close();
+}
+
+void LteUeRrc::SetLogDir(std::string dirname){
+  m_logdir = dirname;
 }
 void
 LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
@@ -1247,7 +1259,6 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
         m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
         NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
 
-        LogRA(true, Simulator::Now()-m_connectStartTime);
         //m_asSapUser->NotifyMessage4();
         //SwitchToState(IDLE_START);
         m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);
@@ -1282,7 +1293,6 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
         m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
         NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
 
-        LogRA(true, Simulator::Now()-m_connectStartTime);
         //m_asSapUser->NotifyMessage4();
         //SwitchToState(IDLE_START);
         m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);
@@ -1380,6 +1390,7 @@ LteUeRrc::DoRecvRrcConnectionReconfiguration (LteRrcSap::RrcConnectionReconfigur
             }
           LteRrcSap::RrcConnectionReconfigurationCompleted msg2;
           msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
+          LogRA(true, Simulator::Now()-m_connectStartTime);
           m_rrcSapUser->SendRrcConnectionReconfigurationCompleted (msg2);
           m_connectionReconfigurationTrace (m_imsi, m_cellId, m_rnti);
         }
@@ -3761,5 +3772,20 @@ LteUeRrc::DoGetEnergyState(){
   return m_energyModel.DoGetState();
 }
 
+void LteUeRrc::AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si){
+  m_resumeId = resumeId;
+  DoForceCampedOnEnb(cellid, dlEarfcn);
+  DoRecvSystemInformationBlockType1Nb(cellid, sib1);
+  SwitchToState(IDLE_CONNECTING);
+  DoRecvSystemInformationNb(si);
+  ApplyRadioResourceConfigDedicated (rrcd);
+  m_leaveConnectedMode = false;
+  m_asSapUser->NotifyConnectionSuccessful ();
+  m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
+  m_hasReceivedSib1Nb = true;
+  m_hasReceivedSib2Nb = true;
+  SwitchToState(IDLE_SUSPEND_PSM);
+  m_asSapUser->NotifyConnectionSuspended();
+}
 } // namespace ns3
 

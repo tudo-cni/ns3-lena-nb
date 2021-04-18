@@ -1391,7 +1391,8 @@ private:
   // Temporary Logging method for successful random access
   void LogRA(bool success, Time timetillconnection);
   void LogDataTransmission(Time timetillconnection);
-  std::string m_logfile;
+  void LogEnergyRemaining();
+  std::string m_logdir;
 
   uint64_t m_resumeId;
   bool m_resumePending;
@@ -1407,12 +1408,13 @@ public:
   /** 
    * The number of component carriers.
    */
+  void AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si);
   void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
 
   NbiotEnergyModel::PowerState DoGetEnergyState();
 
   uint16_t m_numberOfComponentCarriers;
-  void SetLogFile(std::string filename);
+  void SetLogDir(std::string dirname);
   Time m_connectStartTime;
   Time m_dataSendTime;
 
