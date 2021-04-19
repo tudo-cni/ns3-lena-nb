@@ -154,6 +154,7 @@ public:
   
   void NotifyDataInactivitySchedulerNb();
   void NotifyDataActivitySchedulerNb();
+  uint64_t AttachSuspendedNb(uint32_t imsi);
   /**
    * Notify LC config result function
    *
@@ -1872,7 +1873,11 @@ private:
   uint16_t m_dataInactivityInterval;
 
   bool m_enablePSM;
+public:
+  uint64_t AttachSuspendedUeNb(uint32_t imsi);
 
+  NbIotRrcSap::SystemInformationBlockType1Nb GetSib1Nb();
+  NbIotRrcSap::SystemInformationNb GetSiNb();
 
 }; // end of `class LteEnbRrc`
 

@@ -68,7 +68,12 @@ def build(bld):
     obj = bld.create_ns3_program('lena-radio-link-failure',
                                  ['lte'])
     obj.source = 'lena-radio-link-failure.cc'
-    
+    obj = bld.create_ns3_program('lena-nb-connection-setup',
+                                 ['lte'])
+    obj.source = 'lena-nb-connection-setup.cc'
+    obj = bld.create_ns3_program('lena-nb-udp-data-transfer',
+                                 ['lte'])
+    obj.source = 'lena-nb-udp-data-transfer.cc'
     if bld.env['ENABLE_EMU']:
         obj = bld.create_ns3_program('lena-simple-epc-emu',
                                      ['lte', 'fd-net-device'])

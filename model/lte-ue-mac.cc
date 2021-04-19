@@ -72,6 +72,7 @@ public:
   virtual void SetImsi (uint64_t imsi);
   virtual void NotifyEdrx();
   virtual void NotifyPsm();
+  virtual NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel GetCoverageEnhancementLevel();
 
 private:
   LteUeMac *m_mac; ///< the UE MAC
@@ -158,6 +159,9 @@ UeMemberLteUeCmacSapProvider::NotifyPsm()
   m_mac->DoNotifyPsm();
 }
 
+NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel UeMemberLteUeCmacSapProvider::GetCoverageEnhancementLevel(){
+  return m_mac->DoGetCoverageEnhancementLevel();
+}
 
 /// UeMemberLteMacSapProvider class
 class UeMemberLteMacSapProvider : public LteMacSapProvider
@@ -825,7 +829,7 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   // Check CE Level
   double rsrp = m_uePhySapProvider->GetRSRP ();
   NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm"
-                            << "\n");
+                            << std::endl);
   // TODO Grenzfälle
   if (rsrp < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
     {
@@ -1599,5 +1603,10 @@ LteUeMac::DoNotifyEdrx(){
 void 
 LteUeMac::DoNotifyPsm(){
   m_psm = true;
+}
+
+NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel 
+LteUeMac::DoGetCoverageEnhancementLevel(){
+  return m_CeLevel.coverageEnhancementLevel;
 }
 } // namespace ns3

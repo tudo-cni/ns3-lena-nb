@@ -386,7 +386,9 @@ public:
    */
 
   void Attach (Ptr<NetDevice> ueDevice);
-  void AttachAtTime (Ptr<NetDevice> ueDevice, uint64_t delay);
+
+  void AttachAtTimeNb (Ptr<NetDevice> ueDevice, uint64_t delay);
+
   void ScheduleConnect(Ptr<NetDevice> ueDevice);
 
 
@@ -418,6 +420,22 @@ public:
    * procedure.
    */
   void Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
+
+  /**
+   * \brief Manual attachment of a UE device to the network via a given eNodeB.
+   * \param ueDevice the UE device to be attached
+   * \param enbDevice the destination eNodeB device
+   *
+   * In addition, the function also instructs the UE to immediately enter
+   * CONNECTED mode and activates the default EPS bearer.
+   *
+   * The function can be used in both LTE-only and EPC-enabled simulations.
+   * Note that this function will disable Idle mode initial cell selection
+   * procedure.
+   */
+  void AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
+  void AttachSuspend (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, uint64_t resumeId);
+
 
   /** 
    * \brief Manual attachment of a set of UE devices to the network via the

@@ -214,7 +214,11 @@ LteRlcSm::DoDispose ()
   NS_LOG_FUNCTION (this);
   LteRlc::DoDispose ();
 }
-
+void
+LteRlcSm::DoReset()
+{
+  NS_LOG_FUNCTION (this);
+}
 void
 LteRlcSm::DoTransmitPdcpPdu (Ptr<Packet> p)
 {

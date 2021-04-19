@@ -1002,7 +1002,7 @@ LteHelper::Attach (Ptr<NetDevice> ueDevice)
                                   EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
 }
 void
-LteHelper::AttachAtTime (Ptr<NetDevice> ueDevice, uint64_t delay)
+LteHelper::AttachAtTimeNb (Ptr<NetDevice> ueDevice, uint64_t delay)
 {
   NS_LOG_FUNCTION (this);
 
@@ -1034,11 +1034,7 @@ LteHelper::AttachAtTime (Ptr<NetDevice> ueDevice, uint64_t delay)
                                   EpcTft::Default (),
                                   EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
 }
-void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){
-  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
-  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas();
-  ueNas->Connect();
-}
+
 
 void
 LteHelper::Attach (NetDeviceContainer ueDevices, Ptr<NetDevice> enbDevice)
@@ -1073,6 +1069,75 @@ LteHelper::Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
     {
       ueDevice->GetObject<LteUeNetDevice> ()->SetTargetEnb (enbDevice->GetObject<LteEnbNetDevice> ());
     }
+}
+
+void
+LteHelper::AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
+{
+  NS_LOG_FUNCTION (this);
+  //enbRrc->SetCellId (enbDevice->GetObject<LteEnbNetDevice> ()->GetCellId ());
+
+  if (m_epcHelper == 0)
+    {
+      NS_FATAL_ERROR ("This function is not valid without properly configured EPC");
+    }
+
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+  if (ueLteDevice == 0)
+    {
+      NS_FATAL_ERROR ("The passed NetDevice must be an LteUeNetDevice");
+    }
+// activate default EPS bearer
+  m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (),
+                                  EpcTft::Default (),
+                                  EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
+  Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+  Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
+
+  uint64_t resumeId = enbRrc->AttachSuspendedUeNb(ueRrc->GetImsi());
+  Simulator::Schedule(MilliSeconds(20), &LteHelper::AttachSuspend, this, ueDevice, enbDevice, resumeId);
+}
+
+void LteHelper::AttachSuspend(Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, uint64_t resumeId){
+  // initiate cell selection
+
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
+  Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+  Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
+  NbIotRrcSap::SystemInformationBlockType1Nb sib1Nb = enbRrc->GetSib1Nb();
+  NbIotRrcSap::SystemInformationNb siNb = enbRrc->GetSiNb();
+  LteRrcSap::RadioResourceConfigDedicated rrcd = enbRrc->GetUeManagerbyResumeId(resumeId)->GetRadioResourceConfigForHandoverPreparationInfo(); // ShortCut to get RadioResourceConfig
+
+  ueRrc->AttachSuspendedNb(resumeId,enbLteDevice->GetCellId (),enbLteDevice->GetDlEarfcn (), rrcd, sib1Nb, siNb);
+
+}
+
+void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas();
+  ueNas->Connect();
+  //Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  //Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+
+  //Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas ();
+  //ueNas->Connect (enbLteDevice->GetCellId (), enbLteDevice->GetDlEarfcn ());
+
+  //if (m_epcHelper != 0)
+  //  {
+  //    // activate default EPS bearer
+  //    m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (), EpcTft::Default (), EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+  //  }
+
+  //// tricks needed for the simplified LTE-only simulations 
+  //if (m_epcHelper == 0)
+  //  {
+  // ueDevice->GetObject<LteUeNetDevice> ()->SetTargetEnb (enbDevice->GetObject<LteEnbNetDevice> ());
+  //  }
 }
 
 void

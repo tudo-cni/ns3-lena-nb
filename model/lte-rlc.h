@@ -111,6 +111,13 @@ public:
    */
   LteMacSapUser* GetLteMacSapUser ();
 
+  /**
+   * Receive PDU function
+   *
+   * \param params the LteMacSapUser::ReceivePduParameters
+   */ 
+  virtual void DoReset() = 0;
+
 
   /**
    * TracedCallback signature for NotifyTxOpportunity events.
@@ -207,6 +214,7 @@ public:
   static TypeId GetTypeId (void);
   virtual void DoInitialize ();
   virtual void DoDispose ();
+  virtual void DoReset();
 
   virtual void DoTransmitPdcpPdu (Ptr<Packet> p);
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);

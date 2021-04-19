@@ -68,6 +68,8 @@ public:
   virtual void DoNotifyHarqDeliveryFailure ();
   virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
 
+  virtual void DoReset();
+
 private:
   /// Expire RBS timer function
   void ExpireRbsTimer (void);

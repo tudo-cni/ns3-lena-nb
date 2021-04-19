@@ -99,8 +99,9 @@ public:
         OFF
     }powerState;
 
-    NbiotEnergyModel(NbiotChip module): 
+    NbiotEnergyModel(NbiotChip module, uint32_t imsi): 
         m_module(module),
+        m_imsi(imsi),
         m_lastState(PowerState::OFF),
         m_lastStateChange(Time(0)){
         m_battery = CreateObject<LiIonEnergySource>();
@@ -110,10 +111,14 @@ public:
 
     void DoNotifyStateChange(PowerState newState);
     PowerState DoGetState();
+    double GetEnergyRemaining();
+    double GetEnergyRemainingFraction();
+    void SetImsi(uint32_t imsi);
 
 private:
     Ptr<LiIonEnergySource> m_battery; // Battery model
     NbiotChip m_module; // Current Nbiot Module
+    uint32_t m_imsi;
     PowerState m_lastState; // Current Powerstate
     Time m_lastStateChange;
     std::map<PowerState, double> m_timeSpendInState; // Statistics

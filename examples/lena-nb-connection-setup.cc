@@ -103,10 +103,10 @@ std::vector<std::string> readCSVRow (const std::string &row)
 int
 main (int argc, char *argv[])
 {
-  uint16_t numUesCe0 = 10;
+  uint16_t numUesCe0 = 90;
   uint16_t numUesCe1 = 10;
-  uint16_t numUesCe2 = 10;
-  Time simTime = Minutes(10);
+  uint16_t numUesCe2 = 0;
+  Time simTime = Minutes(5);
   //double distance = 50000.0;
   double distanceCe0 =  469531.7428251784;
   double distanceCe1 = 1484789.7410759863;
@@ -115,10 +115,6 @@ main (int argc, char *argv[])
   
 
   Time interPacketInterval = MilliSeconds (100000);
-  bool useCa = false;
-  bool disableDl = true;
-  bool disableUl = false;
-  bool disablePl = true;
   bool scenario = false;
   int seed = 1;
 
@@ -132,10 +128,6 @@ main (int argc, char *argv[])
   cmd.AddValue ("distanceCe1", "Distance between eNBs [m]", distanceCe1);
   cmd.AddValue ("distanceCe2", "Distance between eNBs [m]", distanceCe2);
   cmd.AddValue ("interPacketInterval", "Inter packet interval", interPacketInterval);
-  cmd.AddValue ("useCa", "Whether to use carrier aggregation.", useCa);
-  cmd.AddValue ("disableDl", "Disable downlink data flows", disableDl);
-  cmd.AddValue ("disableUl", "Disable uplink data flows", disableUl);
-  cmd.AddValue ("disablePl", "Disable data flows between peer UEs", disablePl);
   cmd.AddValue ("scenario", "1 if should use scenario csv", scenario);
   cmd.AddValue ("randomSeed", "randomSeed",seed);
   cmd.Parse (argc, argv);
@@ -145,13 +137,6 @@ main (int argc, char *argv[])
 
   // parse again so you can override default values from the command line
   cmd.Parse(argc, argv);
-  //std::cout << simTime << std::endl;
-  if (useCa)
-   {
-     Config::SetDefault ("ns3::LteHelper::UseCa", BooleanValue (useCa));
-     Config::SetDefault ("ns3::LteHelper::NumberOfComponentCarriers", UintegerValue (2));
-     Config::SetDefault ("ns3::LteHelper::EnbComponentCarrierManager", StringValue ("ns3::RrComponentCarrierManager"));
-   }
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
@@ -202,7 +187,6 @@ main (int argc, char *argv[])
   ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
   Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
   // interface 0 is localhost, 1 is the p2p device
-  Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
 
   Ipv4StaticRoutingHelper ipv4RoutingHelper;
   Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
@@ -272,65 +256,36 @@ main (int argc, char *argv[])
   RngSeedManager::SetSeed (seed);  // Changes seed from default of 1 to 3
   Ptr<UniformRandomVariable> RaUeUniformVariable = CreateObject<UniformRandomVariable> ();
 
-  // Install and start applications on UEs and remote host
-  uint16_t ulPort = 2000;
-  ApplicationContainer clientApps;
-  ApplicationContainer serverApps;
 
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
 
-      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()/2);
+      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()*(3.0/4));
       std::cout << access << "\n";
       lteHelper->AttachAtTimeNb (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
-      //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
-      // side effect: the default EPS bearer will be activated
-      if (!disableUl)
-        {
-        ++ulPort;
-        UdpEchoServerHelper server (ulPort);
-        serverApps.Add(server.Install (remoteHost));
-        //
-        // Create a UdpEchoClient application to send UDP datagrams from node zero to
-        // node one.
-        //
 
-
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(20));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
-
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access)+simTime/2);
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access)+simTime/2);
-        }
     }
 
   auto start = std::chrono::system_clock::now(); 
   std::time_t start_time = std::chrono::system_clock::to_time_t(start);
   std::cout << "started computation at " << std::ctime(&start_time);
-  std::string logdir = "logs/";
+   std::string logdir = "logs/";
   std::string makedir = "mkdir -p ";
   //auto start = std::chrono::system_clock::now();
 
   logdir += std::to_string(ueNodes.GetN());
   logdir += "_";
   logdir += std::to_string(simTime.GetInteger());
-  makedir += logdir; 
-  int a = std::system(makedir.c_str());
+  std::string top_dirmakedir = makedir+logdir; 
+  int a = std::system(top_dirmakedir.c_str());
   std::cout << a << std::endl;
   logdir += "/";
-  auto tm = *std::localtime(&start_time);
-  std::stringstream ss;
-  ss << std::put_time(&tm, "ra_%d_%m_%Y_%H_%M_%S");
-  logdir += ss.str();
+
   if (scenario){
     logdir += "_";
     logdir += "predifined_scenario";
   }
   else{
-    logdir += "_";
     logdir += std::to_string(numUesCe0);
     logdir += "_";
     logdir += std::to_string(distanceCe0);
@@ -343,8 +298,17 @@ main (int argc, char *argv[])
     logdir += "_";
     logdir += std::to_string(distanceCe2);
   }
+  std::string second_dirmakedir = makedir+logdir; 
+  a = std::system(second_dirmakedir.c_str());
+  std::cout << a << std::endl;
   logdir += "/";
+  auto tm = *std::localtime(&start_time);
+  std::stringstream ss;
+  ss << std::put_time(&tm, "%d_%m_%Y_%H_%M_%S");
+  logdir += ss.str();
+  logdir += "_";
   //std::cout << logfile << "\n";
+
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
 
     Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
@@ -353,9 +317,17 @@ main (int argc, char *argv[])
   }
 
   
+
+  
   //lteHelper->EnableTraces ();
   // Uncomment to enable PCAP tracing
   //p2ph.EnablePcapAll("lena-simple-epc");
+  Config::SetDefault ("ns3::ConfigStore::Filename", StringValue ("output-attributes.txt"));
+  Config::SetDefault ("ns3::ConfigStore::FileFormat", StringValue ("RawText"));
+  Config::SetDefault ("ns3::ConfigStore::Mode", StringValue ("Save"));
+  ConfigStore outputConfig2;
+  outputConfig2.ConfigureDefaults ();
+  outputConfig2.ConfigureAttributes ();
 
   Simulator::Stop (simTime+Seconds(50));
   Simulator::Run ();

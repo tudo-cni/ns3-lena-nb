@@ -48,6 +48,9 @@ NbiotEnergyModel::DoGetState(){
     return m_lastState;
 }
 
+void NbiotEnergyModel::SetImsi(uint32_t imsi){
+    m_imsi = imsi;
+}
 void NbiotEnergyModel::DoNotifyStateChange(PowerState newState){
     Time stateTime = (Simulator::Now()-m_lastStateChange); // subframes are [ms] and we need [s]
     double lostEnergy = 0; // Energy in [Ws] or [J]
@@ -83,5 +86,11 @@ void NbiotEnergyModel::DoNotifyStateChange(PowerState newState){
     m_energySpendInState[m_lastState] += lostEnergy;
     m_lastState = newState;
 
+}
+double NbiotEnergyModel::GetEnergyRemaining(){
+    return m_battery->GetRemainingEnergy();
+}
+double NbiotEnergyModel::GetEnergyRemainingFraction(){
+    return m_battery->GetEnergyFraction();
 }
 }

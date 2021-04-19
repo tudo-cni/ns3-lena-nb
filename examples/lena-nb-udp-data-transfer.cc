@@ -104,9 +104,9 @@ int
 main (int argc, char *argv[])
 {
   uint16_t numUesCe0 = 10;
-  uint16_t numUesCe1 = 10;
-  uint16_t numUesCe2 = 10;
-  Time simTime = Minutes(10);
+  uint16_t numUesCe1 = 0;
+  uint16_t numUesCe2 = 0;
+  Time simTime = Minutes(2);
   //double distance = 50000.0;
   double distanceCe0 =  469531.7428251784;
   double distanceCe1 = 1484789.7410759863;
@@ -114,7 +114,7 @@ main (int argc, char *argv[])
   double distanceCe2 = 4690000.428251784;
   
 
-  Time interPacketInterval = MilliSeconds (100000);
+  Time interPacketInterval = Days(1);
   bool useCa = false;
   bool disableDl = true;
   bool disableUl = false;
@@ -280,9 +280,9 @@ main (int argc, char *argv[])
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
 
-      int access = RaUeUniformVariable->GetInteger (0, simTime.GetMilliSeconds()/2);
-      std::cout << access << "\n";
-      lteHelper->AttachAtTimeNb (ueLteDevs.Get(i), access); //, enbLteDevs.Get(i)
+      int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds()/2);
+      lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
+
       //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
       // side effect: the default EPS bearer will be activated
       if (!disableUl)
@@ -302,35 +302,31 @@ main (int argc, char *argv[])
         ulClient.SetAttribute ("PacketSize", UintegerValue(20));
         clientApps.Add (ulClient.Install (ueNodes.Get(i)));
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access)+simTime/2);
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access)+simTime/2);
+        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
+        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
         }
     }
 
   auto start = std::chrono::system_clock::now(); 
   std::time_t start_time = std::chrono::system_clock::to_time_t(start);
   std::cout << "started computation at " << std::ctime(&start_time);
-  std::string logdir = "logs/";
+     std::string logdir = "logs/";
   std::string makedir = "mkdir -p ";
   //auto start = std::chrono::system_clock::now();
 
   logdir += std::to_string(ueNodes.GetN());
   logdir += "_";
   logdir += std::to_string(simTime.GetInteger());
-  makedir += logdir; 
-  int a = std::system(makedir.c_str());
+  std::string top_dirmakedir = makedir+logdir; 
+  int a = std::system(top_dirmakedir.c_str());
   std::cout << a << std::endl;
   logdir += "/";
-  auto tm = *std::localtime(&start_time);
-  std::stringstream ss;
-  ss << std::put_time(&tm, "ra_%d_%m_%Y_%H_%M_%S");
-  logdir += ss.str();
+
   if (scenario){
     logdir += "_";
     logdir += "predifined_scenario";
   }
   else{
-    logdir += "_";
     logdir += std::to_string(numUesCe0);
     logdir += "_";
     logdir += std::to_string(distanceCe0);
@@ -343,8 +339,17 @@ main (int argc, char *argv[])
     logdir += "_";
     logdir += std::to_string(distanceCe2);
   }
+  std::string second_dirmakedir = makedir+logdir; 
+  a = std::system(second_dirmakedir.c_str());
+  std::cout << a << std::endl;
   logdir += "/";
+  auto tm = *std::localtime(&start_time);
+  std::stringstream ss;
+  ss << std::put_time(&tm, "%d_%m_%Y_%H_%M_%S");
+  logdir += ss.str();
+  logdir += "_";
   //std::cout << logfile << "\n";
+
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
 
     Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();

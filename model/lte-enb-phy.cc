@@ -702,13 +702,13 @@ LteEnbPhy::StartSubFrame (void)
     }
   }
 
-  if (m_srsPeriodicity>0)
-    { 
-      // might be 0 in case the eNB has no UEs attached
-      NS_ASSERT_MSG (m_nrFrames > 1, "the SRS index check code assumes that frameNo starts at 1");
-      NS_ASSERT_MSG (m_nrSubFrames > 0 && m_nrSubFrames <= 10, "the SRS index check code assumes that subframeNo starts at 1");
-      m_currentSrsOffset = (((m_nrFrames-1)*10 + (m_nrSubFrames-1)) % m_srsPeriodicity);
-    }
+  //if (m_srsPeriodicity>0)
+  //  { 
+  //    // might be 0 in case the eNB has no UEs attached
+  //    NS_ASSERT_MSG (m_nrFrames > 1, "the SRS index check code assumes that frameNo starts at 1");
+  //    NS_ASSERT_MSG (m_nrSubFrames > 0 && m_nrSubFrames <= 10, "the SRS index check code assumes that subframeNo starts at 1");
+  //    m_currentSrsOffset = (((m_nrFrames-1)*10 + (m_nrSubFrames-1)) % m_srsPeriodicity);
+  //  }
   NS_LOG_INFO ("-----sub frame " << m_nrSubFrames << "-----");
   m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
 

@@ -142,6 +142,8 @@ public:
    */
   virtual void NotifyEdrx() = 0;
   virtual void NotifyPsm() = 0;
+
+  virtual NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel GetCoverageEnhancementLevel() =0;
 };
 
 

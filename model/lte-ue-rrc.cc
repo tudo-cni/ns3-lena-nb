@@ -41,6 +41,7 @@
 #include <fstream>
 #include <cmath>
 #include <ns3/build-profile.h>
+#include <iomanip> 
 
 namespace ns3 {
 
@@ -168,10 +169,10 @@ LteUeRrc::LteUeRrc ()
     m_previousCellId (0),
     m_connEstFailCountLimit (0),
     m_connEstFailCount (0),
-    m_t3412(MilliSeconds(100000)),
+    m_t3412(Days(5)),
     m_t3324(MilliSeconds(3500)),
     m_numberOfComponentCarriers (MIN_NO_CC),
-    m_energyModel(NbiotEnergyModel(BG96()))
+    m_energyModel(NbiotEnergyModel(BG96(),0))
 {
   NS_LOG_FUNCTION (this);
   m_cphySapUser.push_back (new MemberLteUeCphySapUser<LteUeRrc> (this));
@@ -193,6 +194,7 @@ void
 LteUeRrc::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
+  LogEnergyRemaining();
   for ( uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
    {
       delete m_cphySapUser.at(i);
@@ -244,7 +246,7 @@ LteUeRrc::GetTypeId (void)
                    "Timer for the RRC Connection Establishment procedure "
                    "(i.e., the procedure is deemed as failed if it takes longer than this). "
                    "Standard values: 100ms, 200ms, 300ms, 400ms, 600ms, 1000ms, 1500ms, 2000ms",
-                   TimeValue (MilliSeconds (60000)), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   TimeValue (MilliSeconds (30000)), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
                    MakeTimeAccessor (&LteUeRrc::m_t300),
                    MakeTimeChecker (MilliSeconds (2500), MilliSeconds (60000)))
     .AddAttribute ("T310",
@@ -467,6 +469,7 @@ LteUeRrc::SetImsi (uint64_t imsi)
 {
   NS_LOG_FUNCTION (this << imsi);
   m_imsi = imsi;
+  m_energyModel.SetImsi(m_imsi);
 
   //Communicate the IMSI to MACs and PHYs for all the component carriers
   for (uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
@@ -607,25 +610,35 @@ LteUeRrc::InitializeSap (void)
     }
 }
 void LteUeRrc::LogRA(bool success, Time timetillconnection){
+        std::string logfile_path = m_logdir+"RA.log";
         std::ofstream logfile;
-        logfile.open(m_logfile, std::ios_base::app);
+        logfile.open(logfile_path, std::ios_base::app);
         if(success){
-          logfile << success << ", " << timetillconnection.GetMilliSeconds() << "\n";
+          logfile << m_imsi << "," << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< ","<< timetillconnection.GetMilliSeconds() << "\n";
         }else{
-          logfile << success << ", " << -1 << "\n";
+          logfile << m_imsi << "," << -1 << "\n";
         } 
         logfile.close();
 }
 
 void LteUeRrc::LogDataTransmission(Time timetillconnection){
+        std::string logfile_path = m_logdir+"Data.log";
         std::ofstream logfile;
-        logfile.open(m_logfile, std::ios_base::app);
-        logfile << timetillconnection.GetMilliSeconds() << "\n";
+        logfile.open(logfile_path, std::ios_base::app);
+        logfile <<  m_imsi << ","  << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< ","<< timetillconnection.GetMilliSeconds() << "\n";
         logfile.close();
 }
 
-void LteUeRrc::SetLogFile(std::string filename){
-  m_logfile = filename;
+void LteUeRrc::LogEnergyRemaining(){
+        std::string logfile_path = m_logdir+"Energy.log";
+        std::ofstream logfile;
+        logfile.open(logfile_path, std::ios_base::app);
+        logfile <<  m_imsi << "," << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< "," << std::setprecision(15) << m_energyModel.GetEnergyRemaining() << "," << m_energyModel.GetEnergyRemainingFraction() <<"\n";
+        logfile.close();
+}
+
+void LteUeRrc::SetLogDir(std::string dirname){
+  m_logdir = dirname;
 }
 void
 LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
@@ -820,6 +833,7 @@ LteUeRrc::DoStartCellSelection (uint32_t dlEarfcn)
                  "cannot start cell selection from state " << ToString (m_state));
   m_dlEarfcn = dlEarfcn;
   m_cphySapProvider.at(0)->StartCellSearch (dlEarfcn);
+  m_connectStartTime = Simulator::Now();
   SwitchToState (IDLE_CELL_SEARCH);
 }
 
@@ -872,7 +886,6 @@ void
 LteUeRrc::DoConnect ()
 {
   NS_LOG_FUNCTION (this << m_imsi);
-  m_connectStartTime = Simulator::Now();
   switch (m_state)
     {
     case IDLE_START:
@@ -903,12 +916,15 @@ LteUeRrc::DoConnect ()
       if(!m_eDrxTimeout.IsExpired()){
         m_eDrxTimeout.Cancel();
       }
+      m_connectStartTime = Simulator::Now();
       StartConnectionNb();
       break;
     case IDLE_SUSPEND_PSM:
+    case CONNECTED_TAU:
       if(!m_psmTimeout.IsExpired()){
         m_psmTimeout.Cancel();
       }
+      m_connectStartTime = Simulator::Now();
       m_resumePending = true;
       m_hasReceivedMibNb = false;
       SwitchToState(IDLE_WAIT_MIB);
@@ -1244,7 +1260,6 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
         m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
         NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
 
-        LogRA(true, Simulator::Now()-m_connectStartTime);
         //m_asSapUser->NotifyMessage4();
         //SwitchToState(IDLE_START);
         m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);
@@ -1279,7 +1294,6 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
         m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
         NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
 
-        LogRA(true, Simulator::Now()-m_connectStartTime);
         //m_asSapUser->NotifyMessage4();
         //SwitchToState(IDLE_START);
         m_connectionEstablishedTrace (m_imsi, m_cellId, m_rnti);
@@ -1377,6 +1391,7 @@ LteUeRrc::DoRecvRrcConnectionReconfiguration (LteRrcSap::RrcConnectionReconfigur
             }
           LteRrcSap::RrcConnectionReconfigurationCompleted msg2;
           msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
+          LogRA(true, Simulator::Now()-m_connectStartTime);
           m_rrcSapUser->SendRrcConnectionReconfigurationCompleted (msg2);
           m_connectionReconfigurationTrace (m_imsi, m_cellId, m_rnti);
         }
@@ -3501,6 +3516,8 @@ LteUeRrc::ConnectionTimeout ()
           }
         m_hasReceivedSib2 = false;         // invalidate the previously received SIB2
         SwitchToState (IDLE_CAMPED_NORMALLY);
+        m_srb0->m_rlc->DoReset();
+        m_srb1->m_rlc->DoReset();
         m_connectionTimeoutTrace (m_imsi, m_cellId, m_rnti, m_connEstFailCount);
         //Following call to UE NAS will force the UE to immediately
         //perform the random access to the same cell again.
@@ -3614,10 +3631,9 @@ LteUeRrc::SwitchToState (State newState)
       break;
     case CONNECTED_TAU:
       // usually wait for TAU but no TAU implemented yet
-      m_hasReceivedMibNb = false; // UE has to received MasterInformationBlock again after PSM see 3GPP TR 45 820 13_1
-      m_resumePending = true;
-      SwitchToState(IDLE_WAIT_MIB);
-      //SwitchToState(IDLE_SUSPEND_PSM);
+      //m_hasReceivedMibNb = false; // UE has to received MasterInformationBlock again after PSM see 3GPP TR 45 820 13_1
+      //m_resumePending = true;
+      DoConnect();
       break;
     default:
       break;
@@ -3757,5 +3773,20 @@ LteUeRrc::DoGetEnergyState(){
   return m_energyModel.DoGetState();
 }
 
+void LteUeRrc::AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si){
+  m_resumeId = resumeId;
+  DoForceCampedOnEnb(cellid, dlEarfcn);
+  DoRecvSystemInformationBlockType1Nb(cellid, sib1);
+  SwitchToState(IDLE_CONNECTING);
+  DoRecvSystemInformationNb(si);
+  ApplyRadioResourceConfigDedicated (rrcd);
+  m_leaveConnectedMode = false;
+  m_asSapUser->NotifyConnectionSuccessful ();
+  m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
+  m_hasReceivedSib1Nb = true;
+  m_hasReceivedSib2Nb = true;
+  SwitchToState(IDLE_SUSPEND_PSM);
+  m_asSapUser->NotifyConnectionSuspended();
+}
 } // namespace ns3
 
