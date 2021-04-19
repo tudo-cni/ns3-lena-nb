@@ -109,7 +109,7 @@ LteRlcAm::GetTypeId (void)
     .AddAttribute ("ReportBufferStatusTimer",
                    "How much to wait to issue a new Report Buffer Status since the last time "
                    "a new SDU was received",     
-                   TimeValue (MilliSeconds (10000)),
+                   TimeValue (MilliSeconds (500000)),
                    MakeTimeAccessor (&LteRlcAm::m_rbsTimerValue),
                    MakeTimeChecker ())
     .AddAttribute ("TxOpportunityForRetxAlwaysBigEnough",
@@ -1761,7 +1761,13 @@ LteRlcAm::ExpireRbsTimer (void)
 {
   NS_LOG_LOGIC ("RBS Timer expires");
 
-  if (m_txonBufferSize + m_txedBufferSize + m_retxBufferSize > 0)
+ // if (m_txonBufferSize + m_txedBufferSize + m_retxBufferSize > 0)
+ //   {
+ //     DoReportBufferStatus ();
+ //     m_rbsTimer = Simulator::Schedule (m_rbsTimerValue, &LteRlcAm::ExpireRbsTimer, this);
+ //   }
+
+  if (m_txonBufferSize + m_txedBufferSize > 0)
     {
       DoReportBufferStatus ();
       m_rbsTimer = Simulator::Schedule (m_rbsTimerValue, &LteRlcAm::ExpireRbsTimer, this);

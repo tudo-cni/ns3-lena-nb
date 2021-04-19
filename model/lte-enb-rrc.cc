@@ -194,7 +194,7 @@ UeManager::UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s, uint8_t compon
     m_pendingStartDataRadioBearers (false),
     m_t3412(Days(5)),
     m_t3324(MilliSeconds(3500)),
-    m_dataInactivityInterval(200),
+    m_dataInactivityInterval(30000),
     m_eDrxCycle(0),
     m_enablePSM(true)
 { 
@@ -851,6 +851,7 @@ UeManager::SendData (uint8_t bid, Ptr<Packet> p)
     case HANDOVER_PREPARATION:
     case HANDOVER_PATH_SWITCH:
     case IDLE_SUSPEND_EDRX:
+    case IDLE_SUSPEND_PSM: // This is not correct, but will stay until paging is implemented
       {
         NS_LOG_LOGIC ("queueing data on PDCP for transmission over the air");
         SendPacket (bid, p);
@@ -1825,7 +1826,7 @@ void UeManager::SwitchToResumeNb(){
   msg.resumeIdentity = m_resumeId; 
   m_rrc->m_rrcSapUser->SendRrcConnectionReleaseNb(m_rnti, msg);
   SwitchToState(IDLE_SUSPEND_EDRX);
-  Simulator::Schedule(MilliSeconds(10000), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti, m_resumeId);
+  Simulator::Schedule(MilliSeconds(30000), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti, m_resumeId);
 }
 
 ///////////////////////////////////////////
@@ -1966,7 +1967,7 @@ LteEnbRrc::GetTypeId (void)
               MakeIntegerChecker<int32_t> ())
     .AddAttribute ("RrcReleaseInterval",
               "Rrc Release Interval in ms",
-              UintegerValue(30000),
+              UintegerValue(50000),
               MakeUintegerAccessor (&LteEnbRrc::m_dataInactivityInterval),
               MakeUintegerChecker<uint16_t> (0, 60000) )
     .AddAttribute ("EnablePSM",

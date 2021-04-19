@@ -7,4 +7,4 @@ cd ../../ && ./waf clean && ./waf configure --disable-python --enable-examples -
 #cd ../../ && ./waf clean && ./waf distclean && 
 #cd ../../ && ./waf clean && CXXFLAGS="-O3 -g" ./waf -d optimized configure --enable-examples --enable-modules=lte --disable-python
 
-#cd ../../ && ./waf clean && CXXFLAGS="-O3 -w" ./waf -d optimized configure --enable-examples --enable-modules=lte --disable-python
+#cd ../../ && ./waf clean && CXXFLAGS="-O3 -w -g" ./waf -d optimized configure --enable-examples --enable-modules=lte --disable-python
