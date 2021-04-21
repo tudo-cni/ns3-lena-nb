@@ -60,7 +60,7 @@ public:
   virtual void ConfigureRach (RachConfig rc);
   virtual void ConfigureRadioResourceConfig (NbIotRrcSap::RadioResourceConfigCommonNb rc);
   virtual void StartContentionBasedRandomAccessProcedure ();
-  virtual void StartRandomAccessProcedureNb ();
+  virtual void StartRandomAccessProcedureNb (bool edt);
   virtual void StartNonContentionBasedRandomAccessProcedure (uint16_t rnti, uint8_t preambleId,
                                                              uint8_t prachMask);
   virtual void SetRnti (uint16_t rnti);
@@ -99,9 +99,9 @@ UeMemberLteUeCmacSapProvider::StartContentionBasedRandomAccessProcedure ()
   m_mac->DoStartContentionBasedRandomAccessProcedure ();
 }
 void
-UeMemberLteUeCmacSapProvider::StartRandomAccessProcedureNb ()
+UeMemberLteUeCmacSapProvider::StartRandomAccessProcedureNb (bool edt)
 {
-  m_mac->DoStartRandomAccessProcedureNb ();
+  m_mac->DoStartRandomAccessProcedureNb (edt);
 }
 void
 UeMemberLteUeCmacSapProvider::StartNonContentionBasedRandomAccessProcedure (uint16_t rnti,
@@ -818,7 +818,7 @@ LteUeMac::DoStartContentionBasedRandomAccessProcedure ()
   RandomlySelectAndSendRaPreamble ();
 }
 void
-LteUeMac::DoStartRandomAccessProcedureNb ()
+LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
 {
   NS_LOG_FUNCTION (this);
 
@@ -831,24 +831,51 @@ LteUeMac::DoStartRandomAccessProcedureNb ()
   NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm"
                             << std::endl);
   // TODO Grenzfälle
+
+  NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled
+
   if (rsrp < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
     {
       // CE2
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb2;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo3;
+      if(edt){
+        tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb2;
+      }
     }
   else if (rsrp <= m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound)
     {
       // CE1
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb1;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo2;
+      if(edt){
+        tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb1;
+      }
     }
   else if (rsrp > m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce1_lowerbound)
     {
       // CE0
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb0;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo1;
+      if(edt){
+        tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb0;
+      }
     }
+
+  if(edt){
+    // Overwrite R13 config with values for R15 EDT provided
+    // easiest way to access data not include in NprachParameterNBR14
+    m_CeLevel.coverageEnhancementLevel= tmp.coverageEnhancementLevel;
+    m_CeLevel.nprachPeriodicity = tmp.nprachPeriodicity; 
+    m_CeLevel.nprachStartTime = tmp.nprachStartTime;
+    m_CeLevel.nprachSubcarrierOffset = tmp.nprachSubcarrierOffset;
+    m_CeLevel.nprachNumSubcarriers = tmp.nprachNumSubcarriers;
+    m_CeLevel.nprachSubcarrierMsg3RangeStart= tmp.nprachSubcarrierMsg3RangeStart;
+    m_CeLevel.npdcchNumRepetitionsRA = tmp.npdcchNumRepetitionsRA;
+    m_CeLevel.npdcchStartSfCssRa = tmp.npdcchStartSfCssRa;
+    m_CeLevel.npdcchOffsetRa = tmp.npdcchOffsetRa;
+
+  }
   m_backoffParameter = 0;
   RandomlySelectAndSendRaPreambleNb ();
 }

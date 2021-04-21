@@ -121,6 +121,7 @@ public:
     IDLE_SUSPEND_EDRX,
     IDLE_SUSPEND_PSM,
     CONNECTED_TAU,
+    IDLE_RANDOM_ACCESS_EDT, // New state for different Preambles and StateMachine
     NUM_STATES
   };
 
@@ -772,7 +773,7 @@ private:
   /// Start connection function
   void StartConnection ();
   /// Start connection function
-  void StartConnectionNb ();
+  void StartConnectionNb (bool edt);
   /**
    * \brief Leave connected mode method
    * Resets the UE back to an appropiate state depending
@@ -1398,18 +1399,24 @@ private:
   bool m_resumePending;
   bool m_enablePSM;
   bool m_enableEDRX;
+  bool m_useEdtPreamble;
 
   EventId m_eDrxTimeout;
 
   EventId m_psmTimeout;
   Time m_t3412;
   Time m_t3324;
+  bool m_cIotOpt;
+  bool m_edt;
+  std::vector<Ptr<Packet>> m_packetStored;
+  NbIotRrcSap::RadioResourceConfigCommonNb m_rc;
 public:
   /** 
    * The number of component carriers.
    */
   void AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si);
   void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
+  bool DoGetEdtEnabled();
 
   NbiotEnergyModel::PowerState DoGetEnergyState();
 

@@ -1189,6 +1189,13 @@ UeManager::RecvRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeC
         {
           m_rrc->m_s1SapProvider->InitialUeMessage (m_imsi, m_rnti);
           SwitchToState (CONNECTED_NORMALLY);// only set new rnti 
+          if (msg.dedicatedInfoNas->GetSize() > 0){
+            EpsBearerTag tag;
+            tag.SetRnti (m_rnti);
+            tag.SetBid (Lcid2Bid (3));
+            msg.dedicatedInfoNas->AddPacketTag (tag);
+            m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
+          }
         }
       else
         {
@@ -2547,7 +2554,6 @@ LteEnbRrc::ConfigureCell (std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> cc
 
       NbIotRrcSap::SystemInformationBlockType1Nb sib1Nb;
       sib1Nb.cellAccessRelatedInfoNb.cellIdentity = it.second->GetCellId();
-
       sib1Nb.cellSelectionInfo.qRxLevMin = m_qRxLevMin; // set as minimum value
       m_sib1Nb.push_back(sib1Nb);
       m_cphySapProvider.at(it.first)->SetSystemInformationBlockType1Nb(sib1Nb);
@@ -3567,94 +3573,13 @@ LteEnbRrc::SendSystemInformationNb ()
 {
   // NS_LOG_FUNCTION (this);
 
-  for (auto &it: m_componentCarrierPhyConf)
-    {
-      uint8_t ccId = it.first;
-
-      NbIotRrcSap::SystemInformationNb si;
-      si.haveSib2 = true;
-      si.sib2.freqInfo.ulCarrierFreq = it.second->GetUlEarfcn ();
-      si.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower = m_cphySapProvider.at (ccId)->GetReferenceSignalPower ();
-
-      //LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
-      NbIotRrcSap::RachInfo rachce0;
-      rachce0.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp10;
-      rachce0.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachInfo rachce1;
-      rachce1.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
-      rachce1.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachInfo rachce2;
-      rachce2.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
-      rachce2.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachConfigCommon rc;
-      rc.preambleTransMaxCE = 10;
-      rc.powerRampingParameters.powerRampingStep = NbIotRrcSap::PowerRampingParameters::PowerRampingStep::dB4;
-      rc.powerRampingParameters.preambleInitialReceivedTargetPower = NbIotRrcSap::PowerRampingParameters::PreambleInitialReceivedTargetPower::dbm_110;
-      rc.connEstFailOffset = 0;
-      rc.rachInfoList.rachInfo1 = rachce0;
-      rc.rachInfoList.rachInfo2 = rachce1;
-      rc.rachInfoList.rachInfo3 = rachce2;
-
-      si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
-      NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
-      // From Vodafone wireshark
-      rsrpprachinfolist.ce1_lowerbound = -115.5;
-      rsrpprachinfolist.ce2_lowerbound = -127.5;
-
-      si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
-      // Values from Vodafone Cell / temporary
-      NbIotRrcSap::NprachParametersNb ce0;
-      ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
-      ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
-      ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
-      ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
-      ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
-      ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
-      ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-      NbIotRrcSap::NprachParametersNb ce1;
-      ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
-      ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-      ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
-      ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
-      ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
-      ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
-      ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-
-      NbIotRrcSap::NprachParametersNb ce2;
-      ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
-      ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
-      ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
-      ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32;
-      ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
-      ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
-      ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
-      si.sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
-
-      m_sib2Nb.push_back(si.sib2);
-      
-      m_rrcSapUser->SendSystemInformationNb (it.second->GetCellId (), si);
-    }
+  NbIotRrcSap::SystemInformationNb si; 
+  si.haveSib2 = true;
+  si.sib2 = m_sib2Nb.back();
+  
+  std::map<uint8_t, Ptr<ComponentCarrierBaseStation>>::iterator cc = m_componentCarrierPhyConf.begin();
+  m_rrcSapUser->SendSystemInformationNb (cc->second->GetCellId (), si);
+    
 
   /*
    * For simplicity, we use the same periodicity for all SIBs. Note that in real
@@ -3670,89 +3595,13 @@ LteEnbRrc::SendSystemInformationNb ()
 //    return false;
 //}
 NbIotRrcSap::SystemInformationBlockType2Nb LteEnbRrc::DoGetCurrentSystemInformationBlockType2Nb(){
-  if (m_sib2Nb.size() == 0){
-      NbIotRrcSap::SystemInformationNb si;
-      si.haveSib2 = true;
-
-      //LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
-      NbIotRrcSap::RachInfo rachce0;
-      rachce0.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp10;
-      rachce0.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachInfo rachce1;
-      rachce1.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
-      rachce1.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachInfo rachce2;
-      rachce2.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
-      rachce2.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachConfigCommon rc;
-      rc.preambleTransMaxCE = 10;
-      rc.powerRampingParameters.powerRampingStep = NbIotRrcSap::PowerRampingParameters::PowerRampingStep::dB4;
-      rc.powerRampingParameters.preambleInitialReceivedTargetPower = NbIotRrcSap::PowerRampingParameters::PreambleInitialReceivedTargetPower::dbm_110;
-      rc.connEstFailOffset = 0;
-      rc.rachInfoList.rachInfo1 = rachce0;
-      rc.rachInfoList.rachInfo2 = rachce1;
-      rc.rachInfoList.rachInfo3 = rachce2;
-
-      si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
-      NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
-      // From Vodafone wireshark
-      rsrpprachinfolist.ce1_lowerbound = -115.5;
-      rsrpprachinfolist.ce2_lowerbound = -127.5;
-
-      si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
-      // Values from Vodafone Cell / temporary
-      NbIotRrcSap::NprachParametersNb ce0;
-      ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
-      ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
-      ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
-      ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
-      ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
-      ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
-      ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-      NbIotRrcSap::NprachParametersNb ce1;
-      ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
-      ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-      ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
-      ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
-      ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
-      ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
-      ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-
-      NbIotRrcSap::NprachParametersNb ce2;
-      ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
-      ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
-      ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
-      ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32;
-      ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
-      ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
-      ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
-      si.sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
-
-
-      m_sib2Nb.push_back(si.sib2);
+  // Only NB-IoT code calls this method so we assume there is only one CC
+  if(m_sib2Nb.size() == 0){
+    std::map<uint8_t, Ptr<ComponentCarrierBaseStation>>::iterator cc = m_componentCarrierPhyConf.begin();
+    GenerateSystemInformationBlockType2Nb(*cc);
   }
   return m_sib2Nb.back();
+
 }
 
 bool
@@ -3783,91 +3632,117 @@ NbIotRrcSap::SystemInformationBlockType1Nb LteEnbRrc::GetSib1Nb(){
 }
 NbIotRrcSap::SystemInformationNb LteEnbRrc::GetSiNb(){
   NbIotRrcSap::SystemInformationNb si;
-  for (auto &it: m_componentCarrierPhyConf)
-    {
-      uint8_t ccId = it.first;
-
-      si.haveSib2 = true;
-      si.sib2.freqInfo.ulCarrierFreq = it.second->GetUlEarfcn ();
-      si.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower = m_cphySapProvider.at (ccId)->GetReferenceSignalPower ();
-
-      //LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
-      NbIotRrcSap::RachInfo rachce0;
-      rachce0.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp10;
-      rachce0.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachInfo rachce1;
-      rachce1.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
-      rachce1.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachInfo rachce2;
-      rachce2.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
-      rachce2.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
-
-      NbIotRrcSap::RachConfigCommon rc;
-      rc.preambleTransMaxCE = 10;
-      rc.powerRampingParameters.powerRampingStep = NbIotRrcSap::PowerRampingParameters::PowerRampingStep::dB4;
-      rc.powerRampingParameters.preambleInitialReceivedTargetPower = NbIotRrcSap::PowerRampingParameters::PreambleInitialReceivedTargetPower::dbm_110;
-      rc.connEstFailOffset = 0;
-      rc.rachInfoList.rachInfo1 = rachce0;
-      rc.rachInfoList.rachInfo2 = rachce1;
-      rc.rachInfoList.rachInfo3 = rachce2;
-
-      si.sib2.radioResourceConfigCommon.rachConfigCommon = rc;
-      NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
-      // From Vodafone wireshark
-      rsrpprachinfolist.ce1_lowerbound = -115.5;
-      rsrpprachinfolist.ce2_lowerbound = -127.5;
-
-      si.sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
-      // Values from Vodafone Cell / temporary
-      NbIotRrcSap::NprachParametersNb ce0;
-      ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
-      ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
-      ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
-      ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
-      ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
-      ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
-      ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-      NbIotRrcSap::NprachParametersNb ce1;
-      ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
-      ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-      ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
-      ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
-      ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
-      ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
-      ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-
-      NbIotRrcSap::NprachParametersNb ce2;
-      ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
-      ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
-      ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
-      ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
-      ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-      ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-      ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
-      ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32;
-      ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
-      ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
-      ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
-      si.sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
-      si.sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
-    }
-
+  si.haveSib2 = true;
+  if(m_sib2Nb.size() == 0){
+    std::map<uint8_t, Ptr<ComponentCarrierBaseStation>>::iterator cc = m_componentCarrierPhyConf.begin();
+    GenerateSystemInformationBlockType2Nb(*cc);
+  }
+  si.sib2 = m_sib2Nb.back();
   return si;
+}
+
+void LteEnbRrc::GenerateSystemInformationBlockType1Nb(){
+  
+}
+
+void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, ns3::Ptr<ns3::ComponentCarrierBaseStation>> cc){
+  // Sib2 and SibNb are created based on the ComponentCarrier configuration. At this point only one CC ist implemented for NB-Iot
+  NbIotRrcSap::SystemInformationBlockType2Nb sib2;
+  sib2.freqInfo.ulCarrierFreq = cc.second->GetUlEarfcn ();
+  sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower = m_cphySapProvider.at (cc.first)->GetReferenceSignalPower ();
+
+  //LteEnbCmacSapProvider::RachConfigNb rc = m_cmacSapProvider.at (ccId)->GetRachConfigNb ();
+  NbIotRrcSap::RachInfo rachce0;
+  rachce0.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp10;
+  rachce0.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+  NbIotRrcSap::RachInfo rachce1;
+  rachce1.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+  rachce1.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+  NbIotRrcSap::RachInfo rachce2;
+  rachce2.RaResponseWindowSize  = NbIotRrcSap::RachInfo::RaResponseWindowSize::pp8;
+  rachce2.macContentionResolutionTimer =  NbIotRrcSap::RachInfo::MacContentionResolutionTimer::pp32;
+
+  NbIotRrcSap::RachConfigCommon rc;
+  rc.preambleTransMaxCE = 10;
+  rc.powerRampingParameters.powerRampingStep = NbIotRrcSap::PowerRampingParameters::PowerRampingStep::dB4;
+  rc.powerRampingParameters.preambleInitialReceivedTargetPower = NbIotRrcSap::PowerRampingParameters::PreambleInitialReceivedTargetPower::dbm_110;
+  rc.connEstFailOffset = 0;
+  rc.rachInfoList.rachInfo1 = rachce0;
+  rc.rachInfoList.rachInfo2 = rachce1;
+  rc.rachInfoList.rachInfo3 = rachce2;
+
+  sib2.radioResourceConfigCommon.rachConfigCommon = rc;
+  NbIotRrcSap::RsrpThresholdsPrachInfoList rsrpprachinfolist; 
+  // From Vodafone wireshark
+  rsrpprachinfolist.ce1_lowerbound = -115.5;
+  rsrpprachinfolist.ce2_lowerbound = -127.5;
+
+  sib2.radioResourceConfigCommon.nprachConfig.rsrpThresholdsPrachInfoList = rsrpprachinfolist;
+  // Values from Vodafone Cell / temporary
+  NbIotRrcSap::NprachParametersNb ce0;
+  ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
+  ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+  ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+  ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+  ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+  ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
+  ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
+  ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+  ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+  NbIotRrcSap::NprachParametersNb ce1;
+  ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
+  ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+  ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
+  ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+  ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+  ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
+  ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
+  ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
+  ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+
+  NbIotRrcSap::NprachParametersNb ce2;
+  ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
+  ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
+  ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
+  ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+  ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n10;
+  ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n32;
+  ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
+  ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
+  ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+  NbIotRrcSap::NprachParametersNbR14 ce0v14;
+  ce0v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
+  ce0v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+  ce0v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
+  ce0v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+  ce0v14.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  ce0v14.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+  ce0v14.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
+  ce0v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+  ce0v14.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+  sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
+  sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
+  sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
+  sib2.radioResourceConfigCommon.nprachConfigR15.nprachParameterListEdt.nprachParametersNb0 = ce0v14;
+  sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
+
+  if(m_sib2Nb.size() == 0){
+    m_sib2Nb.push_back(sib2);
+  }else{
+    m_sib2Nb.back()= sib2;
+  }
 }
 } // namespace ns3
 

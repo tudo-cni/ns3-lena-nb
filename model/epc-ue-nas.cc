@@ -221,10 +221,10 @@ EpcUeNas::Send (Ptr<Packet> packet, uint16_t protocolNumber)
   switch (m_state)
     {
     case SUSPENDED:
-      {
-        // TODO Resume Connection and pass Packets down the line
-        Connect();
-      }
+      //{
+      //  // TODO Resume Connection and pass Packets down the line
+      //  Connect();
+      //}
     case CONNECTING:
     case ACTIVE:
       {

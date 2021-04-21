@@ -75,7 +75,7 @@ public:
    * e.g., to perform RRC connection establishment 
    * 
    */
-  virtual void StartRandomAccessProcedureNb () = 0;
+  virtual void StartRandomAccessProcedureNb (bool edt) = 0;
   /** 
    * tell the MAC to start a non-contention-based random access
    * procedure, e.g., as a consequence of handover
@@ -181,6 +181,8 @@ public:
   virtual void NotifyEnergyState(NbiotEnergyModel::PowerState state)= 0;
 
   virtual NbiotEnergyModel::PowerState GetEnergyState() = 0;
+
+  virtual bool GetEdtEnabled() = 0;
 
 };
 

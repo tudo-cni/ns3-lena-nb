@@ -656,6 +656,30 @@ LteEnbMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
 void
 LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
 {
+  uint32_t currentsubframe = Simulator::Now().GetMilliSeconds();
+  uint16_t window_condition = ( currentsubframe/10 - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (ce) / 10);
+  uint32_t lastPeriodStart = (currentsubframe/10 - 1) - window_condition;
+  uint32_t startSubframeNprachOccasion = lastPeriodStart*10 + NbIotRrcSap::ConvertNprachStartTime2int(ce);
+  uint16_t timeSinceOcassion = currentsubframe - startSubframeNprachOccasion;
+
+  m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachCpLength =
+      NbIotRrcSap::NprachConfig::NprachCpLength::us266dot7;
+  double ts = 1000.0 / (15000.0 * 2048.0);
+  double preambleSymbolTime = 8192.0 * ts;
+  double preambleGroupTimeNoCP = 5.0 * preambleSymbolTime;
+  double preambleGroupTime =
+      NbIotRrcSap::ConvertNprachCpLenght2double (m_sib2Nb.radioResourceConfigCommon.nprachConfig) +
+      preambleGroupTimeNoCP;
+  double preambleRepetition = 4.0 * preambleGroupTime;
+  double time = NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int (ce) *
+                                  preambleRepetition;
+
+  if (std::ceil(time)+1 != timeSinceOcassion){ 
+    return;
+  }
+
+
+
   std::map<uint8_t, uint32_t> receivedNprachs;
   uint8_t subcarrierOffset = NbIotRrcSap::ConvertNprachSubcarrierOffset2int (ce);
 
@@ -663,6 +687,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
 
   std::vector<std::pair<int, NbIotRrcSap::Rar>> m_rarQueue; // Mapping Ranti -> Rar
   NbIotRrcSap::NpdcchMessage rar_dci;
+
 
   if (receivedNprachs.size () > 0)
     {
@@ -693,6 +718,9 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
               // a) Preambles interfere with each other, so all UEs lose
               // b) eNB does cotention resolution magic and one UE surives
               NS_BUILD_DEBUG (std::cout << "Collision" << std::endl);
+              std::cout << "==================================================" <<  std::endl;
+              std::cout << "Collision" << std::endl;
+              std::cout << "==================================================" << std::endl;
               if (m_dropPreambleCollision)
                 {
                   m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
@@ -866,6 +894,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
   // Implement NB-IoT DCI Searchspaces Type2-CSS All AL2  Liberg et al. p 282
   // Find out if current subframe is start of Type2/UE-specific search space
   // A Tutorial to NB-IoT Design zeugs
+
 
   CheckIfPreambleWasReceived (m_ce0Parameter);
   CheckIfPreambleWasReceived (m_ce1Parameter);

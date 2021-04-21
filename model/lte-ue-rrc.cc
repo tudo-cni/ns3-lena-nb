@@ -66,6 +66,7 @@ public:
   virtual void NotifyRandomAccessSuccessful ();
   virtual void NotifyRandomAccessFailed ();
   virtual void NotifyEnergyState(NbiotEnergyModel::PowerState state);
+  virtual bool GetEdtEnabled();
   virtual NbiotEnergyModel::PowerState GetEnergyState();
 
 private:
@@ -108,6 +109,12 @@ UeMemberLteUeCmacSapUser::GetEnergyState()
   return m_rrc->DoGetEnergyState();
 }
 
+bool
+UeMemberLteUeCmacSapUser::GetEdtEnabled()
+{
+  return m_rrc->DoGetEdtEnabled();
+}
+
 
 
 
@@ -128,7 +135,8 @@ static const std::string g_ueRrcStateName[LteUeRrc::NUM_STATES] =
   "CONNECTED_PHY_PROBLEM",
   "CONNECTED_REESTABLISHING",
   "IDLE_SUSPEND_EDRX",
-  "IDLE_SUSPEND_PSM"
+  "IDLE_SUSPEND_PSM",
+  "IDLE_RANDOM_ACCESS_EDT"
 };
 
 /**
@@ -644,25 +652,57 @@ void
 LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
 {
   NS_LOG_FUNCTION (this << packet);
-
-  uint8_t drbid = Bid2Drbid (bid);
-  m_dataSendTime = Simulator::Now();
-  if (drbid != 0)
-    {
-  std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.find (drbid);
-  NS_ASSERT_MSG (it != m_drbMap.end (), "could not find bearer with drbid == " << drbid);
-
-  LtePdcpSapProvider::TransmitPdcpSduParameters params;
-  params.pdcpSdu = packet;
-  params.rnti = m_rnti;
-  params.lcid = it->second->m_logicalChannelIdentity;
-
-  NS_LOG_LOGIC (this << " RNTI=" << m_rnti << " sending packet " << packet
-                     << " on DRBID " << (uint32_t) drbid
-                     << " (LCID " << (uint32_t) params.lcid << ")"
-                     << " (" << packet->GetSize () << " bytes)");
-  it->second->m_pdcp->GetLtePdcpSapProvider ()->TransmitPdcpSdu (params);
+  m_cIotOpt = false;
+  m_edt = false;
+  
+  uint32_t msg3offset = 5;
+  if((m_edt ||  m_cIotOpt) && (m_state == IDLE_SUSPEND_PSM || m_state == IDLE_SUSPEND_EDRX)){
+    if(m_edt && (packet->GetSize() + msg3offset)*8 < 1000){ // 1000 Bit is max TBS, MAC checks later if transmission is possible
+      m_useEdtPreamble = true; // used for IDLE_MIB_STATE Machine
     }
+    else{
+      m_useEdtPreamble = false;
+    }
+    m_dataSendTime = Simulator::Now();
+    m_packetStored.push_back(packet);
+    
+  }
+  else{
+    
+    uint8_t drbid = Bid2Drbid (bid);
+    m_dataSendTime = Simulator::Now();
+    if (drbid != 0)
+      {
+    std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.find (drbid);
+    NS_ASSERT_MSG (it != m_drbMap.end (), "could not find bearer with drbid == " << drbid);
+
+    LtePdcpSapProvider::TransmitPdcpSduParameters params;
+    params.pdcpSdu = packet;
+    params.rnti = m_rnti;
+    params.lcid = it->second->m_logicalChannelIdentity;
+
+    NS_LOG_LOGIC (this << " RNTI=" << m_rnti << " sending packet " << packet
+                      << " on DRBID " << (uint32_t) drbid
+                      << " (LCID " << (uint32_t) params.lcid << ")"
+                      << " (" << packet->GetSize () << " bytes)");
+    it->second->m_pdcp->GetLtePdcpSapProvider ()->TransmitPdcpSdu (params);
+    }
+  }
+
+  if(m_state == IDLE_SUSPEND_PSM){
+      if(!m_psmTimeout.IsExpired()){
+        m_psmTimeout.Cancel();
+      }
+    m_hasReceivedMibNb = false;
+    m_resumePending = true;
+    SwitchToState(IDLE_WAIT_MIB); // After PSM UE hast to receive MIB again
+  }
+  else if(m_state == IDLE_SUSPEND_EDRX){
+      if(!m_eDrxTimeout.IsExpired()){
+        m_eDrxTimeout.Cancel();
+      }
+    StartConnectionNb(m_useEdtPreamble);
+  }
 }
 
 
@@ -732,6 +772,9 @@ LteUeRrc::DoNotifyRandomAccessSuccessful ()
         // send RRC connection request as message 3 of the random access procedure 
         SwitchToState (IDLE_CONNECTING);
         if (m_resumeId == 0){ // Complete Connection Setup
+          if(m_useEdtPreamble){
+            // Send EDT
+          }
           LteRrcSap::RrcConnectionRequest msg;
           msg.ueIdentity = m_imsi;
           m_rrcSapUser->SendRrcConnectionRequest (msg); 
@@ -917,7 +960,6 @@ LteUeRrc::DoConnect ()
         m_eDrxTimeout.Cancel();
       }
       m_connectStartTime = Simulator::Now();
-      StartConnectionNb();
       break;
     case IDLE_SUSPEND_PSM:
     case CONNECTED_TAU:
@@ -1069,7 +1111,7 @@ LteUeRrc::DoRecvMasterInformationBlockNb (uint16_t cellId,
     case IDLE_WAIT_MIB:
       if(m_resumePending){
         // UE has to receive MIB after PSM for Random Access
-        StartConnectionNb();
+        StartConnectionNb(m_useEdtPreamble);
       }
       else{
       // manual attachment
@@ -1212,8 +1254,8 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
           m_ulEarfcn = msg.sib2.freqInfo.ulCarrierFreq;
           m_ulBandwidth = 12;
           m_sib2ReceivedTrace (m_imsi, m_cellId, m_rnti);
-          NbIotRrcSap::RadioResourceConfigCommonNb rc;
-          rc = msg.sib2.radioResourceConfigCommon;
+          m_rc = msg.sib2.radioResourceConfigCommon;
+          
           //rc.numberOfRaPreambles = msg.sib2.radioResourceConfigCommon.rachConfigCommon.preambleInfo.numberOfRaPreambles;
           //rc.preambleTransMax = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.preambleTransMax;
           //rc.raResponseWindowSize = msg.sib2.radioResourceConfigCommon.rachConfigCommon.raSupervisionInfo.raResponseWindowSize;
@@ -1222,13 +1264,13 @@ LteUeRrc::DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
           //NS_ASSERT_MSG (m_connEstFailCountLimit > 0 && m_connEstFailCountLimit < 5,
           //               "SIB2 msg contains wrong value "
           //               << m_connEstFailCountLimit << "of connEstFailCount");
-          m_cmacSapProvider.at (0)->ConfigureRadioResourceConfig(rc);
+          m_cmacSapProvider.at (0)->ConfigureRadioResourceConfig(m_rc);
           m_cphySapProvider.at (0)->ConfigureUplink (m_ulEarfcn, m_ulBandwidth);
           m_cphySapProvider.at (0)->ConfigureReferenceSignalPower (msg.sib2.radioResourceConfigCommon.npdschConfigCommon.nrsPower);
           if (m_state == IDLE_WAIT_SIB2)
             {
               NS_ASSERT (m_connectionPending);
-              StartConnectionNb ();
+              StartConnectionNb (false);
             }
           break;
 
@@ -1288,7 +1330,19 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
         SwitchToState (CONNECTED_NORMALLY);
         m_leaveConnectedMode = false;
         NbIotRrcSap::RrcConnectionResumeCompleteNb msg2;
+        // we use DPR from 36.321 6.1.3.10
+
+        uint32_t size_left_to_fill = 1500-30; // use actual Resume complete size later
+        std::vector<Ptr<Packet>>::iterator next_packet = m_packetStored.begin();
         msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
+
+        if (m_packetStored.size() > 0 && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSerializedSize() > 0){
+          msg2.dedicatedInfoNas = *next_packet;
+        }else{
+          msg2.dedicatedInfoNas = Create<Packet>(0);
+        }
+
+
         m_rrcSapUser->SendRrcConnectionResumeCompletedNb (msg2);
         m_asSapUser->NotifyConnectionSuccessful ();
         m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
@@ -3438,7 +3492,7 @@ LteUeRrc::StartConnection ()
   m_cmacSapProvider.at (0)->StartContentionBasedRandomAccessProcedure ();
 }
 void 
-LteUeRrc::StartConnectionNb ()
+LteUeRrc::StartConnectionNb (bool edt)
 {
   NS_LOG_FUNCTION (this << m_imsi);
   NS_ASSERT (m_hasReceivedMibNb);
@@ -3446,7 +3500,7 @@ LteUeRrc::StartConnectionNb ()
   m_connectionPending = false; // reset the flag
   m_resumePending = false;
   SwitchToState (IDLE_RANDOM_ACCESS);
-  m_cmacSapProvider.at (0)->StartRandomAccessProcedureNb();
+  m_cmacSapProvider.at (0)->StartRandomAccessProcedureNb(edt);
 }
 void 
 LteUeRrc::LeaveConnectedMode ()
@@ -3587,7 +3641,7 @@ LteUeRrc::SwitchToState (State newState)
       if (m_hasReceivedSib2)
         {
           NS_ASSERT (m_connectionPending);
-          StartConnectionNb ();
+          StartConnectionNb (m_useEdtPreamble);
         }
       break;
 
@@ -3788,5 +3842,11 @@ void LteUeRrc::AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dl
   SwitchToState(IDLE_SUSPEND_PSM);
   m_asSapUser->NotifyConnectionSuspended();
 }
+
+bool LteUeRrc::DoGetEdtEnabled(){
+  return m_edt;
+}
+
+
 } // namespace ns3
 

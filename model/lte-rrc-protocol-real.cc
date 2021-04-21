@@ -32,6 +32,7 @@
 #include "lte-enb-rrc.h"
 #include "lte-enb-net-device.h"
 #include "lte-ue-net-device.h"
+#include "nb-iot-nas-tag.h"
 
 namespace ns3 {
 
@@ -181,6 +182,11 @@ LteUeRrcProtocolReal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConn
   rrcConnectionResumeCompleteNbHeader.SetMessage (msg);
 
   packet->AddHeader (rrcConnectionResumeCompleteNbHeader);
+  //uint32_t size = packet->GetSerializedSize();
+  if(msg.dedicatedInfoNas->GetSize() > 0){
+    packet->AddAtEnd(msg.dedicatedInfoNas);
+  }
+  //packet->AddByteTag(NasTag(),size,msg.dedicatedInfoNas->GetSerializedSize());
 
   LtePdcpSapProvider::TransmitPdcpSduParameters transmitPdcpSduParameters;
   transmitPdcpSduParameters.pdcpSdu = packet;
@@ -908,6 +914,7 @@ LteEnbRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameter
     case 14:
       params.pdcpSdu->RemoveHeader (rrcConnectionResumeCompleteNbHeader);
       rrcConnectionResumeCompleteNbMsg = rrcConnectionResumeCompleteNbHeader.GetMessage ();
+      rrcConnectionResumeCompleteNbMsg.dedicatedInfoNas= params.pdcpSdu;
       m_enbRrcSapProvider->RecvRrcConnectionResumeCompletedNb (params.rnti, rrcConnectionResumeCompleteNbMsg);
       break;
     }

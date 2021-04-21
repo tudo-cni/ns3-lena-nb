@@ -1873,6 +1873,10 @@ private:
   uint16_t m_dataInactivityInterval;
 
   bool m_enablePSM;
+
+  void GenerateSystemInformationBlockType1Nb();
+  void GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, ns3::Ptr<ns3::ComponentCarrierBaseStation>> cc);
+
 public:
   uint64_t AttachSuspendedUeNb(uint32_t imsi);
 

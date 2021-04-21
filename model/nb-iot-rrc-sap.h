@@ -7,6 +7,7 @@
 
 #include <ns3/ptr.h>
 #include <ns3/simulator.h>
+#include <ns3/packet.h>
 
 
 namespace ns3{
@@ -413,6 +414,37 @@ class NbIotRrcSap{
                threeEighth
            } npdcchOffsetRa;
         };
+
+        struct NprachParametersNbR14{
+            NprachParametersNb::CoverageEnhancementLevel coverageEnhancementLevel;
+            NprachParametersNb::NprachPeriodicity nprachPeriodicity; 
+            NprachParametersNb::NprachStartTime nprachStartTime;
+            NprachParametersNb::NprachSubcarrierOffset nprachSubcarrierOffset;
+            NprachParametersNb::NprachNumSubcarriers nprachNumSubcarriers;
+            NprachParametersNb::NprachSubcarrierMsg3RangeStart nprachSubcarrierMsg3RangeStart;
+            NprachParametersNb::NpdcchNumRepetitionsRA npdcchNumRepetitionsRA;
+            NprachParametersNb::NpdcchStartSfCssRa npdcchStartSfCssRa;
+            NprachParametersNb::NpdcchOffsetRa npdcchOffsetRa;
+            enum class NprachNumCbraStartSubcarriers{
+               n8,
+               n10,
+               n11,
+               n12,
+               n20,
+               n22,
+               n23,
+               n24,
+               n32,
+               n34,
+               n35,
+               n36,
+               n40,
+               n44,
+               n46,
+                n48
+            } nprachNumCbraStartSubcarriers;
+            int npdcchCarrierIndex;
+        };
         struct NprachParametersList{
             NprachParametersNb nprachParametersNb0;
             NprachParametersNb nprachParametersNb1;
@@ -437,6 +469,35 @@ class NbIotRrcSap{
         struct NpuschConfigCommon{};
         struct DlGap{};
         struct UplinkPowerControlCommon{};
+        struct NprachParametersListEdt{
+            NprachParametersNbR14 nprachParametersNb0;
+            NprachParametersNbR14 nprachParametersNb1;
+            NprachParametersNbR14 nprachParametersNb2;
+        };
+        
+        struct EdtTbsNb{
+            bool edtSmallTbsEnabled;
+            enum class EdtTbs{
+                b328,
+                b408,
+                b504,
+                b584,
+                b680,
+                b808,
+                b936,
+                b1000
+            } edtTbs;
+        };
+        struct EdtTbsInfoList{
+            EdtTbsNb edtTbsNb1;
+            EdtTbsNb edtTbsNb2;
+            EdtTbsNb edtTbsNb3;
+        };
+        struct NprachConfigR15{
+            bool edtSmallTBSSubset = true;
+            EdtTbsInfoList edtTbsInfoList;
+            NprachParametersListEdt nprachParameterListEdt;
+        };
         struct RadioResourceConfigCommonNb{
             RachConfigCommon rachConfigCommon;
             BcchConfig bcchConfig;
@@ -446,6 +507,8 @@ class NbIotRrcSap{
             NpuschConfigCommon npuschConfigCommon;
             DlGap dlGap;
             UplinkPowerControlCommon uplinkPowerControlCommon;
+            NprachConfigR15 nprachConfigR15; // EDT
+
         };
         struct UeTimersAndConstantsNb{};
         struct FreqInfoNb{
@@ -464,11 +527,32 @@ class NbIotRrcSap{
             LateNonCriticalExtensionNb lateNonCriticalExtension1;
         };
 
+        struct UlConfigListNbR15{
+
+        };
+        struct UlConfigCommonListNbR15{
+
+        };
+
+        struct UlConfigCommonNbR15{
+
+        };
+
+        struct NprachParametersListFmt2EdtNb{
+
+        };
+
+        struct SystemInformationBlockType23Nb{
+
+        };
+
         /// SystemInformation structure
         struct SystemInformationNb
         {
             bool haveSib2; ///< have SIB2?
             SystemInformationBlockType2Nb sib2; ///< SIB2
+            bool haveSib23;
+            SystemInformationBlockType23Nb sib23; // EDT Settings
         };
 
         struct HarqAckResource{
@@ -821,6 +905,7 @@ class NbIotRrcSap{
 
         struct RrcConnectionResumeCompleteNb{
             uint8_t rrcTransactionIdentifier;
+            Ptr<Packet> dedicatedInfoNas;
 
         };
 

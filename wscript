@@ -137,7 +137,7 @@ def build(bld):
         'model/nb-iot-rrc-sap.cc',
         'model/nb-iot-scheduler.cc',
         'model/nb-iot-amc.cc',
-        'model/nb-iot-energy.cc'
+        'model/nb-iot-energy.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('lte')
@@ -341,7 +341,7 @@ def build(bld):
         'model/nb-iot-rrc-sap.h',
         'model/nb-iot-scheduler.h',
         'model/nb-iot-amc.h',
-        'model/nb-iot-energy.h'
+        'model/nb-iot-energy.h',
         ]
 
     if (bld.env['ENABLE_EMU']):
