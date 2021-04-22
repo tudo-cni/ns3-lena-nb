@@ -124,6 +124,32 @@ struct LteSpectrumSignalParametersDlCtrlFrame : public SpectrumSignalParameters
   bool pss; ///< primary synchronization signal
 };
 
+struct NbiotSpectrumSignalParametersDlCtrlFrame : public SpectrumSignalParameters
+{
+  
+  // inherited from SpectrumSignalParameters
+  virtual Ptr<SpectrumSignalParameters> Copy ();
+  
+  /**
+  * default constructor
+  */
+  NbiotSpectrumSignalParametersDlCtrlFrame ();
+  
+  /**
+  * copy constructor
+  * \param p the LteSpectrumSignalParametersDlCtrlFrame to copy
+  */
+  NbiotSpectrumSignalParametersDlCtrlFrame (const NbiotSpectrumSignalParametersDlCtrlFrame& p);
+
+
+  std::list<Ptr<LteControlMessage> > ctrlMsgList; ///< control message list
+  
+  uint16_t cellId; ///< cell ID
+  bool npss; ///< primary synchronization signal
+  bool nsss; ///< secondary synchronization signal
+};
+
+
 
 
 /**

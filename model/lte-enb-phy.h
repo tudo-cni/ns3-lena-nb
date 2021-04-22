@@ -242,6 +242,8 @@ public:
   */
   void SendControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList);
 
+  void SendNarrowbandControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList);
+
   /**
   * \brief Send the PDSCH
   * \param pb the PacketBurst to be sent

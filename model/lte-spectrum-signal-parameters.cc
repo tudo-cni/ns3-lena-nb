@@ -119,6 +119,29 @@ LteSpectrumSignalParametersUlSrsFrame::Copy ()
 }
 
 
+NbiotSpectrumSignalParametersDlCtrlFrame::NbiotSpectrumSignalParametersDlCtrlFrame ()
+{
+  NS_LOG_FUNCTION (this);
+}
+
+NbiotSpectrumSignalParametersDlCtrlFrame::NbiotSpectrumSignalParametersDlCtrlFrame (const NbiotSpectrumSignalParametersDlCtrlFrame& p)
+: SpectrumSignalParameters (p)
+{
+  NS_LOG_FUNCTION (this << &p);
+  cellId = p.cellId;
+  npss = p.npss;
+  nsss = p.nsss;
+  ctrlMsgList = p.ctrlMsgList;
+}
+
+Ptr<SpectrumSignalParameters>
+NbiotSpectrumSignalParametersDlCtrlFrame::Copy ()
+{
+  NS_LOG_FUNCTION (this);
+  return Create<NbiotSpectrumSignalParametersDlCtrlFrame> (*this);
+}
+
+
 
 
 

@@ -89,6 +89,7 @@ class LteControlMessage;
 struct LteSpectrumSignalParametersDataFrame;
 struct LteSpectrumSignalParametersDlCtrlFrame;
 struct LteSpectrumSignalParametersUlSrsFrame;
+struct NbiotSpectrumSignalParametersDlCtrlFrame;
 
 /**
 * This method is used by the LteSpectrumPhy to notify the PHY that a
@@ -125,6 +126,18 @@ typedef Callback< void > LtePhyRxCtrlEndErrorCallback;
 * PSS has been received
 */
 typedef Callback< void, uint16_t, Ptr<SpectrumValue> > LtePhyRxPssCallback;
+/**
+* This method is used by the LteSpectrumPhy to notify the UE PHY that a
+* PSS has been received
+*/
+typedef Callback< void, uint16_t, Ptr<SpectrumValue> > NbiotPhyRxNpssCallback;
+/**
+* This method is used by the LteSpectrumPhy to notify the UE PHY that a
+* PSS has been received
+*/
+typedef Callback< void, uint16_t, Ptr<SpectrumValue> > NbiotPhyRxNsssCallback;
+
+
 
 
 /**
@@ -193,6 +206,11 @@ public:
    */
   void StartRxDlCtrl (Ptr<LteSpectrumSignalParametersDlCtrlFrame> lteDlCtrlRxParams);
   /**
+   * \brief Start receive DL control function
+   * \param lteDlCtrlRxParams Ptr<LteSpectrumSignalParametersDlCtrlFrame>
+   */
+  void StartRxDlCtrlNb (Ptr<NbiotSpectrumSignalParametersDlCtrlFrame> nbiotDlCtrlRxParams);
+  /**
    * \brief Start receive UL SRS function
    * \param lteUlSrsRxParams Ptr<LteSpectrumSignalParametersUlSrsFrame>
    */
@@ -254,6 +272,8 @@ public:
   * started, false otherwise.
   */
   bool StartTxDlCtrlFrame (std::list<Ptr<LteControlMessage> > ctrlMsgList, bool pss);
+
+  bool StartTxDlCtrlFrameNb (std::list<Ptr<LteControlMessage> > ctrlMsgList, bool npss, bool nsss);
   
   
   /**
@@ -303,6 +323,22 @@ public:
   * @param c the callback
   */
   void SetLtePhyRxPssCallback (LtePhyRxPssCallback c);
+  /**
+  * set the callback for the reception of the NPSS as part
+  * of the interconnections between the LteSpectrumPhy and the UE PHY
+  *
+  * @param c the callback
+  */
+  void SetNbiotPhyRxNpssCallback (NbiotPhyRxNpssCallback c);
+  /**
+  * set the callback for the reception of the NSSS as part
+  * of the interconnections between the LteSpectrumPhy and the UE PHY
+  *
+  * @param c the callback
+  */
+  void SetNbiotPhyRxNsssCallback (NbiotPhyRxNsssCallback c);
+
+
 
   /**
   * set the callback for the DL HARQ feedback as part of the 
@@ -507,6 +543,9 @@ private:
   LtePhyRxCtrlEndOkCallback     m_ltePhyRxCtrlEndOkCallback; ///< the LTE phy receive control end ok callback
   LtePhyRxCtrlEndErrorCallback  m_ltePhyRxCtrlEndErrorCallback; ///< the LTE phy receive control end error callback
   LtePhyRxPssCallback  m_ltePhyRxPssCallback; ///< the LTE phy receive PSS callback
+
+  NbiotPhyRxNpssCallback m_nbiotPhyRxNpssCallback; ///< the Nbiot phy receive NPSS callback
+  NbiotPhyRxNsssCallback m_nbiotPhyRxNsssCallback; ///< the Nbiot phy receive NSSS callback
 
   Ptr<LteInterference> m_interferenceData; ///< the data interference
   Ptr<LteInterference> m_interferenceCtrl; ///< the control interference

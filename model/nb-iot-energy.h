@@ -100,11 +100,10 @@ public:
     }powerState;
 
     NbiotEnergyModel(NbiotChip module, uint32_t imsi): 
-        m_module(module),
-        m_imsi(imsi),
-        m_lastState(PowerState::OFF),
-        m_lastStateChange(Time(0)){
+        m_module(module), m_imsi(imsi), m_lastState(PowerState::OFF), m_lastStateChange(Time(0))
+        {
         m_battery = CreateObject<LiIonEnergySource>();
+        m_battery->SetInitialEnergy(18000.0);
         }
     ~NbiotEnergyModel();
     

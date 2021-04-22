@@ -1389,6 +1389,109 @@ LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
   m_pssList.push_back (el);
 
 } // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
+void
+LteUePhy::ReceiveNpss (uint16_t cellId, Ptr<SpectrumValue> p)
+{
+  NS_LOG_FUNCTION (this << cellId << (*p));
+
+  double sum = 0.0;
+  uint16_t nRB = 0;
+  Values::const_iterator itPi;
+  for (itPi = p->ConstValuesBegin (); itPi != p->ConstValuesEnd (); itPi++)
+    {
+      // convert PSD [W/Hz] to linear power [W] for the single RE
+      double powerTxW = ((*itPi) * 180000.0) / 12.0;
+      sum += powerTxW;
+      nRB++;
+    }
+  // measure instantaneous RSRP now
+  double rsrp_dBm = 10 * log10 (1000 * (sum / (double)nRB));
+  NS_LOG_INFO (this << " PSS RNTI " << m_rnti << " cellId " << m_cellId
+                    << " has RSRP " << rsrp_dBm << " and RBnum " << nRB);
+  // note that m_pssReceptionThreshold does not apply here
+  // store measurements
+  std::map <uint16_t, UeMeasurementsElement>::iterator itMeasMap = m_ueMeasurementsMap.find (cellId);
+  if (itMeasMap == m_ueMeasurementsMap.end ())
+    {
+      // insert new entry
+      UeMeasurementsElement newEl;
+      newEl.rsrpSum = rsrp_dBm;
+      newEl.rsrpNum = 1;
+      newEl.rsrqSum = 0;
+      newEl.rsrqNum = 0;
+      m_ueMeasurementsMap.insert (std::pair <uint16_t, UeMeasurementsElement> (cellId, newEl));
+    }
+  else
+    {
+      (*itMeasMap).second.rsrpSum += rsrp_dBm;
+      (*itMeasMap).second.rsrpNum++;
+    }
+
+  /*
+   * Collect the PSS for later processing in GenerateCtrlCqiReport()
+   * (to be called from ChunkProcessor after RX is finished).
+   */
+  m_pssReceived = true;
+  PssElement el;
+  el.cellId = cellId;
+  el.pssPsdSum = sum;
+  el.nRB = nRB;
+  m_pssList.push_back (el);
+
+} // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
+
+
+void
+LteUePhy::ReceiveNsss (uint16_t cellId, Ptr<SpectrumValue> p)
+{
+  NS_LOG_FUNCTION (this << cellId << (*p));
+
+  double sum = 0.0;
+  uint16_t nRB = 0;
+  Values::const_iterator itPi;
+  for (itPi = p->ConstValuesBegin (); itPi != p->ConstValuesEnd (); itPi++)
+    {
+      // convert PSD [W/Hz] to linear power [W] for the single RE
+      double powerTxW = ((*itPi) * 180000.0) / 12.0;
+      sum += powerTxW;
+      nRB++;
+    }
+  // measure instantaneous RSRP now
+  double rsrp_dBm = 10 * log10 (1000 * (sum / (double)nRB));
+  NS_LOG_INFO (this << " PSS RNTI " << m_rnti << " cellId " << m_cellId
+                    << " has RSRP " << rsrp_dBm << " and RBnum " << nRB);
+  // note that m_pssReceptionThreshold does not apply here
+  // store measurements
+  std::map <uint16_t, UeMeasurementsElement>::iterator itMeasMap = m_ueMeasurementsMap.find (cellId);
+  if (itMeasMap == m_ueMeasurementsMap.end ())
+    {
+      // insert new entry
+      UeMeasurementsElement newEl;
+      newEl.rsrpSum = rsrp_dBm;
+      newEl.rsrpNum = 1;
+      newEl.rsrqSum = 0;
+      newEl.rsrqNum = 0;
+      m_ueMeasurementsMap.insert (std::pair <uint16_t, UeMeasurementsElement> (cellId, newEl));
+    }
+  else
+    {
+      (*itMeasMap).second.rsrpSum += rsrp_dBm;
+      (*itMeasMap).second.rsrpNum++;
+    }
+
+  /*
+   * Collect the PSS for later processing in GenerateCtrlCqiReport()
+   * (to be called from ChunkProcessor after RX is finished).
+   */
+  m_pssReceived = true;
+  PssElement el;
+  el.cellId = cellId;
+  el.pssPsdSum = sum;
+  el.nRB = nRB;
+  m_pssList.push_back (el);
+
+} // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
+
 
 
 void

@@ -922,6 +922,32 @@ LteEnbPhy::SendControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList)
 }
 
 void
+LteEnbPhy::SendNarrowbandControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList)
+{
+  NS_LOG_FUNCTION (this << " eNB " << m_cellId << " start tx ctrl frame");
+  // set the current tx power spectral density (full bandwidth)
+  std::vector <int> dlRb;
+  for (uint8_t i = 0; i < m_dlBandwidth; i++)
+    {
+      dlRb.push_back (i);
+    }
+  SetDownlinkSubChannels (dlRb);
+  NS_LOG_LOGIC (this << " eNB start TX CTRL");
+  bool npss = false;
+  bool nsss = false;
+  if ((m_nrSubFrames-1 == 5))
+    {
+      npss = true;
+    }
+  else if ((m_nrFrames-1)% 2 == 0 && (m_nrSubFrames-1 == 9) )
+  {
+    nsss = true;
+  }
+  m_downlinkSpectrumPhy->StartTxDlCtrlFrameNb (ctrlMsgList, npss, nsss);
+
+}
+
+void
 LteEnbPhy::SendDataChannels (Ptr<PacketBurst> pb)
 {
   // set the current tx power spectral density

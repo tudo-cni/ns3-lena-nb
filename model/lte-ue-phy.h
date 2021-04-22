@@ -254,6 +254,8 @@ public:
    * \param p PSS list
    */
   virtual void ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p);
+  virtual void ReceiveNpss (uint16_t cellId, Ptr<SpectrumValue> p);
+  virtual void ReceiveNsss (uint16_t cellId, Ptr<SpectrumValue> p);
 
 
   /**
