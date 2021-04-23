@@ -32,7 +32,6 @@
 #include "lte-enb-rrc.h"
 #include "lte-enb-net-device.h"
 #include "lte-ue-net-device.h"
-#include "nb-iot-nas-tag.h"
 
 namespace ns3 {
 

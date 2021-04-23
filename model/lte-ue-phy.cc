@@ -1770,7 +1770,7 @@ LteUePhy::DoSetSrsConfigurationIndex (uint16_t srcCi)
   NS_LOG_FUNCTION (this << srcCi);
   m_srsPeriodicity = GetSrsPeriodicity (srcCi);
   m_srsSubframeOffset = GetSrsSubframeOffset (srcCi);
-  m_srsConfigured = true;
+  //m_srsConfigured = true;
 
   // a guard time is needed for the case where the SRS periodicity is changed dynamically at run time
   // if we use a static one, we can have a 0ms guard time

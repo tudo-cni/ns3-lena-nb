@@ -10,6 +10,9 @@ configure_command = "cd ../../ && ./waf clean && CXXFLAGS=\"-O3 -w\" ./waf -d op
 
 simulation_command = "cd ../../ && ./waf --run \"lena-nb-udp-data-transfer --scenario 0"
 
+callgrind_command = "cd ../../ && ./waf --command-template\"valgrind --tool=callgrind  \%\s\" --run \"lena-nb-udp-data-transfer"
+
+
 class SimulationParameters:
     def __init__(self, numUesCe0, numUesCe1, numUesCe2, simulation, simTime, randomSeed):
         self.numUesCe0 = numUesCe0 
@@ -27,9 +30,8 @@ class SimulationParameters:
         call += f" --numUesCe2={self.numUesCe2}"
         call += f" --simTime={self.simTime}"
         call += f" --randomSeed={self.randomSeed}"
+        call += f" --scenario=0"
         return call
-
-
 
 class TaskQueue(queue.Queue):
 
@@ -50,27 +52,21 @@ class TaskQueue(queue.Queue):
             t.start()
 
     def worker(self, id):
-        print("blub")
-        print(id)
         while True:
-            print("grrr")
             sleep(5) 
-            print("graaa")
             simulationParameters = self.get()
             print(simulationParameters)
-            print("grooo")
             cmd = simulationParameters[0].generateExecutableCall()
             cmd += f" --worker={id}\""
-            print("Hallo")
             subprocess.run(cmd, shell=True, check=True)
             self.task_done()
 
 start_time = time.time()
-simTime = 300
-simu_queue = TaskQueue(5)
-seed = 11
+simTime = 100
+simu_queue = TaskQueue(1)
+seed =2 
 for i in range(1,seed):
-    simu_queue.add_task(SimulationParameters(numUesCe0=10,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    simu_queue.add_task(SimulationParameters(numUesCe0=10,numUesCe1=0,numUesCe2=0,simulation=callgrind_command,simTime=simTime,randomSeed=i))
 
 simu_queue.start_workers()
 
