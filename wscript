@@ -138,6 +138,8 @@ def build(bld):
         'model/nb-iot-scheduler.cc',
         'model/nb-iot-amc.cc',
         'model/nb-iot-energy.cc',
+        'model/nb-iot-data-volume-and-power-headroom-tag.cc',
+        'model/nb-iot-buffer-status-report-tag.cc'
         ]
 
     module_test = bld.create_ns3_module_test_library('lte')
@@ -342,6 +344,8 @@ def build(bld):
         'model/nb-iot-scheduler.h',
         'model/nb-iot-amc.h',
         'model/nb-iot-energy.h',
+        'model/nb-iot-data-volume-and-power-headroom-tag.h',
+        'model/nb-iot-buffer-status-report-tag.h'
         ]
 
     if (bld.env['ENABLE_EMU']):
