@@ -120,6 +120,7 @@ main (int argc, char *argv[])
   bool disableUl = false;
   bool disablePl = true;
   bool scenario = false;
+  uint8_t worker = 0;
   int seed = 1;
 
   // Command line arguments
@@ -137,6 +138,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("disableUl", "Disable uplink data flows", disableUl);
   cmd.AddValue ("disablePl", "Disable data flows between peer UEs", disablePl);
   cmd.AddValue ("scenario", "1 if should use scenario csv", scenario);
+  cmd.AddValue ("worker", "worker id when using multithreading to not confuse logging", worker);
   cmd.AddValue ("randomSeed", "randomSeed",seed);
   cmd.Parse (argc, argv);
 
@@ -347,6 +349,8 @@ main (int argc, char *argv[])
   std::stringstream ss;
   ss << std::put_time(&tm, "%d_%m_%Y_%H_%M_%S");
   logdir += ss.str();
+  logdir += "_";
+  logdir += std::to_string(worker);
   logdir += "_";
   //std::cout << logfile << "\n";
 
