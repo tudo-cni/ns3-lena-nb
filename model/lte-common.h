@@ -169,6 +169,30 @@ public:
 
 };
 
+// NBIOT 
+/// DataVolume class
+class DataVolumeDPR
+{
+
+public:
+  /**
+   * Convert DV ID to buffer size
+   *
+   * \param val DV ID
+   * \returns buffer size
+   */
+  static uint32_t DVId2BufferSize (uint8_t val);
+  /**
+   * Convert Buffer size to BSR ID
+   *
+   * \param val buffer size
+   * \returns BSR ID
+   */
+  static uint8_t BufferSize2DVId (uint32_t val);
+
+  static int  m_bufferSizeLevelBsr[16]; ///< buffer size level BSR
+
+};
 /// TransmissionModesLayers class
 class TransmissionModesLayers
 {

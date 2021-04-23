@@ -40,6 +40,9 @@
 #include "ns3/lte-enb-cmac-sap.h"
 #include <ns3/lte-common.h>
 
+#include "nb-iot-data-volume-and-power-headroom-tag.h"
+#include "nb-iot-buffer-status-report-tag.h"
+
 #include <algorithm>
 namespace ns3 {
 
@@ -1275,7 +1278,8 @@ LteEnbMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
       // Device has received MSG4 and neeeds UL-Resources for MSG5
       if (!m_connectionSuccessful[dlharq->GetRnti ()])
         {
-          m_schedulerNb->ScheduleMsg5Req (dlharq->GetRnti ());
+          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti (), m_ueStoredBSR[dlharq->GetRnti()],NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+          m_ueStoredBSR[dlharq->GetRnti()] = 0;
         }
       else{
           m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti(),20,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
@@ -1402,12 +1406,22 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
   // forward the packet to the correspondent RLC
   uint16_t rnti = tag.GetRnti ();
   uint8_t lcid = tag.GetLcid ();
-  uint8_t bsr = tag.GetBsrIndex();
-  uint64_t buffersize = BufferSizeLevelBsr::BsrId2BufferSize(bsr);
+
+  DataVolumeAndPowerHeadroomTag dprTag;
+  BufferStatusReportTag bsrTag;
+  uint32_t buffersize;
+  if(p->RemovePacketTag(dprTag)){ // it's MSG3
+    buffersize = DataVolumeDPR::DVId2BufferSize(dprTag.GetDataVolumeValue());
+    m_ueStoredBSR[rnti] = buffersize;
+
+  }else if (p->RemovePacketTag(bsrTag)){
+  buffersize = BufferSizeLevelBsr::BsrId2BufferSize(bsrTag.GetBufferStatusReportIndex());
   std::cout << "-------------------------" << std::endl;
   std::cout << "Buffersize: " << buffersize << std::endl;
   std::cout << "-------------------------" << std::endl;
-  m_ueStoredBSR[rnti] = bsr;
+  m_schedulerNb->ScheduleUlRlcBufferReq(rnti,buffersize,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+  
+  }
   std::map<uint16_t, std::map<uint8_t, LteMacSapUser *>>::iterator rntiIt =
       m_rlcAttached.find (rnti);
   NS_ASSERT_MSG (rntiIt != m_rlcAttached.end (), "could not find RNTI" << rnti);
@@ -2044,11 +2058,11 @@ LteEnbMac::DoDlInfoListElementHarqFeeback (DlInfoListElement_s params)
 
 void LteEnbMac::DoNotifyConnectionSuccessful(uint16_t rnti){
   m_connectionSuccessful[rnti] = true;
-  if (m_ueStoredBSR[rnti] > 0){
-      uint64_t dataSize = BufferSizeLevelBsr::BsrId2BufferSize(m_ueStoredBSR[rnti]);
-      m_schedulerNb->ScheduleUlRlcBufferReq(rnti,dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
-      m_ueStoredBSR[rnti]=0;
-  }
+  //if (m_ueStoredBSR[rnti] > 0){
+  //    uint64_t dataSize = BufferSizeLevelBsr::BsrId2BufferSize(m_ueStoredBSR[rnti]);
+  //    m_schedulerNb->ScheduleUlRlcBufferReq(rnti,dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+  //    m_ueStoredBSR[rnti]=0;
+  //}
 }
 
 void LteEnbMac::CheckForDataInactivity(uint16_t rnti){

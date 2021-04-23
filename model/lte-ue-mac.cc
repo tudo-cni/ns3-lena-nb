@@ -29,6 +29,8 @@
 #include "lte-ue-mac.h"
 #include "lte-ue-net-device.h"
 #include "lte-radio-bearer-tag.h"
+#include "nb-iot-data-volume-and-power-headroom-tag.h"
+#include "nb-iot-buffer-status-report-tag.h"
 #include <ns3/ff-mac-common.h>
 #include <ns3/lte-control-messages.h>
 #include <ns3/simulator.h>
@@ -72,6 +74,7 @@ public:
   virtual void SetImsi (uint64_t imsi);
   virtual void NotifyEdrx();
   virtual void NotifyPsm();
+  virtual void SetMsg5Buffer(uint32_t buffersize);
   virtual NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel GetCoverageEnhancementLevel();
 
 private:
@@ -157,6 +160,11 @@ void
 UeMemberLteUeCmacSapProvider::NotifyPsm()
 {
   m_mac->DoNotifyPsm();
+}
+
+void 
+UeMemberLteUeCmacSapProvider::SetMsg5Buffer(uint32_t buffersize){
+  m_mac->DoSetMsg5Buffer(buffersize);
 }
 
 NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel UeMemberLteUeCmacSapProvider::GetCoverageEnhancementLevel(){
@@ -379,8 +387,8 @@ LteUeMac::GetBufferSize(){
 }
 uint64_t 
 LteUeMac::GetBufferSizeComplete(){
-  std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it;
   uint64_t buffersize=0;
+  std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it;
   for(it = m_ulBsrReceived.begin(); it != m_ulBsrReceived.end(); ++it){
         uint64_t data_per_lc =((*it).second.txQueueSize + (*it).second.retxQueueSize + (*it).second.statusPduSize);
         buffersize += data_per_lc;
@@ -392,19 +400,29 @@ LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
 {
   NS_LOG_FUNCTION (this);
   NS_ASSERT_MSG (m_rnti == params.rnti, "RNTI mismatch between RLC and MAC");
-  LteRadioBearerTag tag (params.rnti, params.lcid, 0 /* UE works in SISO mode*/);
+  LteRadioBearerTag radioTag (params.rnti, params.lcid, 0 /* UE works in SISO mode*/);
+  DataVolumeAndPowerHeadroomTag dprTag;
+  BufferStatusReportTag bsrTag;
   uint64_t bsr =0;
   //DoSetTransmissionScheduled(false);
-  bsr = GetBufferSize();
-  if(bsr > 0){
-
-    tag.SetBSR(BufferSizeLevelBsr::BufferSize2BsrId (bsr));
-
-    
-  }else{
-    tag.SetBSR(0);
+  if(m_msg5Buffer > 0){
+    // We are just about to send MSG3, add DPR Element for MSG5 (potentially CIoT-Opt)
+    dprTag.SetDataVolumeValue(DataVolumeDPR::BufferSize2DVId(m_msg5Buffer));
+    m_msg5Buffer = 0;
+    params.pdu->AddPacketTag(dprTag);
   }
-  params.pdu->AddPacketTag (tag);
+  else{
+
+    bsr = GetBufferSize();
+    if(bsr > 0){
+
+      bsrTag.SetBufferStatusReportIndex(BufferSizeLevelBsr::BufferSize2BsrId (bsr));
+      params.pdu->AddPacketTag(bsrTag);
+    }
+    // Normal PDU just add BSR for next Packet
+  }
+  
+  params.pdu->AddPacketTag (radioTag);
   // store pdu in HARQ buffer
   m_miUlHarqProcessesPacket.at (m_harqProcessId)->AddPacket (params.pdu);
   m_miUlHarqProcessesPacketTimer.at (m_harqProcessId) = HARQ_PERIOD;
@@ -1636,4 +1654,9 @@ NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel
 LteUeMac::DoGetCoverageEnhancementLevel(){
   return m_CeLevel.coverageEnhancementLevel;
 }
+
+void LteUeMac::DoSetMsg5Buffer(uint32_t buffersize){
+  m_msg5Buffer = buffersize;
+}
+
 } // namespace ns3

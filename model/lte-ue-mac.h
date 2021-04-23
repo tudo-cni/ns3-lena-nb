@@ -279,6 +279,7 @@ private:
 
   void DoNotifyEdrx();
   void DoNotifyPsm();
+  void DoSetMsg5Buffer(uint32_t buffersize);
 
   NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel DoGetCoverageEnhancementLevel();
   /// component carrier Id --> used to address sap
@@ -346,6 +347,7 @@ private:
   NbIotRrcSap::EdtTbsNb DoGetEdtTbsInfo(); // return EdtTbsInfo based on RSRP (Coverage level)
   uint32_t m_subframesInSearchSpace;
   std::vector<uint32_t> m_logging;
+  uint32_t m_msg5Buffer;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
    * Exporting IMSI, contention flag, preamble transmission counter

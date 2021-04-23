@@ -1097,7 +1097,7 @@ NbiotScheduler::ScheduleDlRlcBufferReq (uint64_t rnti, std::map<uint8_t,LteMacSa
 void
 NbiotScheduler::ScheduleUlRlcBufferReq(uint64_t rnti, uint64_t dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
 {
-  m_RntiRlcUlBuffer[searchspace][rnti] = dataSize+32;
+  m_RntiRlcUlBuffer[searchspace][rnti] = dataSize;
 }
 
 SearchSpaceConfig NbiotScheduler::ConvertNpdcchConfigDedicatedNb2SearchSpaceConfig(NbIotRrcSap::NpdcchConfigDedicatedNb configDedicated){

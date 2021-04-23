@@ -777,6 +777,7 @@ LteUeRrc::DoNotifyRandomAccessSuccessful ()
           }
           LteRrcSap::RrcConnectionRequest msg;
           msg.ueIdentity = m_imsi;
+          m_cmacSapProvider.at(0)->SetMsg5Buffer(20);
           m_rrcSapUser->SendRrcConnectionRequest (msg); 
           m_connectionTimeout = Simulator::Schedule (m_t300,
                                                     &LteUeRrc::ConnectionTimeout,
@@ -791,6 +792,17 @@ LteUeRrc::DoNotifyRandomAccessSuccessful ()
             it->second->m_pdcp->SetRnti(m_rnti);
             it->second->m_rlc->SetRnti(m_rnti);
           }
+  
+          std::vector<Ptr<Packet>>::iterator next_packet = m_packetStored.begin();
+          uint32_t msg5size = 14; // tbd
+          uint32_t size_left_to_fill = 1500-msg5size; // use actual Resume complete size later
+
+          if (m_cIotOpt && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSize() > 0){
+            m_cmacSapProvider.at(0)->SetMsg5Buffer(msg5size+(*next_packet)->GetSize());
+          }else{
+            m_cmacSapProvider.at(0)->SetMsg5Buffer(msg5size);
+          }
+
           NbIotRrcSap::RrcConnectionResumeRequestNb msg;
           msg.resumeIdentity = m_resumeId;
           m_rrcSapUser->SendRrcConnectionResumeRequestNb(msg);
@@ -1332,11 +1344,11 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
         NbIotRrcSap::RrcConnectionResumeCompleteNb msg2;
         // we use DPR from 36.321 6.1.3.10
 
-        uint32_t size_left_to_fill = 1500-30; // use actual Resume complete size later
+        uint32_t size_left_to_fill = 1500-14; // use actual Resume complete size later
         std::vector<Ptr<Packet>>::iterator next_packet = m_packetStored.begin();
         msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
 
-        if (m_packetStored.size() > 0 && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSerializedSize() > 0){
+        if (m_packetStored.size() > 0 && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSize() > 0){
           msg2.dedicatedInfoNas = *next_packet;
         }else{
           msg2.dedicatedInfoNas = Create<Packet>(0);
