@@ -1345,7 +1345,7 @@ LteEnbMac::ReceiveDlCqiLteControlMessage (Ptr<DlCqiLteControlMessage> msg)
   NS_LOG_LOGIC (this << "Enb Received DL-CQI rnti" << dlcqi.m_rnti);
   NS_ASSERT (dlcqi.m_rnti != 0);
   m_ulRsrpReceivedNb.insert (std::pair<uint16_t, double> (dlcqi.m_rnti, msg->rsrp));
-  m_dlCqiReceived.push_back (dlcqi);
+  //m_dlCqiReceived.push_back (dlcqi);
 }
 
 void

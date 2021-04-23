@@ -616,19 +616,20 @@ LteUePhy::GenerateCqiRsrpRsrq (const SpectrumValue& sinr)
             }
           m_p10CqiLast = Simulator::Now ();
         }
-      // check aperiodic high-layer configured subband CQI
-      if  (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
-        {
-          NS_LOG_DEBUG("Reporting A30 CQI at : " << Simulator::Now().GetMilliSeconds()
-                       << " ms. Last reported at : " << m_a30CqiLast.GetMilliSeconds() << " ms");
-          Ptr<LteUeNetDevice> thisDevice = GetDevice ()->GetObject<LteUeNetDevice> ();
-          Ptr<DlCqiLteControlMessage> msg = CreateDlCqiFeedbackMessage (sinr);
-          if (msg)
-            {
-              DoSendLteControlMessage (msg);
-            }
-          m_a30CqiLast = Simulator::Now ();
-        }
+      //Performance Improvements
+      //// check aperiodic high-layer configured subband CQI
+      //if  (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
+      //  {
+      //    NS_LOG_DEBUG("Reporting A30 CQI at : " << Simulator::Now().GetMilliSeconds()
+      //                 << " ms. Last reported at : " << m_a30CqiLast.GetMilliSeconds() << " ms");
+      //    Ptr<LteUeNetDevice> thisDevice = GetDevice ()->GetObject<LteUeNetDevice> ();
+      //    Ptr<DlCqiLteControlMessage> msg = CreateDlCqiFeedbackMessage (sinr);
+      //    if (msg)
+      //      {
+      //        DoSendLteControlMessage (msg);
+      //      }
+      //    m_a30CqiLast = Simulator::Now ();
+      //  }
     }
 
   // Generate PHY trace
@@ -870,86 +871,91 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
   // CREATE DlCqiLteControlMessage
   Ptr<DlCqiLteControlMessage> msg = Create<DlCqiLteControlMessage> ();
   CqiListElement_s dlcqi;
-  std::vector<int> cqi;
-  if (Simulator::Now () > m_p10CqiLast + m_p10CqiPeriodicity)
-    {
-      cqi = m_amc->CreateCqiFeedbacks (newSinr, m_dlBandwidth);
 
-      int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
-      int nbSubChannels = cqi.size ();
-      double cqiSum = 0.0;
-      int activeSubChannels = 0;
-      // average the CQIs of the different RBs
-      for (int i = 0; i < nbSubChannels; i++)
-        {
-          if (cqi.at (i) != -1)
-            {
-              cqiSum += cqi.at (i);
-              activeSubChannels++;
-            }
-          NS_LOG_DEBUG (this << " subch " << i << " cqi " <<  cqi.at (i));
-        }
-      dlcqi.m_rnti = m_rnti;
-      dlcqi.m_ri = 1; // not yet used
-      dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
-      NS_ASSERT_MSG (nLayer > 0, " nLayer negative");
-      NS_ASSERT_MSG (nLayer < 3, " nLayer limit is 2s");
-      for (int i = 0; i < nLayer; i++)
-        {
-          if (activeSubChannels > 0)
-            {
-              dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / activeSubChannels);
-            }
-          else
-            {
-              // approximate with the worst case -> CQI = 1
-              dlcqi.m_wbCqi.push_back (1);
-            }
-        }
-      //NS_LOG_DEBUG (this << " Generate P10 CQI feedback " << (uint16_t) cqiSum / activeSubChannels);
-      dlcqi.m_wbPmi = 0; // not yet used
-      // dl.cqi.m_sbMeasResult others CQI report modes: not yet implemented
-    }
-  else if (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
-    {
-      cqi = m_amc->CreateCqiFeedbacks (newSinr, GetRbgSize ());
-      int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
-      int nbSubChannels = cqi.size ();
-      int rbgSize = GetRbgSize ();
-      double cqiSum = 0.0;
-      int cqiNum = 0;
-      SbMeasResult_s rbgMeas;
-      //NS_LOG_DEBUG (this << " Create A30 CQI feedback, RBG " << rbgSize << " cqiNum " << nbSubChannels << " band "  << (uint16_t)m_dlBandwidth);
-      for (int i = 0; i < nbSubChannels; i++)
-        {
-          if (cqi.at (i) != -1)
-            {
-              cqiSum += cqi.at (i);
-            }
-          // else "nothing" no CQI is treated as CQI = 0 (worst case scenario)
-          cqiNum++;
-          if (cqiNum == rbgSize)
-            {
-              // average the CQIs of the different RBGs
-              //NS_LOG_DEBUG (this << " RBG CQI "  << (uint16_t) cqiSum / rbgSize);
-              HigherLayerSelected_s hlCqi;
-              hlCqi.m_sbPmi = 0; // not yet used
-              for (int i = 0; i < nLayer; i++)
-                {
-                  hlCqi.m_sbCqi.push_back ((uint16_t) cqiSum / rbgSize);
-                }
-              rbgMeas.m_higherLayerSelected.push_back (hlCqi);
-              cqiSum = 0.0;
-              cqiNum = 0;
-            }
-        }
-      dlcqi.m_rnti = m_rnti;
-      dlcqi.m_ri = 1; // not yet used
-      dlcqi.m_cqiType = CqiListElement_s::A30; // Aperidic CQI using PUSCH
-      //dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / nbSubChannels);
-      dlcqi.m_wbPmi = 0; // not yet used
-      dlcqi.m_sbMeasResult = rbgMeas;
-    }
+  dlcqi.m_rnti = m_rnti;
+  dlcqi.m_ri = 1; // not yet used
+  dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
+  //NB-Iot has no CqiTransfer, also hugh performance gain
+  //std::vector<int> cqi;
+  //if (Simulator::Now () > m_p10CqiLast + m_p10CqiPeriodicity)
+  //  {
+  //    cqi = m_amc->CreateCqiFeedbacks (newSinr, m_dlBandwidth);
+
+  //    int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
+  //    int nbSubChannels = cqi.size ();
+  //    double cqiSum = 0.0;
+  //    int activeSubChannels = 0;
+  //    // average the CQIs of the different RBs
+  //    for (int i = 0; i < nbSubChannels; i++)
+  //      {
+  //        if (cqi.at (i) != -1)
+  //          {
+  //            cqiSum += cqi.at (i);
+  //            activeSubChannels++;
+  //          }
+  //        NS_LOG_DEBUG (this << " subch " << i << " cqi " <<  cqi.at (i));
+  //      }
+  //    dlcqi.m_rnti = m_rnti;
+  //    dlcqi.m_ri = 1; // not yet used
+  //    dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
+  //    NS_ASSERT_MSG (nLayer > 0, " nLayer negative");
+  //    NS_ASSERT_MSG (nLayer < 3, " nLayer limit is 2s");
+  //    for (int i = 0; i < nLayer; i++)
+  //      {
+  //        if (activeSubChannels > 0)
+  //          {
+  //            dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / activeSubChannels);
+  //          }
+  //        else
+  //          {
+  //            // approximate with the worst case -> CQI = 1
+  //            dlcqi.m_wbCqi.push_back (1);
+  //          }
+  //      }
+  //    //NS_LOG_DEBUG (this << " Generate P10 CQI feedback " << (uint16_t) cqiSum / activeSubChannels);
+  //    dlcqi.m_wbPmi = 0; // not yet used
+  //    // dl.cqi.m_sbMeasResult others CQI report modes: not yet implemented
+  //  }
+  //else if (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
+  //  {
+  //    cqi = m_amc->CreateCqiFeedbacks (newSinr, GetRbgSize ());
+  //    int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
+  //    int nbSubChannels = cqi.size ();
+  //    int rbgSize = GetRbgSize ();
+  //    double cqiSum = 0.0;
+  //    int cqiNum = 0;
+  //    SbMeasResult_s rbgMeas;
+  //    //NS_LOG_DEBUG (this << " Create A30 CQI feedback, RBG " << rbgSize << " cqiNum " << nbSubChannels << " band "  << (uint16_t)m_dlBandwidth);
+  //    for (int i = 0; i < nbSubChannels; i++)
+  //      {
+  //        if (cqi.at (i) != -1)
+  //          {
+  //            cqiSum += cqi.at (i);
+  //          }
+  //        // else "nothing" no CQI is treated as CQI = 0 (worst case scenario)
+  //        cqiNum++;
+  //        if (cqiNum == rbgSize)
+  //          {
+  //            // average the CQIs of the different RBGs
+  //            //NS_LOG_DEBUG (this << " RBG CQI "  << (uint16_t) cqiSum / rbgSize);
+  //            HigherLayerSelected_s hlCqi;
+  //            hlCqi.m_sbPmi = 0; // not yet used
+  //            for (int i = 0; i < nLayer; i++)
+  //              {
+  //                hlCqi.m_sbCqi.push_back ((uint16_t) cqiSum / rbgSize);
+  //              }
+  //            rbgMeas.m_higherLayerSelected.push_back (hlCqi);
+  //            cqiSum = 0.0;
+  //            cqiNum = 0;
+  //          }
+  //      }
+  //    dlcqi.m_rnti = m_rnti;
+  //    dlcqi.m_ri = 1; // not yet used
+  //    dlcqi.m_cqiType = CqiListElement_s::A30; // Aperidic CQI using PUSCH
+  //    //dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / nbSubChannels);
+  //    dlcqi.m_wbPmi = 0; // not yet used
+  //    dlcqi.m_sbMeasResult = rbgMeas;
+  //  }
 
   msg->SetDlCqi (dlcqi);
   return msg;
