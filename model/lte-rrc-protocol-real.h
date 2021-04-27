@@ -129,6 +129,7 @@ private:
    *
    * \param msg LteRrcSap::RrcConnectionSetupCompleted 
    */
+  void DoSendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg);
 
   /**
    * Send RRC connection reconfiguration setup completed function
@@ -322,6 +323,13 @@ private:
    * \param msg LteRrcSap::RrcConnectionSetup
    */
   void DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
+   * Send RRC connection setup function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionSetup
+   */
+  void DoSendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg);
   /**
    * Send RRC connection reconfiguration function
    *

@@ -312,11 +312,14 @@ class NbIotRrcSap{
         };
 
         struct NprachParametersNb{
+            // Not real part of NprachParamtersNB
+            // for simplicity
            enum class CoverageEnhancementLevel{
                zero,
                one,
                two
            } coverageEnhancementLevel;
+           // real part
            enum class NprachPeriodicity{
                ms40,
                ms80,
@@ -489,9 +492,9 @@ class NbIotRrcSap{
             } edtTbs;
         };
         struct EdtTbsInfoList{
+            EdtTbsNb edtTbsNb0;
             EdtTbsNb edtTbsNb1;
             EdtTbsNb edtTbsNb2;
-            EdtTbsNb edtTbsNb3;
         };
         struct NprachConfigR15{
             bool edtSmallTBSSubset = true;
@@ -814,6 +817,7 @@ class NbIotRrcSap{
         {
             uint8_t rapId; ///< RAPID
             uint16_t cellRnti;
+            NprachParametersNb::CoverageEnhancementLevel ceLevel;
             //BuildRarListElement_s rarPayload; ///< RAR payload
             RarPayload rarPayload;
         };
@@ -845,6 +849,7 @@ class NbIotRrcSap{
         uint64_t rnti;
         uint64_t tbs; // in bit
         bool isRar;
+        bool isEdt;
         uint64_t lcid;
 
         };
@@ -908,7 +913,32 @@ class NbIotRrcSap{
             Ptr<Packet> dedicatedInfoNas;
 
         };
+    
+        struct StmsiNb{
+            uint32_t mTmsi;
+            uint8_t mmec;
+        };
+        struct RrcEarlyDataRequestNb{
+            StmsiNb sTmsiNb;
+            enum class EstablishmentCauseNb{
+                moData,
+                moExceptionData,
+                delayTolerantAccess,
+                spare1
+               // mtEdt // Not Release 13
+            } establishmentCauseNb;
+            // Optional CQI NPDCCH not implemented
+            Ptr<Packet> dedicatedInfoNas;
 
+            
+        };
+
+        struct RrcEarlyDataCompleteNb{
+
+            Ptr<Packet> dedicatedInfoNas;
+
+        };
+            
         struct RrcConnectionReleaseNb{
             uint8_t rrcTransactionIdentifier;
             enum class ReleaseCauseNb{
@@ -1771,6 +1801,39 @@ class NbIotRrcSap{
                     break;
                 case DciN0::NumNpuschRepetitions::r128:
                     res = 128;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+
+        static uint16_t ConvertEdtTbs2int(EdtTbsNb edtTbs){
+            uint16_t res = 0;
+            switch(edtTbs.edtTbs){
+                case EdtTbsNb::EdtTbs::b328:
+                    res = 328;
+                    break;
+                case EdtTbsNb::EdtTbs::b408:
+                    res = 408;
+                    break;
+                case EdtTbsNb::EdtTbs::b504:
+                    res = 504;
+                    break;
+                case EdtTbsNb::EdtTbs::b584:
+                    res = 584;
+                    break;
+                case EdtTbsNb::EdtTbs::b680:
+                    res = 680;
+                    break;
+                case EdtTbsNb::EdtTbs::b808:
+                    res = 808;
+                    break;
+                case EdtTbsNb::EdtTbs::b936:
+                    res = 936;
+                    break;
+                case EdtTbsNb::EdtTbs::b1000:
+                    res = 1000;
                     break;
                 default:
                     break;

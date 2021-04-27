@@ -33,6 +33,7 @@
 #include "lte-enb-net-device.h"
 #include "lte-ue-net-device.h"
 
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteRrcProtocolReal");
@@ -197,6 +198,32 @@ LteUeRrcProtocolReal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConn
       m_setupParameters.srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
     }
 }
+
+
+void 
+LteUeRrcProtocolReal::DoSendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  m_rnti = m_rrc->GetRnti ();
+  Ptr<Packet> packet = Create<Packet> ();
+
+  RrcEarlyDataRequestNbHeader rrcEarlyDataRequestNbHeader;
+  rrcEarlyDataRequestNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcEarlyDataRequestNbHeader);
+  //uint32_t size = packet->GetSerializedSize();
+
+  if(msg.dedicatedInfoNas->GetSize() > 0){
+    packet->AddAtEnd(msg.dedicatedInfoNas);
+  }
+  //packet->AddByteTag(NasTag(),size,msg.dedicatedInfoNas->GetSerializedSize());
+  LteRlcSapProvider::TransmitPdcpPduParameters transmitPdcpPduParameters;
+  transmitPdcpPduParameters.pdcpPdu = packet;
+  transmitPdcpPduParameters.rnti = m_rnti;
+  transmitPdcpPduParameters.lcid = 0;
+
+  m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+}
+
 void 
 LteUeRrcProtocolReal::DoSendRrcConnectionReconfigurationCompleted (LteRrcSap::RrcConnectionReconfigurationCompleted msg)
 {
@@ -357,12 +384,14 @@ LteUeRrcProtocolReal::DoReceivePdcpPdu (Ptr<Packet> p)
   RrcConnectionReestablishmentRejectHeader rrcConnectionReestablishmentRejectHeader;
   RrcConnectionSetupHeader rrcConnectionSetupHeader;
   RrcConnectionRejectHeader rrcConnectionRejectHeader;
+  RrcEarlyDataCompleteNbHeader rrcEarlyDataCompleteNbHeader;
 
   // Declare possible messages
   LteRrcSap::RrcConnectionReestablishment rrcConnectionReestablishmentMsg;
   LteRrcSap::RrcConnectionReestablishmentReject rrcConnectionReestablishmentRejectMsg;
   LteRrcSap::RrcConnectionSetup rrcConnectionSetupMsg;
   LteRrcSap::RrcConnectionReject rrcConnectionRejectMsg;
+  NbIotRrcSap::RrcEarlyDataCompleteNb rrcEarlyDataCompleteNbMsg;
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcDlCcchMessage.GetMessageType () )
@@ -391,6 +420,12 @@ LteUeRrcProtocolReal::DoReceivePdcpPdu (Ptr<Packet> p)
       rrcConnectionSetupMsg = rrcConnectionSetupHeader.GetMessage ();
       m_ueRrcSapProvider->RecvRrcConnectionSetup (rrcConnectionSetupMsg);
       break;
+    case 4:
+      p->RemoveHeader(rrcEarlyDataCompleteNbHeader);
+      rrcEarlyDataCompleteNbMsg = rrcEarlyDataCompleteNbHeader.GetMessage();
+      rrcEarlyDataCompleteNbMsg.dedicatedInfoNas = p;
+      m_ueRrcSapProvider->RecvRrcEarlyDataCompleteNb(rrcEarlyDataCompleteNbMsg);
+
 
     }
 }
@@ -843,6 +878,7 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
   RrcConnectionReestablishmentRequestHeader rrcConnectionReestablishmentRequestHeader;
   RrcConnectionRequestHeader rrcConnectionRequestHeader;
   RrcConnectionResumeRequestNbHeader rrcConnectionResumeRequestNbHeader;
+  RrcEarlyDataRequestNbHeader rrcEarlyDataRequestNbHeader;
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcUlCcchMessage.GetMessageType () )
@@ -864,9 +900,38 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
       NbIotRrcSap::RrcConnectionResumeRequestNb rrcConnectionResumeRequestNbMsg;
       rrcConnectionResumeRequestNbMsg = rrcConnectionResumeRequestNbHeader.GetMessage();
       m_enbRrcSapProvider->RecvRrcConnectionResumeRequestNb (rnti, rrcConnectionResumeRequestNbMsg);
+      break;
+    case 3:
+      p->RemoveHeader(rrcEarlyDataRequestNbHeader);
+      NbIotRrcSap::RrcEarlyDataRequestNb rrcEarlyDataRequestNbMsg;
+      rrcEarlyDataRequestNbMsg = rrcEarlyDataRequestNbHeader.GetMessage();
+      rrcEarlyDataRequestNbMsg.dedicatedInfoNas= p;
+      m_enbRrcSapProvider->RecvRrcEarlyDataRequestNb (rnti, rrcEarlyDataRequestNbMsg);
+      break;
     }
 }
+void 
+LteEnbRrcProtocolReal::DoSendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg)
+{
+  Ptr<Packet> packet = Create<Packet> ();
 
+  RrcEarlyDataCompleteNbHeader rrcEarlyDataCompleteNbHeader;
+  rrcEarlyDataCompleteNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcEarlyDataCompleteNbHeader);
+  //uint32_t size = packet->GetSerializedSize();
+  if(msg.dedicatedInfoNas->GetSize() > 0){
+    packet->AddAtEnd(msg.dedicatedInfoNas);
+  }
+  //packet->AddByteTag(NasTag(),size,msg.dedicatedInfoNas->GetSerializedSize());
+
+  LteRlcSapProvider::TransmitPdcpPduParameters transmitPdcpPduParameters;
+  transmitPdcpPduParameters.pdcpPdu = packet;
+  transmitPdcpPduParameters.rnti = rnti;
+  transmitPdcpPduParameters.lcid = 0;
+
+  m_setupUeParametersMap[rnti].srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+}
 void
 LteEnbRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params)
 {

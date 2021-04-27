@@ -14,7 +14,7 @@ NbiotAmc::NbiotAmc ()
   std::ifstream npdsch_file ("src/lte/csv/clean_NPDSCH_100_TRBlks.csv");
   m_npusch_params = readNpuschCSV (npusch_file);
   m_npdsch_params = readNpdschCSV (npdsch_file);
-
+  m_r13 = true;
   m_highestmcl = m_npdsch_params.inband.begin ()->Pathloss;
   m_lowestmcl = m_npdsch_params.inband.begin ()->Pathloss;
   for (std::vector<NpdschMeasurementValues>::iterator it = m_npdsch_params.inband.begin ();
@@ -206,16 +206,23 @@ NbiotAmc::getNpdschParameters (double couplingloss, int dataSize, std::string op
 
   NpdschMeasurementValues value;
   value.TTI = 10000;
+  value.BLER = 1;
+  int max_tbs;
+  if(m_r13){
+    max_tbs = 680;
+  }
   for (std::vector<NpdschMeasurementValues>::iterator it = values->begin (); it != values->end ();
        ++it)
     {
       if (it->Pathloss == couplingloss)
         {
-          if (it->TBS >= dataSize)
+          if (it->TBS >= dataSize && it->TBS <= max_tbs) 
             {
               if (it->TTI < value.TTI)
-                {
-                  value = *it;
+                { 
+                  if (it->BLER < value.BLER){
+                    value = *it;
+                  }
                 }
             }
         }
@@ -237,6 +244,11 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
     }
   NpuschMeasurementValues value;
   value.TTI = 10000;
+  value.BLER = 1;
+  int max_tbs;
+  if(m_r13){
+    max_tbs = 1000;
+  }
   for (std::vector<NpuschMeasurementValues>::iterator it = m_npusch_params.measurements.begin ();
        it != m_npusch_params.measurements.end (); ++it)
     {
@@ -244,11 +256,13 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
         {
           if (it->Pathloss == couplingloss)
             {
-              if (it->TBS >= dataSize)
+              if (it->TBS >= dataSize && it->TBS <= max_tbs) 
                 {
                   if (it->TTI < value.TTI)
                     { 
-                      value = *it;
+                      if (it->BLER < value.BLER){
+                        value = *it;
+                      }
                     }
                 }
             }
@@ -453,6 +467,9 @@ std::pair<NbIotRrcSap::DciN0, int>
 NbiotAmc::getBareboneDciN0 (double couplingloss, int dataSize, double scs, double bandwidth)
 {
   NpuschMeasurementValues value = getNpuschParameters (couplingloss, dataSize, scs, bandwidth);
+  value.NRep = 1;
+  value.NRU = 8;
+  value.ITBS= 7;
   NbIotRrcSap::DciN0 dci = mapMeasurementValuetoDciN0 (value);
   uint16_t tbs = TransportBlockSizeTableUlNb[value.ITBS][value.NRU];
   return std::make_pair (dci, tbs);

@@ -121,7 +121,7 @@ public:
     IDLE_SUSPEND_EDRX,
     IDLE_SUSPEND_PSM,
     CONNECTED_TAU,
-    IDLE_RANDOM_ACCESS_EDT, // New state for different Preambles and StateMachine
+    IDLE_EARLY_DATA_TRANSMISSION, // New state for different Preambles and StateMachine
     NUM_STATES
   };
 
@@ -427,7 +427,7 @@ private:
    */
   void DoSetTemporaryCellRnti (uint16_t rnti);
   /// Notify random access successful function
-  void DoNotifyRandomAccessSuccessful ();
+  void DoNotifyRandomAccessSuccessful (bool edt);
   /// Notify random access failed function
   void DoNotifyRandomAccessFailed ();
  
@@ -460,6 +460,7 @@ private:
    * \param bid the BID
    */
   void DoSendData (Ptr<Packet> packet, uint8_t bid);
+  void SendDataNb (Ptr<Packet> packet, uint8_t bid);
   /// Disconnect function
   void DoDisconnect ();
 
@@ -534,6 +535,11 @@ private:
    * \param msg the LteRrcSap::RrcConnectionSetup
    */
   void DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
+   * \param msg the LteRrcSap::RrcConnectionSetup
+   */
+  void DoRecvRrcEarlyDataCompleteNb (NbIotRrcSap::RrcEarlyDataCompleteNb msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReconfiguration interface.
    * \param msg the LteRrcSap::RrcConnectionReconfiguration

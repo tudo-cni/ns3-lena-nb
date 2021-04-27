@@ -335,6 +335,7 @@ private:
    */
   std::map<uint64_t, uint16_t> m_imsiRntiMap;
   std::map<uint64_t, std::map<uint8_t, uint32_t> > m_resumeRbidTeidMap; // NBIOT LIMITATION 2^32-1 Teid devices
+  std::map<uint64_t, uint64_t> m_imsiResumeIdMap; // IMSI to ResumeId
 
   uint16_t m_cellId; ///< cell ID
 

@@ -63,7 +63,7 @@ public:
   UeMemberLteUeCmacSapUser (LteUeRrc* rrc);
 
   virtual void SetTemporaryCellRnti (uint16_t rnti);
-  virtual void NotifyRandomAccessSuccessful ();
+  virtual void NotifyRandomAccessSuccessful (bool edt);
   virtual void NotifyRandomAccessFailed ();
   virtual void NotifyEnergyState(NbiotEnergyModel::PowerState state);
   virtual bool GetEdtEnabled();
@@ -86,9 +86,9 @@ UeMemberLteUeCmacSapUser::SetTemporaryCellRnti (uint16_t rnti)
 
 
 void
-UeMemberLteUeCmacSapUser::NotifyRandomAccessSuccessful ()
+UeMemberLteUeCmacSapUser::NotifyRandomAccessSuccessful (bool edt)
 {
-  m_rrc->DoNotifyRandomAccessSuccessful ();
+  m_rrc->DoNotifyRandomAccessSuccessful (edt);
 }
 
 void
@@ -136,7 +136,7 @@ static const std::string g_ueRrcStateName[LteUeRrc::NUM_STATES] =
   "CONNECTED_REESTABLISHING",
   "IDLE_SUSPEND_EDRX",
   "IDLE_SUSPEND_PSM",
-  "IDLE_RANDOM_ACCESS_EDT"
+  "IDLE_EARLY_DATA_TRANSMISSION"
 };
 
 /**
@@ -653,40 +653,24 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
 {
   NS_LOG_FUNCTION (this << packet);
   m_cIotOpt = false;
-  m_edt = false;
+  m_edt = true;
   
+  m_dataSendTime = Simulator::Now();
   uint32_t msg3offset = 5;
-  if((m_edt ||  m_cIotOpt) && (m_state == IDLE_SUSPEND_PSM || m_state == IDLE_SUSPEND_EDRX)){
+  if(m_edt){
     if(m_edt && (packet->GetSize() + msg3offset)*8 < 1000){ // 1000 Bit is max TBS, MAC checks later if transmission is possible
       m_useEdtPreamble = true; // used for IDLE_MIB_STATE Machine
     }
     else{
       m_useEdtPreamble = false;
     }
-    m_dataSendTime = Simulator::Now();
-    m_packetStored.push_back(packet);
-    
   }
+  
+  if (m_state == CONNECTED_NORMALLY){
+    SendDataNb(packet, bid);
+  } 
   else{
-    
-    uint8_t drbid = Bid2Drbid (bid);
-    m_dataSendTime = Simulator::Now();
-    if (drbid != 0)
-      {
-    std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.find (drbid);
-    NS_ASSERT_MSG (it != m_drbMap.end (), "could not find bearer with drbid == " << drbid);
-
-    LtePdcpSapProvider::TransmitPdcpSduParameters params;
-    params.pdcpSdu = packet;
-    params.rnti = m_rnti;
-    params.lcid = it->second->m_logicalChannelIdentity;
-
-    NS_LOG_LOGIC (this << " RNTI=" << m_rnti << " sending packet " << packet
-                      << " on DRBID " << (uint32_t) drbid
-                      << " (LCID " << (uint32_t) params.lcid << ")"
-                      << " (" << packet->GetSize () << " bytes)");
-    it->second->m_pdcp->GetLtePdcpSapProvider ()->TransmitPdcpSdu (params);
-    }
+    m_packetStored.push_back(packet);
   }
 
   if(m_state == IDLE_SUSPEND_PSM){
@@ -705,6 +689,25 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
   }
 }
 
+void LteUeRrc::SendDataNb(Ptr<Packet> packet, uint8_t bid){
+  uint8_t drbid = Bid2Drbid (bid);
+  if (drbid != 0)
+    {
+      std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.find (drbid);
+      NS_ASSERT_MSG (it != m_drbMap.end (), "could not find bearer with drbid == " << drbid);
+
+      LtePdcpSapProvider::TransmitPdcpSduParameters params;
+      params.pdcpSdu = packet;
+      params.rnti = m_rnti;
+      params.lcid = it->second->m_logicalChannelIdentity;
+
+      NS_LOG_LOGIC (this << " RNTI=" << m_rnti << " sending packet " << packet
+                        << " on DRBID " << (uint32_t) drbid
+                        << " (LCID " << (uint32_t) params.lcid << ")"
+                        << " (" << packet->GetSize () << " bytes)");
+      it->second->m_pdcp->GetLtePdcpSapProvider ()->TransmitPdcpSdu (params);
+  }
+}
 
 void
 LteUeRrc::DoDisconnect ()
@@ -759,7 +762,7 @@ LteUeRrc::DoSetTemporaryCellRnti (uint16_t rnti)
 }
 
 void
-LteUeRrc::DoNotifyRandomAccessSuccessful ()
+LteUeRrc::DoNotifyRandomAccessSuccessful (bool edt)
 {
   NS_LOG_FUNCTION (this << m_imsi << ToString (m_state));
   //m_randomAccessSuccessfulTrace (m_imsi, m_cellId, m_rnti);
@@ -770,42 +773,56 @@ LteUeRrc::DoNotifyRandomAccessSuccessful ()
       {
         // we just received a RAR with a T-C-RNTI and an UL grant
         // send RRC connection request as message 3 of the random access procedure 
-        SwitchToState (IDLE_CONNECTING);
-        if (m_resumeId == 0){ // Complete Connection Setup
-          if(m_useEdtPreamble){
-            // Send EDT
-          }
-          LteRrcSap::RrcConnectionRequest msg;
-          msg.ueIdentity = m_imsi;
-          m_cmacSapProvider.at(0)->SetMsg5Buffer(20);
-          m_rrcSapUser->SendRrcConnectionRequest (msg); 
-          m_connectionTimeout = Simulator::Schedule (m_t300,
-                                                    &LteUeRrc::ConnectionTimeout,
-                                                    this);
-        }
-        else{
-          
-          m_srb0->m_rlc->SetRnti(m_rnti);
-          m_srb1->m_rlc->SetRnti(m_rnti);
-          m_srb1->m_pdcp->SetRnti(m_rnti);
-          for(std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.begin(); it != m_drbMap.end(); ++it){
-            it->second->m_pdcp->SetRnti(m_rnti);
-            it->second->m_rlc->SetRnti(m_rnti);
-          }
-  
+        if(edt){
+          SwitchToState(IDLE_EARLY_DATA_TRANSMISSION);
+          NbIotRrcSap::RrcEarlyDataRequestNb msg;
+          msg.sTmsiNb.mTmsi = m_imsi;
+          msg.establishmentCauseNb = NbIotRrcSap::RrcEarlyDataRequestNb::EstablishmentCauseNb::moData;
           std::vector<Ptr<Packet>>::iterator next_packet = m_packetStored.begin();
-          uint32_t msg5size = 14; // tbd
-          uint32_t size_left_to_fill = 1500-msg5size; // use actual Resume complete size later
-
-          if (m_cIotOpt && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSize() > 0){
-            m_cmacSapProvider.at(0)->SetMsg5Buffer(msg5size+(*next_packet)->GetSize());
-          }else{
-            m_cmacSapProvider.at(0)->SetMsg5Buffer(msg5size);
+          msg.dedicatedInfoNas = *next_packet;
+          m_rrcSapUser->SendRrcEarlyDataRequestNb (msg); 
+          m_connectionTimeout = Simulator::Schedule (m_t300,
+                                                      &LteUeRrc::ConnectionTimeout,
+                                                      this);
+          
+        }else{
+          SwitchToState (IDLE_CONNECTING);
+          if (m_resumeId == 0){ // Complete Connection Setup
+            if(m_useEdtPreamble){
+              // Send EDT
+            }
+            LteRrcSap::RrcConnectionRequest msg;
+            msg.ueIdentity = m_imsi;
+            m_cmacSapProvider.at(0)->SetMsg5Buffer(20);
+            m_rrcSapUser->SendRrcConnectionRequest (msg); 
+            m_connectionTimeout = Simulator::Schedule (m_t300,
+                                                      &LteUeRrc::ConnectionTimeout,
+                                                      this);
           }
+          else{
+            
+            m_srb0->m_rlc->SetRnti(m_rnti);
+            m_srb1->m_rlc->SetRnti(m_rnti);
+            m_srb1->m_pdcp->SetRnti(m_rnti);
+            for(std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.begin(); it != m_drbMap.end(); ++it){
+              it->second->m_pdcp->SetRnti(m_rnti);
+              it->second->m_rlc->SetRnti(m_rnti);
+            }
+    
+            std::vector<Ptr<Packet>>::iterator next_packet = m_packetStored.begin();
+            uint32_t msg5size = 14; // tbd
+            uint32_t size_left_to_fill = 1500-msg5size; // use actual Resume complete size later
 
-          NbIotRrcSap::RrcConnectionResumeRequestNb msg;
-          msg.resumeIdentity = m_resumeId;
-          m_rrcSapUser->SendRrcConnectionResumeRequestNb(msg);
+            if (m_cIotOpt && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSize() > 0){
+              m_cmacSapProvider.at(0)->SetMsg5Buffer(msg5size+(*next_packet)->GetSize());
+            }else{
+              m_cmacSapProvider.at(0)->SetMsg5Buffer(msg5size);
+            }
+
+            NbIotRrcSap::RrcConnectionResumeRequestNb msg;
+            msg.resumeIdentity = m_resumeId;
+            m_rrcSapUser->SendRrcConnectionResumeRequestNb(msg);
+          }
         }
       }
       break;
@@ -1329,6 +1346,39 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
 }
 
 void 
+LteUeRrc::DoRecvRrcEarlyDataCompleteNb(NbIotRrcSap::RrcEarlyDataCompleteNb msg){
+
+  switch(m_state){
+    case IDLE_EARLY_DATA_TRANSMISSION:
+      {
+        // Forward received message
+        m_connEstFailCount = 0;
+        m_connectionTimeout.Cancel ();
+        // Return to Resume
+        m_asSapUser->NotifyConnectionSuspended();
+        //m_asSapUser->NotifyConnectionSuspended();
+        if(m_enableEDRX){
+          SwitchToState(IDLE_SUSPEND_EDRX);
+          // Start EDRX TIMER
+        }  
+        else if(m_enablePSM){
+          //Start PSM Timer
+          SwitchToState(IDLE_SUSPEND_PSM);
+          
+        }
+        if (msg.dedicatedInfoNas->GetSize() > 0){
+          LogDataTransmission(Simulator::Now()-m_dataSendTime);
+          m_asSapUser->RecvData (msg.dedicatedInfoNas);
+        }
+
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+void 
 LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
 {
   NS_LOG_FUNCTION (this << " RNTI " << m_rnti);
@@ -1348,9 +1398,14 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
         std::vector<Ptr<Packet>>::iterator next_packet = m_packetStored.begin();
         msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
 
-        if (m_packetStored.size() > 0 && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSize() > 0){
-          msg2.dedicatedInfoNas = *next_packet;
-        }else{
+        if(m_cIotOpt){
+          if (m_packetStored.size() > 0 && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSize() > 0){
+            msg2.dedicatedInfoNas = *next_packet;
+          }else{
+            msg2.dedicatedInfoNas = Create<Packet>(0);
+          }
+        }else if (m_packetStored.size() > 0){
+          SendDataNb(m_packetStored.front(),1);
           msg2.dedicatedInfoNas = Create<Packet>(0);
         }
 

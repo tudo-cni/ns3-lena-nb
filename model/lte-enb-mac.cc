@@ -656,8 +656,26 @@ LteEnbMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
   m_schedSapProvider->SchedUlTriggerReq (ulparams);
 }
 
+void LteEnbMac::CheckPreambleReceptionForAllCoverageClases(){
+  //CE0 
+  CheckIfPreambleWasReceived(m_ce0Parameter, false);
+  //CE1 
+  CheckIfPreambleWasReceived(m_ce1Parameter, false);
+  //CE2 
+  CheckIfPreambleWasReceived(m_ce2Parameter, false);
+  if(m_edt){
+
+    //CE0 Edt
+    CheckIfPreambleWasReceived(m_ce0ParameterEdt, true);
+    //CE1 Edt
+    CheckIfPreambleWasReceived(m_ce1ParameterEdt, true);
+    //CE2 Edt
+    CheckIfPreambleWasReceived(m_ce2ParameterEdt, true);
+  }
+}
+
 void
-LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
+LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool edt) 
 {
   uint32_t currentsubframe = Simulator::Now().GetMilliSeconds();
   uint16_t window_condition = ( currentsubframe/10 - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (ce) / 10);
@@ -740,6 +758,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
                   rar.rapId = subcarrierOffset + iter->first;
                   rar.rarPayload.cellRnti = rar.cellRnti;
                   rar_dci.isRar = true;
+                  rar_dci.isEdt = edt;
                   rar_dci.rars.push_back (rar);
                   rar_dci.ranti = m_rapIdRantiMap[subcarrierOffset + iter->first];
                   m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
@@ -768,6 +787,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce)
               rar_dcis.back ().searchSpaceType = NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2;
               rar_dcis.back ().ce = ce.coverageEnhancementLevel;
               rar_dcis.back ().isRar = true;
+              rar_dcis.back ().isEdt = edt;
               rar_dcis.back ().dciN1.numNpdschSubframesPerRepetition =
                   NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
               rar_dcis.back ().dciN1.numNpdschRepetitions =
@@ -872,23 +892,76 @@ LteEnbMac::VerySimpleNbiotDownlinkScheduler ()
     {
     }
 }
+void LteEnbMac::SetCoverageLevelAndSib2Nb(){
+  m_sib2Nb = m_cmacSapUser->GetCurrentSystemInformationBlockType2Nb ();
+  m_ce0Parameter =
+      m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0;
+  m_ce1Parameter =
+          m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1;
+  m_ce2Parameter =
+          m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2;
 
+  // Temp variables to assign relevant edt parameters
+  NbIotRrcSap::NprachParametersNb tmp;
+  NbIotRrcSap::NprachParametersNbR14 tmpr14;
+
+  // EDT CE0
+  tmp = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0;
+  tmpr14 = m_sib2Nb.radioResourceConfigCommon.nprachConfigR15.nprachParameterListEdt.nprachParametersNb0;
+  tmp.coverageEnhancementLevel= tmpr14.coverageEnhancementLevel;
+  tmp.nprachPeriodicity = tmpr14.nprachPeriodicity; 
+  tmp.nprachStartTime = tmpr14.nprachStartTime;
+  tmp.nprachSubcarrierOffset = tmpr14.nprachSubcarrierOffset;
+  tmp.nprachNumSubcarriers = tmpr14.nprachNumSubcarriers;
+  tmp.nprachSubcarrierMsg3RangeStart= tmpr14.nprachSubcarrierMsg3RangeStart;
+  tmp.npdcchNumRepetitionsRA = tmpr14.npdcchNumRepetitionsRA;
+  tmp.npdcchStartSfCssRa = tmpr14.npdcchStartSfCssRa;
+  tmp.npdcchOffsetRa = tmpr14.npdcchOffsetRa;
+
+  m_ce0ParameterEdt = tmp;
+ 
+  // EDT CE1
+  tmp = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1;
+  tmpr14 = m_sib2Nb.radioResourceConfigCommon.nprachConfigR15.nprachParameterListEdt.nprachParametersNb1;
+  tmp.coverageEnhancementLevel= tmpr14.coverageEnhancementLevel;
+  tmp.nprachPeriodicity = tmpr14.nprachPeriodicity; 
+  tmp.nprachStartTime = tmpr14.nprachStartTime;
+  tmp.nprachSubcarrierOffset = tmpr14.nprachSubcarrierOffset;
+  tmp.nprachNumSubcarriers = tmpr14.nprachNumSubcarriers;
+  tmp.nprachSubcarrierMsg3RangeStart= tmpr14.nprachSubcarrierMsg3RangeStart;
+  tmp.npdcchNumRepetitionsRA = tmpr14.npdcchNumRepetitionsRA;
+  tmp.npdcchStartSfCssRa = tmpr14.npdcchStartSfCssRa;
+  tmp.npdcchOffsetRa = tmpr14.npdcchOffsetRa;     
+
+  m_ce1ParameterEdt = tmp;
+ 
+  // EDT CE2
+  tmp = m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2;
+  tmpr14 = m_sib2Nb.radioResourceConfigCommon.nprachConfigR15.nprachParameterListEdt.nprachParametersNb2;
+  tmp.coverageEnhancementLevel= tmpr14.coverageEnhancementLevel;
+  tmp.nprachPeriodicity = tmpr14.nprachPeriodicity; 
+  tmp.nprachStartTime = tmpr14.nprachStartTime;
+  tmp.nprachSubcarrierOffset = tmpr14.nprachSubcarrierOffset;
+  tmp.nprachNumSubcarriers = tmpr14.nprachNumSubcarriers;
+  tmp.nprachSubcarrierMsg3RangeStart= tmpr14.nprachSubcarrierMsg3RangeStart;
+  tmp.npdcchNumRepetitionsRA = tmpr14.npdcchNumRepetitionsRA;
+  tmp.npdcchStartSfCssRa = tmpr14.npdcchStartSfCssRa;
+  tmp.npdcchOffsetRa = tmpr14.npdcchOffsetRa;     
+
+  m_ce2ParameterEdt = tmp;
+
+}
 void
 LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
 {
   NS_LOG_FUNCTION (this << " EnbMac - frame " << frameNo << " subframe " << subframeNo);
-
+  m_edt = true;
   m_frameNo = frameNo;
   m_subframeNo = subframeNo;
   if (m_schedulerNb == nullptr)
     {
-      m_sib2Nb = m_cmacSapUser->GetCurrentSystemInformationBlockType2Nb ();
-      m_ce0Parameter =
-          m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0;
-      m_ce1Parameter =
-          m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1;
-      m_ce2Parameter =
-          m_sib2Nb.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2;
+      SetCoverageLevelAndSib2Nb();
+
       m_schedulerNb = new NbiotScheduler (
           std::vector<NbIotRrcSap::NprachParametersNb>{m_ce0Parameter, m_ce1Parameter,
                                                        m_ce2Parameter},
@@ -899,9 +972,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
   // A Tutorial to NB-IoT Design zeugs
 
 
-  CheckIfPreambleWasReceived (m_ce0Parameter);
-  CheckIfPreambleWasReceived (m_ce1Parameter);
-  CheckIfPreambleWasReceived (m_ce2Parameter);
+  CheckPreambleReceptionForAllCoverageClases();
   //m_schedulerNb->SetCeLevel (m_ce0Parameter, m_ce1Parameter, m_ce2Parameter);
   m_schedulerNb->SetRntiRsrpMap (m_ulRsrpReceivedNb);
   std::vector<NbIotRrcSap::NpdcchMessage> scheduled = m_schedulerNb->Schedule (frameNo, subframeNo);
@@ -1008,34 +1079,18 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                           }
                         else if (bsr->second.txQueueSize > 0)
                           {
-                            uint16_t lcid = it->lcid;
-                            uint32_t rlcOverhead;
-                            if (lcid == 1)
-                              {
-                                // for SRB1 (using RLC AM) it's better to
-                                // overestimate RLC overhead rather than
-                                // underestimate it and risk unneeded
-                                // segmentation which increases delay
-                                rlcOverhead = 4;
-                              }
-                            else
-                              {
-                                // minimum RLC overhead due to header
-                                rlcOverhead = 2;
-                              }
-                            NS_LOG_DEBUG (this << " serve tx DATA, bytes " << bytesforallLc 
-                                                << ", RLC overhead " << rlcOverhead);
+
                             if(bsr->second.txQueueSize > bytesforallLc){
                               txOpParams.bytes = bytesforallLc;
                               bsr->second.txQueueSize -= bytesforallLc;
                               bytesforallLc = 0;
                             }else{
-                              if(bsr->second.txQueueSize +4 < 7){
+                              if(bsr->second.txQueueSize < 7){
                                 txOpParams.bytes = 7;
                                 bytesforallLc -= 7;
                               }else{
-                                txOpParams.bytes = bsr->second.txQueueSize+4;
-                                bytesforallLc -= bsr->second.txQueueSize+4;
+                                txOpParams.bytes = bsr->second.txQueueSize;
+                                bytesforallLc -= bsr->second.txQueueSize;
                               }
 
                               bsr->second.txQueueSize = 0;
@@ -1059,6 +1114,18 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                                 std::cout << "Bla" << std::endl;
                               }
                           }
+                  }
+                  std::vector<uint8_t> remaining;
+                  for (itBsr = m_lastDlBSR[it->rnti].begin (); itBsr != m_lastDlBSR[it->rnti].end (); itBsr++)
+                  {
+                    if (((*itBsr).second.statusPduSize > 0) || ((*itBsr).second.retxQueueSize > 0) ||
+                        ((*itBsr).second.txQueueSize > 0))
+                      {
+                        remaining.push_back(itBsr->first);
+                      }
+                  }
+                  if(remaining.size()>0){
+                    m_schedulerNb->ScheduleDlRlcBufferReq(it->rnti,m_lastDlBSR[it->rnti],NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
                   }
                 }
             }
@@ -1282,7 +1349,7 @@ LteEnbMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
           m_ueStoredBSR[dlharq->GetRnti()] = 0;
         }
       else{
-          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti(),20,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti(),5,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
       } 
     }
   else
@@ -1416,6 +1483,7 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
 
   }else if (p->RemovePacketTag(bsrTag)){
   buffersize = BufferSizeLevelBsr::BsrId2BufferSize(bsrTag.GetBufferStatusReportIndex());
+  buffersize += 4; // Compensate RLC Header etc
   std::cout << "-------------------------" << std::endl;
   std::cout << "Buffersize: " << buffersize << std::endl;
   std::cout << "-------------------------" << std::endl;
@@ -1781,6 +1849,11 @@ LteEnbMac::DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParamete
 {
   NS_LOG_FUNCTION (this);
   m_lastDlBSR[params.rnti][params.lcid] = params;
+  if(params.lcid == 1 || params.lcid == 3){
+    // We are using SRB1 or DRB -> RLC AM Header
+  m_lastDlBSR[params.rnti][params.lcid].txQueueSize +=4;
+
+  }
   m_schedulerNb->ScheduleDlRlcBufferReq(params.rnti, m_lastDlBSR[params.rnti], searchspace);
   
 }

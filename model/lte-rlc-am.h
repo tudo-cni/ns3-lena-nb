@@ -151,6 +151,12 @@ private:
     uint32_t m_retxBufferSize; ///< retransmit buffer size
     uint32_t m_txedBufferSize; ///< transmit ed buffer size
 
+    uint32_t m_lastTxQueueSize; ///< transmit on buffer size
+    uint32_t m_lastRetxQueueSize; ///< retransmit buffer size
+    uint32_t m_lastStatusPduSize; ///< transmit ed buffer size
+
+
+
     bool     m_statusPduRequested; ///< status PDU requested
     uint32_t m_statusPduBufferSize; ///< status PDU buffer size
 
@@ -220,6 +226,7 @@ private:
   
   bool m_txOpportunityForRetxAlwaysBigEnough; ///< transmit opportunity for retransmit? 
   bool m_pollRetransmitTimerJustExpired; ///< poll retransmit timer just expired?
+
 
   /**
    * SDU Reassembling state

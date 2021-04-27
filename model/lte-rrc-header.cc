@@ -4704,6 +4704,136 @@ RrcConnectionResumeRequestNbHeader::GetShortResumeMacI() const
   return m_shortResumeMacI;
 }
 
+//////////////////// RrcConnectionResumeRequestNb class ////////////////////////
+
+// Constructor
+RrcEarlyDataRequestNbHeader::RrcEarlyDataRequestNbHeader() : RrcUlCcchMessage ()
+{
+  m_mTmsi = std::bitset<32> (0ul);
+  m_mmec = std::bitset<8> (0ul);
+  m_establishmentCause= moData;
+}
+
+// Destructor
+RrcEarlyDataRequestNbHeader::~RrcEarlyDataRequestNbHeader()
+{
+}
+
+TypeId
+RrcEarlyDataRequestNbHeader::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::RrcConnectionResumeRequestHeaderNb")
+    .SetParent<Header> ()
+    .SetGroupName("Lte")
+  ;
+  return tid;
+}
+
+void
+RrcEarlyDataRequestNbHeader::Print (std::ostream &os) const
+{
+  os << "M-TMSI:" <<m_mTmsi<< std::endl;
+  os << "MMEC:" << m_mmec<< std::endl;
+  os << "Establishment Cause:" << m_establishmentCause<< std::endl;
+}
+
+void
+RrcEarlyDataRequestNbHeader::PreSerialize () const
+{
+  m_serializationResult = Buffer ();
+
+  SerializeUlCcchMessage (3);
+
+  // Serialize RRCConnectionResumeRequest sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize criticalExtensions choice:
+  // 2 options, selected: 0 (option: rrcConnectionRequest-r8)
+  SerializeChoice (2,0,false);
+
+  // Serialize RRCEarlyDataRequest-NB-r15-IEs sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize S-TMSI-r15 Sequence:
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize mmec : MMEC ::= BIT STRING (SIZE (8))
+  SerializeBitstring (m_mmec);
+
+  // Serialize m-TMSI ::= BIT STRING (SIZE (32))
+  SerializeBitstring (m_mTmsi);
+
+  // Serialize establishmentCause : EstablishmentCause ::= ENUMERATED
+  SerializeEnum (4,m_establishmentCause);
+
+  // Finish serialization
+  FinalizeSerialization ();
+}
+
+uint32_t
+RrcEarlyDataRequestNbHeader::Deserialize (Buffer::Iterator bIterator)
+{
+  std::bitset<1> dummy;
+  std::bitset<0> optionalOrDefaultMask;
+  int selectedOption;
+
+  bIterator = DeserializeUlCcchMessage (bIterator);
+
+  // Deserialize RCConnectionRequest sequence
+  bIterator = DeserializeSequence (&optionalOrDefaultMask,false,bIterator);
+
+  // Deserialize criticalExtensions choice:
+  bIterator = DeserializeChoice (2,false,&selectedOption,bIterator);
+
+  // Deserialize RRCConnectionRequest-r8-IEs sequence
+  bIterator = DeserializeSequence (&optionalOrDefaultMask,false,bIterator);
+
+  // Deserialize S-TMSI sequence
+  bIterator = DeserializeSequence (&optionalOrDefaultMask,false,bIterator);
+
+  // Deserialize mmec
+  bIterator = DeserializeBitstring (&m_mmec,bIterator);
+
+  // Deserialize m-TMSI
+  bIterator = DeserializeBitstring (&m_mTmsi,bIterator);
+
+  // Deserialize resumeCause 
+  bIterator = DeserializeEnum (4,&selectedOption,bIterator);
+
+  return GetSerializedSize ();
+}
+
+void
+RrcEarlyDataRequestNbHeader::SetMessage (NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  m_mTmsi= std::bitset<32> ((uint32_t)msg.sTmsiNb.mTmsi);
+  m_mmec = std::bitset<8> ((uint8_t)msg.sTmsiNb.mmec);
+  m_isDataSerialized = false;
+}
+
+NbIotRrcSap::RrcEarlyDataRequestNb
+RrcEarlyDataRequestNbHeader::GetMessage () const
+{
+  NbIotRrcSap::RrcEarlyDataRequestNb msg;
+  msg.sTmsiNb.mTmsi = (uint32_t) m_mTmsi.to_ulong ();
+  msg.sTmsiNb.mmec = (uint8_t) m_mTmsi.to_ulong ();
+  // Establishment-Cause not reversed. Most of the time DATA
+  return msg;
+}
+
+std::bitset<32>
+RrcEarlyDataRequestNbHeader::GetmTmsi() const
+{
+  return m_mTmsi;
+}
+
+std::bitset<8>
+RrcEarlyDataRequestNbHeader::GetMmec() const
+{
+  return m_mmec;
+}
 //////////////////// RrcConnectionResumeNb class ////////////////////////
 
 // Constructor
@@ -5360,6 +5490,85 @@ RrcConnectionResumeCompleteNbHeader::GetMessage () const
 {
   NbIotRrcSap::RrcConnectionResumeCompleteNb msg;
   msg.rrcTransactionIdentifier = m_rrcTransactionIdentifier;
+  return msg;
+}
+
+//////////////////// RrcEarlyDataRequestNbHeader class ////////////////////////
+
+RrcEarlyDataCompleteNbHeader::RrcEarlyDataCompleteNbHeader ()
+{
+
+}
+
+RrcEarlyDataCompleteNbHeader::~RrcEarlyDataCompleteNbHeader()
+{
+}
+
+void
+RrcEarlyDataCompleteNbHeader::PreSerialize () const
+{
+  m_serializationResult = Buffer ();
+
+  // Serialize DCCH message
+  SerializeDlCcchMessage (4);
+
+  // Serialize RRCConnectionSetupComplete sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize criticalExtensions choice
+  // 2 options, selected 0 (c1)
+  SerializeChoice (2,0,false);
+
+  // Finish serialization
+  FinalizeSerialization ();
+}
+
+uint32_t
+RrcEarlyDataCompleteNbHeader::Deserialize (Buffer::Iterator bIterator)
+{
+  std::bitset<0> bitset0;
+
+  bIterator = DeserializeDlCcchMessage (bIterator);
+
+  bIterator = DeserializeSequence (&bitset0,false,bIterator);
+
+  int n;
+
+  bIterator = DeserializeChoice (2,false,&n,bIterator);
+
+  if (n == 1)
+    {
+      // Deserialize criticalExtensionsFuture
+      bIterator = DeserializeSequence (&bitset0,false,bIterator);
+    }
+  else if (n == 0)
+    {
+      // Deserialize EarlyDataComplete 
+      // Everything optinal and dedicatedInfoNas handled at ns3 level
+      bIterator = DeserializeSequence (&bitset0,false,bIterator);
+    }
+
+  return GetSerializedSize ();
+}
+
+void
+RrcEarlyDataCompleteNbHeader::Print (std::ostream &os) const
+{
+  os << "RrcEarlyDataComplete"<< std::endl;
+}
+
+void
+RrcEarlyDataCompleteNbHeader::SetMessage (NbIotRrcSap::RrcEarlyDataCompleteNb msg)
+{
+  m_isDataSerialized = false;
+}
+
+
+NbIotRrcSap::RrcEarlyDataCompleteNb
+RrcEarlyDataCompleteNbHeader::GetMessage () const
+{
+  NbIotRrcSap::RrcEarlyDataCompleteNb msg;
   return msg;
 }
 //////////////////// RrcConnectionReconfigurationCompleteHeader class ////////////////////////
@@ -7493,7 +7702,7 @@ RrcUlCcchMessage::DeserializeUlCcchMessage (Buffer::Iterator bIterator)
   else if (n == 0)
     {
       // Deserialize c1
-      bIterator = DeserializeChoice (3,false,&m_messageType,bIterator);
+      bIterator = DeserializeChoice (4,false,&m_messageType,bIterator);
     }
 
   return bIterator;
@@ -7506,7 +7715,7 @@ RrcUlCcchMessage::SerializeUlCcchMessage (int messageType) const
   // Choose c1
   SerializeChoice (2,0,false);
   // Choose message type
-  SerializeChoice (3,messageType,false);
+  SerializeChoice (4,messageType,false);
 }
 
 ///////////////////  RrcDlCcchMessage //////////////////////////////////
@@ -7554,7 +7763,7 @@ RrcDlCcchMessage::DeserializeDlCcchMessage (Buffer::Iterator bIterator)
   else if (n == 0)
     {
       // Deserialize c1
-      bIterator = DeserializeChoice (4,false,&m_messageType,bIterator);
+      bIterator = DeserializeChoice (5,false,&m_messageType,bIterator);
     }
 
   return bIterator;
@@ -7567,7 +7776,7 @@ RrcDlCcchMessage::SerializeDlCcchMessage (int messageType) const
   // Choose c1
   SerializeChoice (2,0,false);
   // Choose message type
-  SerializeChoice (4,messageType,false);
+  SerializeChoice (5,messageType,false);
 }
 
 } // namespace ns3

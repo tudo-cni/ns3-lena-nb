@@ -151,6 +151,17 @@ LteUeRrcProtocolIdeal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcCon
 }
 
 void 
+LteUeRrcProtocolIdeal::DoSendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteEnbRrcSapProvider::RecvRrcEarlyDataRequestNb,
+                       m_enbRrcSapProvider,
+		       m_rnti, 
+		       msg);
+}
+
+
+void 
 LteUeRrcProtocolIdeal::DoSendRrcConnectionReconfigurationCompleted (LteRrcSap::RrcConnectionReconfigurationCompleted msg)
 {
   // re-initialize the RNTI and get the EnbLteRrcSapProvider for the
@@ -468,6 +479,14 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap:
 {
   Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
 		       &LteUeRrcSapProvider::RecvRrcConnectionResumeNb,
+		       GetUeRrcSapProvider (rnti), 
+		       msg);
+}
+void 
+LteEnbRrcProtocolIdeal::DoSendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteUeRrcSapProvider::RecvRrcEarlyDataCompleteNb,
 		       GetUeRrcSapProvider (rnti), 
 		       msg);
 }

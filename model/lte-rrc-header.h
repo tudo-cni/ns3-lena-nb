@@ -612,6 +612,65 @@ private:
   std::bitset<3> m_spare; ///< sparIe bit
 };
 
+/**
+* This class manages the serialization/deserialization of RrcConnectionRequest IE
+*/
+class RrcEarlyDataRequestNbHeader : public RrcUlCcchMessage
+{
+public:
+  RrcEarlyDataRequestNbHeader ();
+  ~RrcEarlyDataRequestNbHeader ();
+
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+  // Inherited from RrcAsn1Header 
+  void PreSerialize () const;
+  uint32_t Deserialize (Buffer::Iterator bIterator);
+  void Print (std::ostream &os) const;
+
+  /**
+   * Receives a RrcConnectionRequest IE and stores the contents into the class attributes
+   * @param msg The information element to parse
+   */
+  void SetMessage (NbIotRrcSap::RrcEarlyDataRequestNb msg);
+
+  /**
+   * Returns a RrcConnectionRequest IE from the values in the class attributes
+   * @return A RrcConnectionRequest, as defined in LteRrcSap
+   */
+  NbIotRrcSap::RrcEarlyDataRequestNb GetMessage () const;
+
+  /**
+   * Get ResumeId attribute
+   * @return ResumeId attribute
+   */
+  std::bitset<40> GetResumeId() const;
+  /**
+   * Get ResumeId attribute
+   * @return ResumeId attribute
+   */
+  std::bitset<32> GetmTmsi() const;
+  /**
+   * Get ResumeId attribute
+   * @return ResumeId attribute
+   */
+  std::bitset<8> GetMmec() const;
+
+private:
+  std::bitset<32> m_mTmsi; ///< MMEC
+  std::bitset<8> m_mmec;
+  /// EstablishmentCause enumeration
+  enum
+  {  moData,
+     moExceptionData,
+     delayTolerantAccess,
+     spare1 
+  } m_establishmentCause; ///< the establishent cause
+};
+
 class RrcConnectionResumeNbHeader : public RrcDlDcchMessage
 {
 public:
@@ -793,6 +852,37 @@ public:
 
 private:
   uint8_t m_rrcTransactionIdentifier; ///< RRC transaction identifier
+
+};
+
+/**
+* This class manages the serialization/deserialization of RrcEarlyDataComplete-NB IE
+*/
+class RrcEarlyDataCompleteNbHeader : public RrcDlCcchMessage
+{
+public:
+  RrcEarlyDataCompleteNbHeader ();
+  ~RrcEarlyDataCompleteNbHeader();
+
+  // Inherited from RrcAsn1Header 
+  void PreSerialize () const;
+  uint32_t Deserialize (Buffer::Iterator bIterator);
+  void Print (std::ostream &os) const;
+
+  /**
+  * Receives a RrcConnectionSetupCompleted IE and stores the contents into the class attributes
+  * @param msg The information element to parse
+  */
+  void SetMessage (NbIotRrcSap::RrcEarlyDataCompleteNb msg);
+
+  /**
+  * Returns a RrcConnectionSetupCompleted IE from the values in the class attributes
+  * @return A RrcConnectionSetupCompleted, as defined in LteRrcSap
+  */
+  NbIotRrcSap::RrcEarlyDataCompleteNb GetMessage () const;
+
+private:
+  // everything is optional and dedicatedInfoNas is transmitted on ns3 packet level
 
 };
 /**

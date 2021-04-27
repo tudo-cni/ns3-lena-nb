@@ -558,25 +558,39 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                                   RRCConnectionResumeRequest-NB ist transmitted using SRB0 (ref. ETSI TS 136 331 V13.15.0 p.522 "RRCConnectionResumeRequest-NB" and therefore does not go through PDCP (ref. ETSI TS 136 323 V13.6.0, 4.2.1: "Each RB (i.e. DRB, SLRB and SRB, except for SRB0 and SRB1bis) is associated with one PDCP entity"))
                                   */
 
-                                  uint64_t size_rrc_conn_resume_req =
-                                      59; // 40 bits resumeID +16 bits shortResumeMAC-I +3 bits resumeCause ref. ETSI TS 136 331 V13.15.0 p.522 RRCConnectionResumeRequest-NB
-                                  size_rrc_conn_resume_req +=
-                                      (8 - size_rrc_conn_resume_req % 8); // Fill to full byte
-                                  uint64_t size_rlc_pdu = size_rrc_conn_resume_req;
-                                  //MAC_SUBHEADER_CE__R_F2_E_LCID = 8           # R/F2/E/LCID sub-header for MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-2)
-                                  //MAC_SUBHEADER_SDU__R_F2_E_LCID_F_7L = 16    # R/F2/E/LCID/F/L sub-headerfor MAC SDU with 7-bits L field (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-1)
-                                  //MAC_CE_sBSR = 8                             # Short BSR and Truncated BSR MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.3.1-1)
-                                  uint64_t size_mac_pdu = 8 + 16 + 8 + size_rlc_pdu;
+                                  //uint64_t size_rrc_conn_resume_req =
+                                  //    59; // 40 bits resumeID +16 bits shortResumeMAC-I +3 bits resumeCause ref. ETSI TS 136 331 V13.15.0 p.522 RRCConnectionResumeRequest-NB
+                                  //size_rrc_conn_resume_req +=
+                                  //    (8 - size_rrc_conn_resume_req % 8); // Fill to full byte
+                                  //uint64_t size_rlc_pdu = size_rrc_conn_resume_req;
+                                  ////MAC_SUBHEADER_CE__R_F2_E_LCID = 8           # R/F2/E/LCID sub-header for MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-2)
+                                  ////MAC_SUBHEADER_SDU__R_F2_E_LCID_F_7L = 16    # R/F2/E/LCID/F/L sub-headerfor MAC SDU with 7-bits L field (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-1)
+                                  ////MAC_CE_sBSR = 8                             # Short BSR and Truncated BSR MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.3.1-1)
+                                  //uint64_t size_mac_pdu = 8 + 16 + 8 + size_rlc_pdu;
+                                  uint64_t size_mac_pdu = 0;
+                                  if(it->isEdt){
+                                    if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero){
+                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb0);
+                                    }
+                                    else if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one){
+                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb1);
+                                    }
+                                    else if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two){
+                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb2);
+                                    }
+                                  }else{
+                                    size_mac_pdu = 88; // Fixed Ulgrant Size. See 136.331
+                                  }
                                   uint64_t couplingloss = 0;
-                                  if (rar->rapId < 24)
+                                  if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two)
                                     {
                                       couplingloss = 159;
                                     }
-                                  else if (rar->rapId < 36)
+                                  else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one)
                                     {
                                       couplingloss = 149;
                                     }
-                                  else if (rar->rapId < 48)
+                                  else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero)
                                     {
                                       couplingloss = 139;
                                     }
@@ -1058,7 +1072,9 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
 
     if(m_RntiRlcUlBuffer[searchspace][rnti]*8 > 1000){ // max TBS Uplink Rel. 13
       tbs = 1000;
-      m_RntiRlcUlBuffer[searchspace][rnti] = m_RntiRlcUlBuffer[searchspace][rnti] - (1000/8);
+      //m_RntiRlcUlBuffer[searchspace][rnti] = m_RntiRlcUlBuffer[searchspace][rnti] - (1000/8);
+      m_RntiRlcUlBuffer[searchspace][rnti] = 0;
+
     }
     else{
       tbs = m_RntiRlcUlBuffer[searchspace][rnti]* 8;

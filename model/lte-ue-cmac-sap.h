@@ -172,7 +172,7 @@ public:
    * Notify the RRC that the MAC Random Access procedure completed successfully
    * 
    */
-  virtual void NotifyRandomAccessSuccessful () = 0;
+  virtual void NotifyRandomAccessSuccessful (bool edt) = 0;
 
   /** 
    * Notify the RRC that the MAC Random Access procedure failed

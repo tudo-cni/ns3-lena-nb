@@ -100,6 +100,7 @@ public:
     IDLE_SUSPEND_EDRX,// New NBIOT
     IDLE_SUSPEND_PSM,// New NBIOT
     CONNECTED_TAU,// New NBIOT
+    IDLE_EARLY_DATA_TRANSMISSION,// New NBIOT
     NUM_STATES
   };
 
@@ -308,6 +309,8 @@ public:
    * \param msg the RRC connection request message
    */
   void RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+
+  void RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg);
 
   /**
    * Implement the LteEnbRrcSapProvider::RecvRrcConnectionSetupCompleted interface.
@@ -1205,6 +1208,14 @@ private:
    * \param msg the LteRrcSap::RrcConnectionRequest
    */
   void DoRecvRrcConnectionResumeRequestNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+  /**
+   * Part of the RRC protocol. Forwarding LteEnbRrcSapProvider::RecvRrcConnectionRequest interface to UeManager::RecvRrcConnectionRequest
+   *
+   * \param rnti the RNTI
+   * \param msg the LteRrcSap::RrcConnectionRequest
+   */
+  void DoRecvRrcEarlyDataRequestNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataRequestNb msg);
+
 
   bool DoCheckIfResumeIdExists(uint64_t resumeId);
 
@@ -1876,6 +1887,7 @@ private:
 
   void GenerateSystemInformationBlockType1Nb();
   void GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, ns3::Ptr<ns3::ComponentCarrierBaseStation>> cc);
+  bool m_edt;
 
 public:
   uint64_t AttachSuspendedUeNb(uint32_t imsi);

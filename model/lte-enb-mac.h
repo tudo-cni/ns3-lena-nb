@@ -509,7 +509,8 @@ private:
 
   // Temp, might not be needed later
   void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
-  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce);
+  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce, bool edt);
+  void CheckPreambleReceptionForAllCoverageClases();
   void VerySimpleNbiotDownlinkScheduler();
   /**
   * \brief Receive RACH Preamble function
@@ -522,6 +523,11 @@ private:
 
   void CheckForDataInactivity(uint16_t rnti);
   void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
+  void SetCoverageLevelAndSib2Nb();
+  
+  
+  
+  
 
   NbiotScheduler* m_schedulerNb = nullptr;
   std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
@@ -534,6 +540,9 @@ private:
   NbIotRrcSap::NprachParametersNb m_ce0Parameter;
   NbIotRrcSap::NprachParametersNb m_ce1Parameter;
   NbIotRrcSap::NprachParametersNb m_ce2Parameter;
+  NbIotRrcSap::NprachParametersNb m_ce0ParameterEdt;
+  NbIotRrcSap::NprachParametersNb m_ce1ParameterEdt;
+  NbIotRrcSap::NprachParametersNb m_ce2ParameterEdt;
   bool m_SearchSpaceType2C0;
   bool m_SearchSpaceType2C1;
   bool m_SearchSpaceType2C2;
@@ -549,6 +558,7 @@ private:
   std::map<uint16_t, uint8_t> m_ueStoredBSR;
   std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
   std::map<uint16_t, EventId> m_noDataIndicators;
+  bool m_edt;
   };
 
 } // end namespace ns3

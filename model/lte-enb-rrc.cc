@@ -157,6 +157,7 @@ static const std::string g_ueManagerStateName[UeManager::NUM_STATES] =
   "IDLE_SUSPEND_EDRX", // New NBIOT
   "IDLE_SUSPEND_PSM", // New NBIOT
   "CONNECTED_TAU"// New NBIOT
+  "IDLE_EARLY_DATA_TRANSMISSION" // New NBIOT
 };
 
 /**
@@ -332,7 +333,8 @@ UeManager::DoInitialize ()
                                                       &LteEnbRrc::HandoverJoiningTimeout,
                                                       m_rrc, m_rnti);
       break;
-
+    case IDLE_EARLY_DATA_TRANSMISSION:
+      break;
     default:
       NS_FATAL_ERROR ("unexpected state " << ToString (m_state));
       break;
@@ -857,7 +859,18 @@ UeManager::SendData (uint8_t bid, Ptr<Packet> p)
         SendPacket (bid, p);
       }
       break;
+    case IDLE_EARLY_DATA_TRANSMISSION:
+      {
+        // Answer message for the early data transmission
 
+        // send RRC Early Data Transmission Complete to UE
+        // For now, we assume that the meesage will definitely fit into dedicated nas => TBS < 680
+        NbIotRrcSap::RrcEarlyDataCompleteNb msg;
+        msg.dedicatedInfoNas = p;
+
+        m_rrc->m_rrcSapUser->SendRrcEarlyDataCompleteNb (m_rnti, msg);
+
+      }
     case HANDOVER_JOINING:
       {
         // Buffer data until RRC Connection Reconfiguration Complete message is received
@@ -1136,6 +1149,73 @@ UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeReq
       break;
     }
 }
+
+void
+UeManager::RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  NS_LOG_FUNCTION (this);
+  NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
+  switch (m_state)
+    {
+    case INITIAL_RANDOM_ACCESS:
+      {
+        m_connectionRequestTimeout.Cancel ();
+
+        if (m_rrc->m_edt)
+          {
+              m_imsi = msg.sTmsiNb.mTmsi;
+              m_rrc->m_s1SapProvider->InitialUeMessage(m_imsi, m_rnti);
+
+              SwitchToState (IDLE_EARLY_DATA_TRANSMISSION);
+              if(msg.dedicatedInfoNas->GetSize()>0){
+                // data radio bearer
+                EpsBearerTag tag;
+                tag.SetRnti (m_rnti);
+                tag.SetBid (Lcid2Bid (3));
+                msg.dedicatedInfoNas->AddPacketTag (tag);
+                m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
+              }
+
+            }
+        else if (m_rrc->m_admitRrcConnectionRequest)
+            {
+              //m_imsi = msg.ueIdentity;
+              LteRrcSap::RrcConnectionSetup msg2;
+              msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
+              msg2.radioResourceConfigDedicated = BuildRadioResourceConfigDedicated ();
+              m_rrc->m_rrcSapUser->SendRrcConnectionSetup (m_rnti, msg2);
+
+              RecordDataRadioBearersToBeStarted ();
+              m_connectionSetupTimeout = Simulator::Schedule (
+                  m_rrc->m_connectionSetupTimeoutDuration,
+                  &LteEnbRrc::ConnectionSetupTimeout, m_rrc, m_rnti);
+              SwitchToState (CONNECTION_SETUP);
+
+
+            }
+        else
+        {
+            NS_LOG_INFO ("rejecting connection request for RNTI " << m_rnti);
+
+            // send RRC CONNECTION REJECT to UE
+            LteRrcSap::RrcConnectionReject rejectMsg;
+            rejectMsg.waitTime = 3;
+            m_rrc->m_rrcSapUser->SendRrcConnectionReject (m_rnti, rejectMsg);
+
+            m_connectionRejectedTimeout = Simulator::Schedule (
+                m_rrc->m_connectionRejectedTimeoutDuration,
+                &LteEnbRrc::ConnectionRejectedTimeout, m_rrc, m_rnti);
+            SwitchToState (CONNECTION_REJECTED);
+          }  
+      }
+      break;
+
+    default:
+      NS_FATAL_ERROR ("method unexpected in state " << ToString (m_state));
+      break;
+    }
+}
+
 
 
 
@@ -1859,7 +1939,8 @@ LteEnbRrc::LteEnbRrc ()
     m_lastAllocatedConfigurationIndex (0),
     m_reconfigureUes (false),
     m_numberOfComponentCarriers (0),
-    m_carriersConfigured (false)
+    m_carriersConfigured (false),
+    m_edt(true)
 {
   NS_LOG_FUNCTION (this);
   m_legacy_lte = false;
@@ -1872,6 +1953,7 @@ LteEnbRrc::LteEnbRrc ()
   m_s1SapUser = new MemberEpcEnbS1SapUser<LteEnbRrc> (this);
   m_cphySapUser.push_back (new MemberLteEnbCphySapUser<LteEnbRrc> (this));
   m_ccmRrcSapUser = new MemberLteCcmRrcSapUser <LteEnbRrc>(this);
+
 }
 
 void
@@ -2622,7 +2704,8 @@ LteEnbRrc::SendData (Ptr<Packet> packet)
     // Ue is in Connected State, just send Packet 
     Ptr<UeManager> ueManager = GetUeManagerbyRnti (tag.GetRnti ());
     ueManager->SendData (tag.GetBid (), packet);
-  }else{
+  }
+  else{
     // Device is in eDRX or PSM -> Store Packet for Imsi
     m_imsiSavedPacketsMap[tag.GetImsi()].push_back(std::pair<uint8_t, Ptr<Packet>>(tag.GetBid (), packet));
   }
@@ -2744,6 +2827,19 @@ LteEnbRrc::DoRecvRrcConnectionResumeRequestNb (uint16_t rnti, NbIotRrcSap::RrcCo
     ResumeUe(rnti, msg.resumeIdentity);
   }
   GetUeManagerbyRnti (rnti)->RecvRrcConnectionResumeRequestNb (msg);
+}
+
+void
+LteEnbRrc::DoRecvRrcEarlyDataRequestNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+    //NS_LOG_FUNCTION (this << rnti);
+    //EpsBearerTag tag;
+    //tag.SetRnti (65535);
+    //tag.SetBid (1);
+    //msg.dedicatedInfoNas->AddPacketTag (tag);
+    //m_forwardUpCallback (msg.dedicatedInfoNas);
+    GetUeManagerbyRnti (rnti)->RecvRrcEarlyDataRequestNb (msg);
+  
 }
 
 bool
@@ -3732,10 +3828,37 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce0v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
   ce0v14.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
+  NbIotRrcSap::NprachParametersNbR14 ce1v14;
+  ce1v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
+  ce1v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+  ce1v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
+  ce1v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+  ce1v14.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  ce1v14.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+  ce1v14.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
+  ce1v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+  ce1v14.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+  NbIotRrcSap::NprachParametersNbR14 ce2v14;
+  ce2v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
+  ce2v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+  ce2v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
+  ce2v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+  ce2v14.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  ce2v14.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
+  ce2v14.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
+  ce2v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+  ce2v14.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
   sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
   sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;
   sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb2 = ce2;
   sib2.radioResourceConfigCommon.nprachConfigR15.nprachParameterListEdt.nprachParametersNb0 = ce0v14;
+  sib2.radioResourceConfigCommon.nprachConfigR15.nprachParameterListEdt.nprachParametersNb1 = ce1v14;
+  sib2.radioResourceConfigCommon.nprachConfigR15.nprachParameterListEdt.nprachParametersNb2 = ce2v14;
+  sib2.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb0.edtTbs = NbIotRrcSap::EdtTbsNb::EdtTbs::b1000;
+  sib2.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb1.edtTbs = NbIotRrcSap::EdtTbsNb::EdtTbs::b1000;
+  sib2.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb2.edtTbs = NbIotRrcSap::EdtTbsNb::EdtTbs::b1000;
   sib2.freqInfo.ulCarrierFreq = m_ulEarfcn;
 
   if(m_sib2Nb.size() == 0){

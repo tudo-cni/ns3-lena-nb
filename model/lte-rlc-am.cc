@@ -46,6 +46,10 @@ LteRlcAm::LteRlcAm ()
   m_txedBuffer.resize (1024);
   m_txedBufferSize = 0;
 
+  m_lastRetxQueueSize = 0;
+  m_lastTxQueueSize = 0;
+  m_lastStatusPduSize = 0;
+
   m_statusPduRequested = false;
   m_statusPduBufferSize = 0;
 
@@ -109,7 +113,7 @@ LteRlcAm::GetTypeId (void)
     .AddAttribute ("ReportBufferStatusTimer",
                    "How much to wait to issue a new Report Buffer Status since the last time "
                    "a new SDU was received",     
-                   TimeValue (MilliSeconds (500000)),
+                   TimeValue (MilliSeconds (10)),
                    MakeTimeAccessor (&LteRlcAm::m_rbsTimerValue),
                    MakeTimeChecker ())
     .AddAttribute ("TxOpportunityForRetxAlwaysBigEnough",
@@ -215,14 +219,14 @@ LteRlcAm::DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpPara
       return;
     }
 
-  if ( m_statusPduRequested && ! m_statusProhibitTimer.IsRunning () )
+  if ( m_statusPduRequested && ! m_statusProhibitTimer.IsRunning ()  && txOpParams.bytes == 4)
     {
       if (txOpParams.bytes < m_statusPduBufferSize)
         {
           // Stingy MAC: We need more bytes for the STATUS PDU
-          NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small for the STATUS PDU (size = " << m_statusPduBufferSize << ")");
-          NS_ASSERT_MSG (false, "TxOpportunity (size = " << txOpParams.bytes << ") too small for the STATUS PDU (size = " << m_statusPduBufferSize << ")\n"
-                             << "Your MAC scheduler is assigned too few resource blocks.");
+          //NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small for the STATUS PDU (size = " << m_statusPduBufferSize << ")");
+          //NS_ASSERT_MSG (false, "TxOpportunity (size = " << txOpParams.bytes << ") too small for the STATUS PDU (size = " << m_statusPduBufferSize << ")\n"
+          //                   << "Your MAC scheduler is assigned too few resource blocks.");
           return;
         }
 
@@ -412,9 +416,9 @@ LteRlcAm::DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpPara
       if (txOpParams.bytes < 7)
       {
         // Stingy MAC: We need more bytes for new DATA PDUs.
-        NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small for DATA PDU");
-        NS_ASSERT_MSG (false, "TxOpportunity (size = " << txOpParams.bytes << ") too small for DATA PDU\n"
-                           << "Your MAC scheduler is assigned too few resource blocks.");
+        //NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small for DATA PDU");
+        //NS_ASSERT_MSG (false, "TxOpportunity (size = " << txOpParams.bytes << ") too small for DATA PDU\n"
+        //                   << "Your MAC scheduler is assigned too few resource blocks.");
         return;
       }
 
@@ -1647,8 +1651,11 @@ LteRlcAm::DoReportBufferStatus (void)
       r.statusPduSize = 0;
     }
 
-  if ( r.txQueueSize != 0 || r.retxQueueSize != 0 || r.statusPduSize != 0 )
+  if ( r.txQueueSize != m_lastTxQueueSize  || r.retxQueueSize != m_lastRetxQueueSize || r.statusPduSize != m_lastStatusPduSize )
     {
+      m_lastTxQueueSize = r.txQueueSize;
+      m_lastRetxQueueSize = r.retxQueueSize;
+      m_lastStatusPduSize = r.statusPduSize;
       NS_LOG_INFO ("Send ReportBufferStatus: " << r.txQueueSize << ", " << r.txQueueHolDelay << ", " 
                                                << r.retxQueueSize << ", " << r.retxQueueHolDelay << ", " 
                                                << r.statusPduSize);
@@ -1656,6 +1663,7 @@ LteRlcAm::DoReportBufferStatus (void)
     }
   else
     {
+      m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
       m_macSapProvider->ReportNoTransmissionNb(m_rnti,m_lcid);
 
       NS_LOG_INFO ("ReportBufferStatus don't needed");

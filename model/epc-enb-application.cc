@@ -162,6 +162,8 @@ EpcEnbApplication::DoInitialUeMessage (uint64_t imsi, uint16_t rnti)
   m_s1apSapMme->InitialUeMessage (imsi, rnti, imsi, m_cellId);
 }
 
+
+
 void 
 EpcEnbApplication::DoPathSwitchRequest (EpcEnbS1SapProvider::PathSwitchRequestParameters params)
 {
@@ -223,6 +225,13 @@ EpcEnbApplication::DoMoveUeToResume (uint16_t rnti, uint64_t resumeId)
 {
   NS_LOG_FUNCTION (this << rnti);
   m_resumeRbidTeidMap[resumeId] = m_rbidTeidMap[rnti];
+  // Get Imsi to rnti
+  for (auto it = m_imsiRntiMap.begin(); it != m_imsiRntiMap.end(); ++it){
+    if (it->second == rnti){
+      m_imsiResumeIdMap[it->first] = resumeId;
+      break;
+    }
+  }
   m_rbidTeidMap.erase(rnti);
   
 }
@@ -236,6 +245,12 @@ EpcEnbApplication::DoResumeUe(uint16_t rnti, uint64_t resumeId)
     m_teidRbidMap[bidIt->second].m_rnti = rnti;
   }
   m_resumeRbidTeidMap.erase(rnti);
+  for (auto it = m_imsiRntiMap.begin(); it != m_imsiRntiMap.end(); ++it){
+    if (it->second == rnti){
+      m_imsiRntiMap.erase(it);
+      break;
+    }
+  }
   
 }
 void 
@@ -307,10 +322,31 @@ EpcEnbApplication::RecvFromLteSocket (Ptr<Socket> socket)
   uint8_t bid = tag.GetBid ();
   NS_LOG_LOGIC ("received packet with RNTI=" << (uint32_t) rnti << ", BID=" << (uint32_t)  bid);
   std::map<uint16_t, std::map<uint8_t, uint32_t> >::iterator rntiIt = m_rbidTeidMap.find (rnti);
+
   if (rntiIt == m_rbidTeidMap.end ())
     {
-      NS_LOG_WARN ("UE context not found, discarding packet");
+      // We got an IP-Packet without restored/initial Context
+      // Either CIoT-Opt Early Data Transmission 
+      // Or someone might have made a mistake
+      uint64_t imsi = 0;
+      for (auto it = m_imsiRntiMap.begin(); it != m_imsiRntiMap.end(); ++it){
+        if (it->second == rnti){
+          imsi = it->first;
+        }
+      }
+      if(imsi != 0){
+        std::map<uint64_t, std::map<uint8_t, uint32_t> >::iterator resumeIt = m_resumeRbidTeidMap.find (m_imsiResumeIdMap[imsi]);
+        std::map<uint8_t, uint32_t>::iterator bidIt = resumeIt->second.find (bid);
+        NS_ASSERT (bidIt != rntiIt->second.end ());
+
+        uint32_t teid = bidIt->second;
+        m_teidRbidMap[teid].m_rnti = rnti;
+        m_rxLteSocketPktTrace (packet->Copy ());
+        SendToS1uSocket (packet, teid);
+      }
+          
     }
+  
   else
     {
       std::map<uint8_t, uint32_t>::iterator bidIt = rntiIt->second.find (bid);
