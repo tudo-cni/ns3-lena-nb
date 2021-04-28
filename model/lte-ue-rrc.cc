@@ -288,6 +288,18 @@ LteUeRrc::GetTypeId (void)
                    BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
                    MakeBooleanAccessor(&LteUeRrc::m_enablePSM),
                    MakeBooleanChecker())
+    .AddAttribute ("CIoT-Opt",
+                   "This specifies the maximum number of in-sync indications. "
+                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
+                   BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   MakeBooleanAccessor(&LteUeRrc::m_cIotOpt),
+                   MakeBooleanChecker())
+    .AddAttribute ("EDT",
+                   "This specifies the maximum number of in-sync indications. "
+                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
+                   BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   MakeBooleanAccessor(&LteUeRrc::m_edt),
+                   MakeBooleanChecker())
     .AddTraceSource ("MibReceived",
                      "trace fired upon reception of Master Information Block",
                      MakeTraceSourceAccessor (&LteUeRrc::m_mibReceivedTrace),
@@ -653,7 +665,7 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
 {
   NS_LOG_FUNCTION (this << packet);
   m_cIotOpt = false;
-  m_edt = true;
+  m_edt = false;
   
   m_dataSendTime = Simulator::Now();
   uint32_t msg3offset = 5;
