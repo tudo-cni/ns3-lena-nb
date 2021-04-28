@@ -317,7 +317,8 @@ class NbIotRrcSap{
            enum class CoverageEnhancementLevel{
                zero,
                one,
-               two
+               two,
+               none // For USS later
            } coverageEnhancementLevel;
            // real part
            enum class NprachPeriodicity{

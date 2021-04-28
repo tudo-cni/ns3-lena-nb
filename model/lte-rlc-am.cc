@@ -1661,11 +1661,10 @@ LteRlcAm::DoReportBufferStatus (void)
                                                << r.statusPduSize);
       m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
     }
-  else
+  else 
     {
-      m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+      //m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
       m_macSapProvider->ReportNoTransmissionNb(m_rnti,m_lcid);
-
       NS_LOG_INFO ("ReportBufferStatus don't needed");
     }
 }

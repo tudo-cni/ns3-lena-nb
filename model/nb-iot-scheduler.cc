@@ -164,31 +164,15 @@ NbiotScheduler::SetRntiRsrpMap (std::map<uint16_t, double> map)
 }
 
 void
-NbiotScheduler::ScheduleRarReq (uint64_t rnti, uint64_t rapid, NbIotRrcSap::NprachParametersNb ce,
-                                NbIotRrcSap::DciN1::DciRepetitions rep)
-{
-  NbIotRrcSap::NpdcchMessage rar;
-  //  rar.npdcchFormat = NpdcchMessage::NpdcchFormat::format1;
-  //  rar.dciType = NpdcchMessage::DciType::n1;
-  //  rar.searchSpaceType = NpdcchMessage::SearchSpaceType::type2;
-  //  // Dci set depending on coverage level.... yet static
-  //  rar.dciN1.dciRepetitions = rep;
-  //  rar.dciN1.m_rapId = rapid;
-  //  rar.dciN1.numNpdschSubframesPerRepetition = NbIotRrcSap::DciN1::NumNpdschSubframesPerRepetition::s2;
-  //  rar.dciN1.numNpdschRepetitions = NbIotRrcSap::DciN1::NumNpdschRepetitions::r2;
-  //  rar.ue.ce = ce;
-  //  rar.ue.ranti = rnti;
-  m_NpdcchQueue.push_back (rar);
-}
-
-void
-NbiotScheduler::ScheduleNpdcchMessageReq (NbIotRrcSap::NpdcchMessage msg)
+NbiotScheduler::ScheduleRarReq (NbIotRrcSap::NpdcchMessage msg, SearchSpaceConfig ssc)
 {
   // NPDCCH Parameters taken from Liberg, Olof, et al. The Cellular Internet of Things 2017 p.305, In-Band-Deployment Table 8.9
+
   if (msg.ce == m_ce0.coverageEnhancementLevel)
     {
       msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
       msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
+
     }
   else if (msg.ce == m_ce1.coverageEnhancementLevel)
     {
@@ -200,11 +184,20 @@ NbiotScheduler::ScheduleNpdcchMessageReq (NbIotRrcSap::NpdcchMessage msg)
       msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r256;
       msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r256;
     }
+
   for(std::vector<NbIotRrcSap::Rar>::iterator it = msg.rars.begin(); it != msg.rars.end(); ++it){
-    m_lastUlSubframe[it->cellRnti] = 0;
+    m_rntiUeConfigMap[it->cellRnti] = UeConfig();
+
+    m_rntiUeConfigMap[it->cellRnti].lastDl = 0;
+    m_rntiUeConfigMap[it->cellRnti].lastUl = 0;
+    m_rntiUeConfigMap[it->cellRnti].rlcDlBuffer = 0;
+    m_rntiUeConfigMap[it->cellRnti].rlcUlBuffer = 0;
+    m_rntiUeConfigMap[it->cellRnti].rnti = it->cellRnti;
+    m_rntiUeConfigMap[it->cellRnti].searchSpaceConfig = ssc;
   }
-  m_NpdcchQueue.push_back (msg);
+  m_rarQueue[ssc].push_back (msg);
 }
+
 
 std::vector<NbIotRrcSap::NpdcchMessage>
 NbiotScheduler::Schedule (uint64_t frameNo, uint64_t subframeNo)
@@ -218,21 +211,25 @@ NbiotScheduler::Schedule (uint64_t frameNo, uint64_t subframeNo)
       return ret;
     }
   // check and Schedule DCIs for SearchSpaceType2 (RAR, HARQ, RRC)
+  SearchSpaceConfig currentSearchSpace;
   if (IsSearchSpaceBegin (ConvertNprachParametersNb2SearchSpaceConfig(m_ce0)))
-    {
-      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, ConvertNprachParametersNb2SearchSpaceConfig(m_ce0));
+    { 
+      currentSearchSpace =  ConvertNprachParametersNb2SearchSpaceConfig(m_ce0);
+      tmp = ScheduleSearchSpace (currentSearchSpace);
       ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
       ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
   if (IsSearchSpaceBegin(ConvertNprachParametersNb2SearchSpaceConfig(m_ce1)))
     {
-      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2, ConvertNprachParametersNb2SearchSpaceConfig(m_ce1));
+      currentSearchSpace =  ConvertNprachParametersNb2SearchSpaceConfig(m_ce1);
+      tmp = ScheduleSearchSpace (currentSearchSpace);
       ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
       ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
   if (IsSearchSpaceBegin(ConvertNprachParametersNb2SearchSpaceConfig(m_ce2)))
     {
-      tmp = ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2,ConvertNprachParametersNb2SearchSpaceConfig(m_ce2));
+      currentSearchSpace =  ConvertNprachParametersNb2SearchSpaceConfig(m_ce2);
+      tmp = ScheduleSearchSpace (currentSearchSpace);
       ret.reserve(ret.size() + std::distance(tmp.begin(),tmp.end()));
       ret.insert(ret.end(),tmp.begin(),tmp.end());
     }
@@ -474,228 +471,191 @@ NbiotScheduler::Schedule (uint64_t frameNo, uint64_t subframeNo)
 //  return scheduledMessages;
 //}
 
-void NbiotScheduler::AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace){
-  for(std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>>::iterator it = m_RntiRlcDlBuffer[seachspace].begin();
-      it != m_RntiRlcDlBuffer[seachspace].end();){
-      std::vector<NbIotRrcSap::NpdcchMessage>::iterator messageIt = m_NpdcchQueue.begin();
-      for(; messageIt != m_NpdcchQueue.end();++messageIt){
-                        if(messageIt->rnti == it->first && messageIt->dciType == NbIotRrcSap::NpdcchMessage::DciType::n1){
-            break;
-          }
-        }
-        NbIotRrcSap::NpdcchMessage dci = CreateDciNpdcchMessage(it->first,seachspace,NbIotRrcSap::NpdcchMessage::DciType::n1);
-        m_RntiRlcDlBuffer[seachspace].erase(it++);
-        if(messageIt != m_NpdcchQueue.end()){
-          *(messageIt) = dci;
-        }
-        else{
-          m_NpdcchQueue.push_back(dci);
-        }
-      }
-  for(std::map<uint16_t, uint64_t>::iterator it = m_RntiRlcUlBuffer[seachspace].begin();
-      it != m_RntiRlcUlBuffer[seachspace].end();){
-        NbIotRrcSap::NpdcchMessage dci = CreateDciNpdcchMessage(it->first,seachspace,NbIotRrcSap::NpdcchMessage::DciType::n0);
-        // Ue can only notify new BSR when a MAC PDU is transmitted, so we only delete the entry when all requested data is scheduled
-        if (m_RntiRlcUlBuffer[seachspace][it->first] == 0){
-        m_RntiRlcUlBuffer[seachspace].erase(it++);
-        }else{
-          it++;
-        }
-        m_NpdcchQueue.push_back(dci);
-      }
+//void NbiotScheduler::AddRntiDatatoNpdcchQueue(SearchSpaceConfig seachspace){
+//  for(std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>>::iterator it = m_RntiRlcDlBuffer[seachspace].begin();
+//      it != m_RntiRlcDlBuffer[seachspace].end();){
+//      std::vector<NbIotRrcSap::NpdcchMessage>::iterator messageIt = m_NpdcchQueue.begin();
+//      for(; messageIt != m_NpdcchQueue.end();++messageIt){
+//                        if(messageIt->rnti == it->first && messageIt->dciType == NbIotRrcSap::NpdcchMessage::DciType::n1){
+//            break;
+//          }
+//        }
+//        NbIotRrcSap::NpdcchMessage dci = CreateDciNpdcchMessage(it->first,seachspace,NbIotRrcSap::NpdcchMessage::DciType::n1);
+//        m_RntiRlcDlBuffer[seachspace].erase(it++);
+//        if(messageIt != m_NpdcchQueue.end()){
+//          *(messageIt) = dci;
+//        }
+//        else{
+//          m_NpdcchQueue.push_back(dci);
+//        }
+//      }
+//  for(std::map<uint16_t, uint64_t>::iterator it = m_RntiRlcUlBuffer[seachspace].begin();
+//      it != m_RntiRlcUlBuffer[seachspace].end();){
+//        NbIotRrcSap::NpdcchMessage dci = CreateDciNpdcchMessage(it->first,seachspace,NbIotRrcSap::NpdcchMessage::DciType::n0);
+//        // Ue can only notify new BSR when a MAC PDU is transmitted, so we only delete the entry when all requested data is scheduled
+//        if (m_RntiRlcUlBuffer[seachspace][it->first] == 0){
+//        m_RntiRlcUlBuffer[seachspace].erase(it++);
+//        }else{
+//          it++;
+//        }
+//        m_NpdcchQueue.push_back(dci);
+//      }
+//}
+
+void NbiotScheduler::SortBasedOnSelectedSchedulingAlgorithm(std::vector<uint16_t>& rntis){
+
 }
 
-std::vector<NbIotRrcSap::NpdcchMessage>
-NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace,
-                                     SearchSpaceConfig ssc)
-{
+bool NbiotScheduler::ScheduleNpdcchMessage(NbIotRrcSap::NpdcchMessage &message, SearchSpaceConfig ssc){
+
   bool scheduleSuccessful = false;
-  std::vector<NbIotRrcSap::NpdcchMessage> scheduledMessages;
-  AddRntiDatatoNpdcchQueue(seachspace);
   
-  /*
-  Scheduling Magic. For now FIFO
-  */
+  if(message.dciType == NbIotRrcSap::NpdcchMessage::DciType::n1){
+    std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (message.rnti,
+      m_frameNo - 1, m_subframeNo - 1, ssc.R_max,
+      NbIotRrcSap::ConvertDciN1Repetitions2int (message.dciN1));
+    if (test.size () > 0) // WE GOT A DOWNLINK NPDCCH CANDIDATE
+      {
 
-  for (std::vector<NbIotRrcSap::NpdcchMessage>::iterator it = m_NpdcchQueue.begin ();
-       it != m_NpdcchQueue.end ();)
-    {
-      if (it->searchSpaceType == seachspace)
-        {
-          if (it->ce == ssc.ce)
-            {
-              if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n1)
-                {
-                  std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (it->rnti,
-                    m_frameNo - 1, m_subframeNo - 1, ssc.R_max,
-                    NbIotRrcSap::ConvertDciN1Repetitions2int (it->dciN1));
-                  if (test.size () > 0) // WE GOT A DOWNLINK NPDCCH CANDIDATE
-                    {
-
-                      uint64_t subframesNpdsch =
-                          NbIotRrcSap::ConvertNumNpdschSubframesPerRepetition2int (it->dciN1) *
-                          NbIotRrcSap::ConvertNumNpdschRepetitions2int (it->dciN1);
-                      std::vector<uint64_t> npdschsubframes = GetNextAvailableNpdschCandidate (
-                          *(test.end () - 1), m_minSchedulingDelayDci2Downlink, subframesNpdsch,
-                          ssc.R_max);
-                      if (npdschsubframes.size () > 0) // WE GOT A DOWNLINK CANDIDATE
-                        {
-                          uint64_t subframesNpusch;
-                          std::pair<NbIotRrcSap::UlGrant, std::pair<uint8_t, std::vector<uint64_t>>> ulgrant;
-                          if (it->isRar)
-                            {
-                              for (std::vector<NbIotRrcSap::Rar>::iterator rar = it->rars.begin ();
-                                   rar != it->rars.end ();)
-                                {
-                                  // MSG3 SIZE
-                                  // See Joerke NBIoT_UE.py
-                                  /*
-                                  The MAC PDU consists of the following (ref. ETSI TS 136 321 V13.9.0 Fig. 6.1.6-4):
-                                  |-----------------------------------------MAC-Header-----------------------------------------|--MAC-CE--|...|--MAC-SDU--|--Padding(opt)--|
-                                  |--R/F2/E/LCID subheader--|...|--R/F2/E/LCID/F/K subheader--|--R/R/E/LCID padding subheader--|
-                                  In Msg3 the UE should transmit a Buffer Status Report MAC CE in order to inform the eNodeB about its UL buffer status
-                                  Since RRCConnectionResumeComplete-NB is transmitted in RLC TM, TMD PDU consists only of a data field and doesn't consists of any RLC headers (Ref. ETSI TS 136 331 V13.15.0 p.522 "RRCConnectionResumeRequest-NB" and ETSI TS 136 322 V13.4.0, 6.2.1.2)
-                                  RRCConnectionResumeRequest-NB ist transmitted using SRB0 (ref. ETSI TS 136 331 V13.15.0 p.522 "RRCConnectionResumeRequest-NB" and therefore does not go through PDCP (ref. ETSI TS 136 323 V13.6.0, 4.2.1: "Each RB (i.e. DRB, SLRB and SRB, except for SRB0 and SRB1bis) is associated with one PDCP entity"))
-                                  */
-
-                                  //uint64_t size_rrc_conn_resume_req =
-                                  //    59; // 40 bits resumeID +16 bits shortResumeMAC-I +3 bits resumeCause ref. ETSI TS 136 331 V13.15.0 p.522 RRCConnectionResumeRequest-NB
-                                  //size_rrc_conn_resume_req +=
-                                  //    (8 - size_rrc_conn_resume_req % 8); // Fill to full byte
-                                  //uint64_t size_rlc_pdu = size_rrc_conn_resume_req;
-                                  ////MAC_SUBHEADER_CE__R_F2_E_LCID = 8           # R/F2/E/LCID sub-header for MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-2)
-                                  ////MAC_SUBHEADER_SDU__R_F2_E_LCID_F_7L = 16    # R/F2/E/LCID/F/L sub-headerfor MAC SDU with 7-bits L field (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-1)
-                                  ////MAC_CE_sBSR = 8                             # Short BSR and Truncated BSR MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.3.1-1)
-                                  //uint64_t size_mac_pdu = 8 + 16 + 8 + size_rlc_pdu;
-                                  uint64_t size_mac_pdu = 0;
-                                  if(it->isEdt){
-                                    if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero){
-                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb0);
-                                    }
-                                    else if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one){
-                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb1);
-                                    }
-                                    else if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two){
-                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb2);
-                                    }
-                                  }else{
-                                    size_mac_pdu = 88; // Fixed Ulgrant Size. See 136.331
-                                  }
-                                  uint64_t couplingloss = 0;
-                                  if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two)
-                                    {
-                                      couplingloss = 159;
-                                    }
-                                  else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one)
-                                    {
-                                      couplingloss = 149;
-                                    }
-                                  else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero)
-                                    {
-                                      couplingloss = 139;
-                                    }
-                                  subframesNpusch = m_Amc.getMsg3Subframes (
-                                      couplingloss, size_mac_pdu, 15000, 15);
-                                  ulgrant = GetNextAvailableMsg3UlGrantCandidate (
-                                      npdschsubframes.back(), subframesNpusch);
-                                  if (ulgrant.first.success) // WE GOT AN UPLINK MSG3 CANDIDATE
-                                    {
-                                      scheduleSuccessful = true;
-                                      rar->rarPayload.ulGrant = ulgrant.first;
-                                      rar->rarPayload.ulGrant.subframes = ulgrant.second;
-                                      rar->rarPayload.ulGrant.tbs_size = size_mac_pdu;
-                                      NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
-                                      NS_BUILD_DEBUG (std::cout << " Subcarrier "
-                                                                << ulgrant.second.first << " ");
-                                      for (size_t i = 0; i < ulgrant.second.second.size (); i++)
-                                        {
-                                          m_uplink[ulgrant.second.first][ulgrant.second.second[i]] =
-                                              m_currenthyperindex;
-                                          NS_BUILD_DEBUG (std::cout << ulgrant.second.second[i]
-                                                                    << " ");
-                                        }
-                                      NS_BUILD_DEBUG (std::cout << std::endl);
-                                      ++rar;
-                                      m_lastUlSubframe[rar->cellRnti] = ulgrant.second.second.back();
-                                    }
-                                  else
-                                    {
-                                      it->rars.erase (rar);
-                                      // Stuff if cant schedule npusch
-                                    }
-                                }
-                            }
-                          else
-                            {
-                              // Create HARQ Ressource
-                              uint64_t subframesNpuschHarq =
-                                  4; // Have to be set by higher layer | 4 for debugging
-                              std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschharqsubframes =
-                                  GetNextAvailableNpuschCandidate (*(npdschsubframes.end () - 1), 0,
-                                                                   subframesNpuschHarq, true);
-                              if (npuschharqsubframes.size () > 0)
-                                {
-                                  NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH HARQ at ");
-                                  scheduleSuccessful = true;
-                                  for (size_t i = 0; i < npuschharqsubframes[0].second.size (); i++)
-                                    {
-                                      m_uplink[npuschharqsubframes[0].first]
-                                              [npuschharqsubframes[0].second[i]] =
-                                                  m_currenthyperindex;
-                                      NS_BUILD_DEBUG (std::cout << npuschharqsubframes[0].second[i]
-                                                                << " ");
-                                    }
-                                  NS_BUILD_DEBUG (std::cout << std::endl);
-                                  it->dciN1.npuschOpportunity = npuschharqsubframes;
-
-                                  m_lastUlSubframe[it->rnti] = npuschharqsubframes[0].second.back();
-                                }
-                            }
-                          if (scheduleSuccessful)
-                            {
-                              NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
-
-                              for (size_t j = 0; j < test.size (); ++j)
-                                {
-                                  m_downlink[test[j]] = m_currenthyperindex;
-                                  NS_BUILD_DEBUG (std::cout << test[j] << " ");
-                                }
-
-                              NS_BUILD_DEBUG (std::cout << std::endl);
-                              NS_BUILD_DEBUG (std::cout << "Scheduling NPDSCH at ");
-
-                              for (size_t j = 0; j < npdschsubframes.size (); ++j)
-                                {
-                                  m_downlink[npdschsubframes[j]] = m_currenthyperindex;
-                                  NS_BUILD_DEBUG (std::cout << npdschsubframes[j] << " ");
-                                }
-
-                              it->dciRepetitionsubframes = test;
-                              it->dciN1.npdschOpportunity = npdschsubframes;
-                              it->dciN1.dciSubframes = test;
-                              scheduledMessages.push_back (*(it));
-                              NS_BUILD_DEBUG (std::cout << std::endl);
-
-                              m_NpdcchQueue.erase (it);
-                              continue;
-                            }
-                          else
-                            {
-
-                            }
-                        }
+        uint64_t subframesNpdsch =
+            NbIotRrcSap::ConvertNumNpdschSubframesPerRepetition2int (message.dciN1) *
+            NbIotRrcSap::ConvertNumNpdschRepetitions2int (message.dciN1);
+        std::vector<uint64_t> npdschsubframes = GetNextAvailableNpdschCandidate (
+            *(test.end () - 1), m_minSchedulingDelayDci2Downlink, subframesNpdsch,
+            ssc.R_max);
+        if (npdschsubframes.size () > 0) // WE GOT A DOWNLINK CANDIDATE
+          {
+            uint64_t subframesNpusch;
+            std::pair<NbIotRrcSap::UlGrant, std::pair<uint8_t, std::vector<uint64_t>>> ulgrant;
+            if (message.isRar)
+              {
+                for (std::vector<NbIotRrcSap::Rar>::iterator rar = message.rars.begin ();
+                      rar != message.rars.end ();)
+                  {
+                    uint64_t size_mac_pdu = 0;
+                    if(message.isEdt){
+                      if(message.ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero){
+                        size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb0);
+                      }
+                      else if(message.ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one){
+                        size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb1);
+                      }
+                      else if(message.ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two){
+                        size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb2);
+                      }
+                    }else{
+                      size_mac_pdu = 88; // Fixed Ulgrant Size. See 136.331
                     }
-                }
-              else if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n0)
+                    uint64_t couplingloss = 0;
+                    if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two)
+                      {
+                        couplingloss = 159;
+                      }
+                    else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one)
+                      {
+                        couplingloss = 149;
+                      }
+                    else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero)
+                      {
+                        couplingloss = 139;
+                      }
+                    subframesNpusch = m_Amc.getMsg3Subframes (
+                        couplingloss, size_mac_pdu, 15000, 15);
+                    ulgrant = GetNextAvailableMsg3UlGrantCandidate (
+                        npdschsubframes.back(), subframesNpusch);
+                    if (ulgrant.first.success) // WE GOT AN UPLINK MSG3 CANDIDATE
+                      {
+                        scheduleSuccessful = true;
+                        rar->rarPayload.ulGrant = ulgrant.first;
+                        rar->rarPayload.ulGrant.subframes = ulgrant.second;
+                        rar->rarPayload.ulGrant.tbs_size = size_mac_pdu;
+                        NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
+                        NS_BUILD_DEBUG (std::cout << " Subcarrier "
+                                                  << ulgrant.second.first << " ");
+                        for (size_t i = 0; i < ulgrant.second.second.size (); i++)
+                          {
+                            m_uplink[ulgrant.second.first][ulgrant.second.second[i]] =
+                                m_currenthyperindex;
+                            NS_BUILD_DEBUG (std::cout << ulgrant.second.second[i]
+                                                      << " ");
+                          }
+                        NS_BUILD_DEBUG (std::cout << std::endl);
+                        ++rar;
+                        m_rntiUeConfigMap[rar->cellRnti].lastUl = ulgrant.second.second.back();
+                      }
+                    else
+                      {
+                        message.rars.erase (rar);
+                        // Stuff if cant schedule npusch
+                      }
+                  }
+              }
+            else
+              {
+                // Create HARQ Ressource
+                uint64_t subframesNpuschHarq =
+                    4; // Have to be set by higher layer | 4 for debugging
+                std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschharqsubframes =
+                    GetNextAvailableNpuschCandidate (*(npdschsubframes.end () - 1), 0,
+                                                      subframesNpuschHarq, true);
+                if (npuschharqsubframes.size () > 0)
+                  {
+                    NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH HARQ at ");
+                    scheduleSuccessful = true;
+                    for (size_t i = 0; i < npuschharqsubframes[0].second.size (); i++)
+                      {
+                        m_uplink[npuschharqsubframes[0].first]
+                                [npuschharqsubframes[0].second[i]] =
+                                    m_currenthyperindex;
+                        NS_BUILD_DEBUG (std::cout << npuschharqsubframes[0].second[i]
+                                                  << " ");
+                      }
+                    NS_BUILD_DEBUG (std::cout << std::endl);
+                    message.dciN1.npuschOpportunity = npuschharqsubframes;
+
+                    m_rntiUeConfigMap[message.rnti].lastUl = npuschharqsubframes[0].second.back();
+                  }
+              }
+            if (scheduleSuccessful)
+              {
+                NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
+
+                for (size_t j = 0; j < test.size (); ++j)
+                  {
+                    m_downlink[test[j]] = m_currenthyperindex;
+                    NS_BUILD_DEBUG (std::cout << test[j] << " ");
+                  }
+
+                NS_BUILD_DEBUG (std::cout << std::endl);
+                NS_BUILD_DEBUG (std::cout << "Scheduling NPDSCH at ");
+
+                for (size_t j = 0; j < npdschsubframes.size (); ++j)
+                  {
+                    m_downlink[npdschsubframes[j]] = m_currenthyperindex;
+                    NS_BUILD_DEBUG (std::cout << npdschsubframes[j] << " ");
+                  }
+
+                message.dciRepetitionsubframes = test;
+                message.dciN1.npdschOpportunity = npdschsubframes;
+                message.dciN1.dciSubframes = test;
+                NS_BUILD_DEBUG (std::cout << std::endl);
+                return true;
+
+              }
+
+          }
+    }
+  }
+  else if (message.dciType == NbIotRrcSap::NpdcchMessage::DciType::n0)
                 {
-                  std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (it->rnti,
+                  std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (message.rnti,
                     m_frameNo - 1, m_subframeNo - 1, ssc.R_max,
-                    NbIotRrcSap::ConvertDciN0Repetitions2int (it->dciN0));
+                    NbIotRrcSap::ConvertDciN0Repetitions2int (message.dciN0));
                   if (test.size () > 0)
                     {
                       uint64_t subframesNpusch =
-                          NbIotRrcSap::ConvertNumResourceUnits2int (it->dciN0) *
-                          NbIotRrcSap::ConvertNumNpuschRepetitions2int (it->dciN0);
+                          NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0) *
+                          NbIotRrcSap::ConvertNumNpuschRepetitions2int (message.dciN0);
                       // Have to be set by higher layer | 4 for debugging
                       std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschsubframes =
                           GetNextAvailableNpuschCandidate (*(test.end () - 1), 0, subframesNpusch,
@@ -713,25 +673,279 @@ NbiotScheduler::ScheduleSearchSpace (NbIotRrcSap::NpdcchMessage::SearchSpaceType
                             }
                           NS_BUILD_DEBUG (std::cout << std::endl);
 
-                          it->dciRepetitionsubframes = test;
-                          it->dciN0.npuschOpportunity = npuschsubframes;
-                          it->dciN0.dciSubframes = test;
-                          m_lastUlSubframe[it->rnti] = npuschsubframes[0].second.back();
-                          scheduledMessages.push_back (*(it));
+                          message.dciRepetitionsubframes = test;
+                          message.dciN0.npuschOpportunity = npuschsubframes;
+                          message.dciN0.dciSubframes = test;
+                          m_rntiUeConfigMap[message.rnti].lastUl = npuschsubframes[0].second.back();
                           NS_BUILD_DEBUG (std::cout << std::endl);
-
-                          m_NpdcchQueue.erase (it);
-                          continue;
+                          return true;
                         }
                     }
-                }
-            }
-          // TO FIX, HAS TO COUNT UP IN ALL CASSES that dont delete the current element
-        }
+                } 
+  return false;
+      
+}
 
-      ++it;
-      scheduleSuccessful = false;
+std::vector<NbIotRrcSap::NpdcchMessage>
+NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
+{
+  std::vector<NbIotRrcSap::NpdcchMessage> scheduledMessages;
+
+  //AddRntiDatatoNpdcchQueue(seachspace);
+
+  // priorities rar 
+  for(std::vector<NbIotRrcSap::NpdcchMessage>::iterator rar = m_rarQueue[ssc].begin(); rar != m_rarQueue[ssc].end();){
+    if(ScheduleNpdcchMessage((*rar),ssc)){
+      scheduledMessages.push_back(*rar);
+      m_rarQueue[ssc].erase(rar);
     }
+    else{
+      ++rar;
+    }
+  }
+  /*
+  Scheduling Magic. For now FIFO
+  */
+  SortBasedOnSelectedSchedulingAlgorithm(m_searchSpaceRntiMap[ssc]);
+  std::vector<uint16_t > test_tmp = m_searchSpaceRntiMap[ssc];
+  for(std::vector<uint16_t>::iterator it = m_searchSpaceRntiMap[ssc].begin(); it != m_searchSpaceRntiMap[ssc].end(); ){
+    NbIotRrcSap::NpdcchMessage dci_candidate;
+    if(m_rntiUeConfigMap[(*it)].rlcDlBuffer > 0){
+
+      dci_candidate= CreateDciNpdcchMessage((*it), NbIotRrcSap::NpdcchMessage::DciType::n1); 
+      if(ScheduleNpdcchMessage(dci_candidate,ssc)){
+        scheduledMessages.push_back(dci_candidate);
+        m_rntiUeConfigMap[(*it)].rlcDlBuffer = 0;
+      }
+      
+      
+    }else if(m_rntiUeConfigMap[(*it)].rlcUlBuffer > 0){
+      dci_candidate = CreateDciNpdcchMessage((*it), NbIotRrcSap::NpdcchMessage::DciType::n0); 
+      if(ScheduleNpdcchMessage(dci_candidate,ssc)){
+        scheduledMessages.push_back(dci_candidate);
+        m_rntiUeConfigMap[(*it)].rlcUlBuffer = 0;
+      }
+    }
+        ++it;
+  }
+
+
+//  for (std::vector<NbIotRrcSap::NpdcchMessage>::iterator it = m_NpdcchQueue.begin ();
+//       it != m_NpdcchQueue.end ();)
+//    {
+//      if (it->searchSpaceType == seachspace)
+//        {
+//          if (it->ce == ssc.ce)
+//            {
+//              if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n1)
+//                {
+//                  std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (it->rnti,
+//                    m_frameNo - 1, m_subframeNo - 1, ssc.R_max,
+//                    NbIotRrcSap::ConvertDciN1Repetitions2int (it->dciN1));
+//                  if (test.size () > 0) // WE GOT A DOWNLINK NPDCCH CANDIDATE
+//                    {
+//
+//                      uint64_t subframesNpdsch =
+//                          NbIotRrcSap::ConvertNumNpdschSubframesPerRepetition2int (it->dciN1) *
+//                          NbIotRrcSap::ConvertNumNpdschRepetitions2int (it->dciN1);
+//                      std::vector<uint64_t> npdschsubframes = GetNextAvailableNpdschCandidate (
+//                          *(test.end () - 1), m_minSchedulingDelayDci2Downlink, subframesNpdsch,
+//                          ssc.R_max);
+//                      if (npdschsubframes.size () > 0) // WE GOT A DOWNLINK CANDIDATE
+//                        {
+//                          uint64_t subframesNpusch;
+//                          std::pair<NbIotRrcSap::UlGrant, std::pair<uint8_t, std::vector<uint64_t>>> ulgrant;
+//                          if (it->isRar)
+//                            {
+//                              for (std::vector<NbIotRrcSap::Rar>::iterator rar = it->rars.begin ();
+//                                   rar != it->rars.end ();)
+//                                {
+//                                  // MSG3 SIZE
+//                                  // See Joerke NBIoT_UE.py
+//                                  /*
+//                                  The MAC PDU consists of the following (ref. ETSI TS 136 321 V13.9.0 Fig. 6.1.6-4):
+//                                  |-----------------------------------------MAC-Header-----------------------------------------|--MAC-CE--|...|--MAC-SDU--|--Padding(opt)--|
+//                                  |--R/F2/E/LCID subheader--|...|--R/F2/E/LCID/F/K subheader--|--R/R/E/LCID padding subheader--|
+//                                  In Msg3 the UE should transmit a Buffer Status Report MAC CE in order to inform the eNodeB about its UL buffer status
+//                                  Since RRCConnectionResumeComplete-NB is transmitted in RLC TM, TMD PDU consists only of a data field and doesn't consists of any RLC headers (Ref. ETSI TS 136 331 V13.15.0 p.522 "RRCConnectionResumeRequest-NB" and ETSI TS 136 322 V13.4.0, 6.2.1.2)
+//                                  RRCConnectionResumeRequest-NB ist transmitted using SRB0 (ref. ETSI TS 136 331 V13.15.0 p.522 "RRCConnectionResumeRequest-NB" and therefore does not go through PDCP (ref. ETSI TS 136 323 V13.6.0, 4.2.1: "Each RB (i.e. DRB, SLRB and SRB, except for SRB0 and SRB1bis) is associated with one PDCP entity"))
+//                                  */
+//
+//                                  //uint64_t size_rrc_conn_resume_req =
+//                                  //    59; // 40 bits resumeID +16 bits shortResumeMAC-I +3 bits resumeCause ref. ETSI TS 136 331 V13.15.0 p.522 RRCConnectionResumeRequest-NB
+//                                  //size_rrc_conn_resume_req +=
+//                                  //    (8 - size_rrc_conn_resume_req % 8); // Fill to full byte
+//                                  //uint64_t size_rlc_pdu = size_rrc_conn_resume_req;
+//                                  ////MAC_SUBHEADER_CE__R_F2_E_LCID = 8           # R/F2/E/LCID sub-header for MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-2)
+//                                  ////MAC_SUBHEADER_SDU__R_F2_E_LCID_F_7L = 16    # R/F2/E/LCID/F/L sub-headerfor MAC SDU with 7-bits L field (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.2-1)
+//                                  ////MAC_CE_sBSR = 8                             # Short BSR and Truncated BSR MAC control element (ETSI TS 136 321 V13.9.0 (2018-07) Figure 6.1.3.1-1)
+//                                  //uint64_t size_mac_pdu = 8 + 16 + 8 + size_rlc_pdu;
+//                                  uint64_t size_mac_pdu = 0;
+//                                  if(it->isEdt){
+//                                    if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero){
+//                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb0);
+//                                    }
+//                                    else if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one){
+//                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb1);
+//                                    }
+//                                    else if(it->ce == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two){
+//                                      size_mac_pdu = NbIotRrcSap::ConvertEdtTbs2int(m_sib2config.radioResourceConfigCommon.nprachConfigR15.edtTbsInfoList.edtTbsNb2);
+//                                    }
+//                                  }else{
+//                                    size_mac_pdu = 88; // Fixed Ulgrant Size. See 136.331
+//                                  }
+//                                  uint64_t couplingloss = 0;
+//                                  if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two)
+//                                    {
+//                                      couplingloss = 159;
+//                                    }
+//                                  else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one)
+//                                    {
+//                                      couplingloss = 149;
+//                                    }
+//                                  else if (rar->ceLevel == NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero)
+//                                    {
+//                                      couplingloss = 139;
+//                                    }
+//                                  subframesNpusch = m_Amc.getMsg3Subframes (
+//                                      couplingloss, size_mac_pdu, 15000, 15);
+//                                  ulgrant = GetNextAvailableMsg3UlGrantCandidate (
+//                                      npdschsubframes.back(), subframesNpusch);
+//                                  if (ulgrant.first.success) // WE GOT AN UPLINK MSG3 CANDIDATE
+//                                    {
+//                                      scheduleSuccessful = true;
+//                                      rar->rarPayload.ulGrant = ulgrant.first;
+//                                      rar->rarPayload.ulGrant.subframes = ulgrant.second;
+//                                      rar->rarPayload.ulGrant.tbs_size = size_mac_pdu;
+//                                      NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
+//                                      NS_BUILD_DEBUG (std::cout << " Subcarrier "
+//                                                                << ulgrant.second.first << " ");
+//                                      for (size_t i = 0; i < ulgrant.second.second.size (); i++)
+//                                        {
+//                                          m_uplink[ulgrant.second.first][ulgrant.second.second[i]] =
+//                                              m_currenthyperindex;
+//                                          NS_BUILD_DEBUG (std::cout << ulgrant.second.second[i]
+//                                                                    << " ");
+//                                        }
+//                                      NS_BUILD_DEBUG (std::cout << std::endl);
+//                                      ++rar;
+//                                      m_lastUlSubframe[rar->cellRnti] = ulgrant.second.second.back();
+//                                    }
+//                                  else
+//                                    {
+//                                      it->rars.erase (rar);
+//                                      // Stuff if cant schedule npusch
+//                                    }
+//                                }
+//                            }
+//                          else
+//                            {
+//                              // Create HARQ Ressource
+//                              uint64_t subframesNpuschHarq =
+//                                  4; // Have to be set by higher layer | 4 for debugging
+//                              std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschharqsubframes =
+//                                  GetNextAvailableNpuschCandidate (*(npdschsubframes.end () - 1), 0,
+//                                                                   subframesNpuschHarq, true);
+//                              if (npuschharqsubframes.size () > 0)
+//                                {
+//                                  NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH HARQ at ");
+//                                  scheduleSuccessful = true;
+//                                  for (size_t i = 0; i < npuschharqsubframes[0].second.size (); i++)
+//                                    {
+//                                      m_uplink[npuschharqsubframes[0].first]
+//                                              [npuschharqsubframes[0].second[i]] =
+//                                                  m_currenthyperindex;
+//                                      NS_BUILD_DEBUG (std::cout << npuschharqsubframes[0].second[i]
+//                                                                << " ");
+//                                    }
+//                                  NS_BUILD_DEBUG (std::cout << std::endl);
+//                                  it->dciN1.npuschOpportunity = npuschharqsubframes;
+//
+//                                  m_lastUlSubframe[it->rnti] = npuschharqsubframes[0].second.back();
+//                                }
+//                            }
+//                          if (scheduleSuccessful)
+//                            {
+//                              NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
+//
+//                              for (size_t j = 0; j < test.size (); ++j)
+//                                {
+//                                  m_downlink[test[j]] = m_currenthyperindex;
+//                                  NS_BUILD_DEBUG (std::cout << test[j] << " ");
+//                                }
+//
+//                              NS_BUILD_DEBUG (std::cout << std::endl);
+//                              NS_BUILD_DEBUG (std::cout << "Scheduling NPDSCH at ");
+//
+//                              for (size_t j = 0; j < npdschsubframes.size (); ++j)
+//                                {
+//                                  m_downlink[npdschsubframes[j]] = m_currenthyperindex;
+//                                  NS_BUILD_DEBUG (std::cout << npdschsubframes[j] << " ");
+//                                }
+//
+//                              it->dciRepetitionsubframes = test;
+//                              it->dciN1.npdschOpportunity = npdschsubframes;
+//                              it->dciN1.dciSubframes = test;
+//                              scheduledMessages.push_back (*(it));
+//                              NS_BUILD_DEBUG (std::cout << std::endl);
+//
+//                              m_NpdcchQueue.erase (it);
+//                              continue;
+//                            }
+//                          else
+//                            {
+//
+//                            }
+//                        }
+//                    }
+//                }
+//              else if (it->dciType == NbIotRrcSap::NpdcchMessage::DciType::n0)
+//                {
+//                  std::vector<uint64_t> test = GetNextAvailableSearchSpaceCandidate (it->rnti,
+//                    m_frameNo - 1, m_subframeNo - 1, ssc.R_max,
+//                    NbIotRrcSap::ConvertDciN0Repetitions2int (it->dciN0));
+//                  if (test.size () > 0)
+//                    {
+//                      uint64_t subframesNpusch =
+//                          NbIotRrcSap::ConvertNumResourceUnits2int (it->dciN0) *
+//                          NbIotRrcSap::ConvertNumNpuschRepetitions2int (it->dciN0);
+//                      // Have to be set by higher layer | 4 for debugging
+//                      std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschsubframes =
+//                          GetNextAvailableNpuschCandidate (*(test.end () - 1), 0, subframesNpusch,
+//                                                           true);
+//
+//                      if (npuschsubframes.size () > 0)
+//                        {
+//                          NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
+//                          scheduleSuccessful = true;
+//                          for (size_t i = 0; i < npuschsubframes[0].second.size (); i++)
+//                            {
+//                              m_uplink[npuschsubframes[0].first][npuschsubframes[0].second[i]] =
+//                                  m_currenthyperindex;
+//                              NS_BUILD_DEBUG (std::cout << npuschsubframes[0].second[i] << " ");
+//                            }
+//                          NS_BUILD_DEBUG (std::cout << std::endl);
+//
+//                          it->dciRepetitionsubframes = test;
+//                          it->dciN0.npuschOpportunity = npuschsubframes;
+//                          it->dciN0.dciSubframes = test;
+//                          m_lastUlSubframe[it->rnti] = npuschsubframes[0].second.back();
+//                          scheduledMessages.push_back (*(it));
+//                          NS_BUILD_DEBUG (std::cout << std::endl);
+//
+//                          m_NpdcchQueue.erase (it);
+//                          continue;
+//                        }
+//                    }
+//                }
+//            }
+//          // TO FIX, HAS TO COUNT UP IN ALL CASSES that dont delete the current element
+//        }
+//
+//      ++it;
+//      scheduleSuccessful = false;
+//    }
+//   */
   return scheduledMessages;
 }
 
@@ -980,7 +1194,7 @@ NbiotScheduler::GetNextAvailableSearchSpaceCandidate (uint32_t rnti,uint64_t Sea
 
       if (subframes_to_use.size () > 0)
         {
-          if(subframes_to_use.front() > m_lastUlSubframe[rnti]+8){
+          if(subframes_to_use.front() > m_rntiUeConfigMap[rnti].lastUl+8){
             return subframes_to_use;
           }
         }
@@ -990,7 +1204,7 @@ NbiotScheduler::GetNextAvailableSearchSpaceCandidate (uint32_t rnti,uint64_t Sea
 
 
 
-NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace, NbIotRrcSap::NpdcchMessage::DciType dci_type){
+NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::DciType dci_type){
   double correction_factor =
       10 *
       log10 (
@@ -1035,22 +1249,15 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
   msg.isRar = false;
   msg.rnti = rnti;
   msg.ce = ceLevel;
-  msg.searchSpaceType = searchspace;
 
   if(dci_type == NbIotRrcSap::NpdcchMessage::DciType::n1){
-    std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it; 
     uint64_t tbs = 0;
-    uint64_t buffer_size = 0;
-    std::map<uint8_t, uint64_t> buffers;
-    for(it= m_RntiRlcDlBuffer[searchspace][rnti].begin(); it != m_RntiRlcDlBuffer[searchspace][rnti].end(); ++it){
-      buffers[it->second.lcid] =  4+it->second.txQueueSize + it->second.retxQueueSize+it->second.statusPduSize;
-      buffer_size += buffers[it->second.lcid];
-    }
-      if(buffer_size *8 > 680){ // max TBS Downlink Rel. 13
+
+      if(m_rntiUeConfigMap[rnti].rlcDlBuffer*8 > 680){ // max TBS Downlink Rel. 13
         tbs = 680;
       }
       else{
-        tbs = buffer_size* 8;
+        tbs = (m_rntiUeConfigMap[rnti].rlcDlBuffer)* 8;
       }
       std::pair<NbIotRrcSap::DciN1, uint64_t> dci_tbs = m_Amc.getBareboneDciN1 (
         m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, "inband");
@@ -1070,15 +1277,14 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
   else if (dci_type == NbIotRrcSap::NpdcchMessage::DciType::n0){
     uint64_t tbs = 0;
 
-    if(m_RntiRlcUlBuffer[searchspace][rnti]*8 > 1000){ // max TBS Uplink Rel. 13
+    if(m_rntiUeConfigMap[rnti].rlcUlBuffer*8 > 1000){ // max TBS Uplink Rel. 13
       tbs = 1000;
-      //m_RntiRlcUlBuffer[searchspace][rnti] = m_RntiRlcUlBuffer[searchspace][rnti] - (1000/8);
-      m_RntiRlcUlBuffer[searchspace][rnti] = 0;
+      m_rntiUeConfigMap[rnti].rlcUlBuffer = m_rntiUeConfigMap[rnti].rlcUlBuffer - (1000/8);
 
     }
     else{
-      tbs = m_RntiRlcUlBuffer[searchspace][rnti]* 8;
-      m_RntiRlcUlBuffer[searchspace][rnti] = 0;
+      tbs = (10+m_rntiUeConfigMap[rnti].rlcUlBuffer)* 8;
+      m_rntiUeConfigMap[rnti].rlcUlBuffer = 0;
     }
 
     std::pair<NbIotRrcSap::DciN0, uint64_t> dci_tbs = m_Amc.getBareboneDciN0 (
@@ -1099,21 +1305,43 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
   return msg;
 }
 
+//void
+//NbiotScheduler::ScheduleMsg5Req (uint64_t rnti)
+//{
+//  m_RntiRlcUlBuffer[NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2][rnti] = 14;
+//}
 void
-NbiotScheduler::ScheduleMsg5Req (uint64_t rnti)
+NbiotScheduler::ScheduleDlRlcBufferReq (uint64_t rnti, std::map<uint8_t,LteMacSapProvider::ReportBufferStatusParameters> lcids)
 {
-  m_RntiRlcUlBuffer[NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2][rnti] = 14;
+  // Calculate RLC Buffer Size
+  std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator it; 
+  uint64_t buffer_size = 0;
+  std::map<uint8_t, uint64_t> buffers;
+    for(it= lcids.begin(); it != lcids.end(); ++it){
+      if(it->second.txQueueSize != 0 || it->second.retxQueueSize != 0 || it->second.statusPduSize != 0){
+        buffer_size +=  it->second.txQueueSize + it->second.retxQueueSize+it->second.statusPduSize;
+    }
+  }
+  buffer_size += 10;
+  m_lastDlBuffer.push_back(std::pair<uint16_t, std::map<uint8_t,LteMacSapProvider::ReportBufferStatusParameters>>(rnti,lcids));
+
+  m_rntiUeConfigMap[rnti].rlcDlBuffer = buffer_size;
+  SearchSpaceConfig searchSpace= m_rntiUeConfigMap[rnti].searchSpaceConfig;
+  std::vector<uint16_t>::iterator findit = std::find(m_searchSpaceRntiMap[searchSpace].begin(), m_searchSpaceRntiMap[searchSpace].end(), rnti);
+  if(findit == m_searchSpaceRntiMap[searchSpace].end()){
+    m_searchSpaceRntiMap[searchSpace].push_back(rnti);
+  }
 }
 void
-NbiotScheduler::ScheduleDlRlcBufferReq (uint64_t rnti, std::map<uint8_t,LteMacSapProvider::ReportBufferStatusParameters> lcids,
-                                        NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+NbiotScheduler::ScheduleUlRlcBufferReq(uint64_t rnti, uint64_t dataSize)
 {
-  m_RntiRlcDlBuffer[searchspace][rnti] = lcids;
-}
-void
-NbiotScheduler::ScheduleUlRlcBufferReq(uint64_t rnti, uint64_t dataSize,NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
-{
-  m_RntiRlcUlBuffer[searchspace][rnti] = dataSize;
+  m_rntiUeConfigMap[rnti].rlcUlBuffer = dataSize;
+  m_lastUlBuffer.push_back(std::pair<uint16_t, uint64_t>(rnti,dataSize));
+  SearchSpaceConfig searchSpace= m_rntiUeConfigMap[rnti].searchSpaceConfig;
+  std::vector<uint16_t>::iterator it = std::find(m_searchSpaceRntiMap[searchSpace].begin(), m_searchSpaceRntiMap[searchSpace].end(), rnti);
+  if( it == m_searchSpaceRntiMap[searchSpace].end()){
+    m_searchSpaceRntiMap[searchSpace].push_back(rnti);
+  }
 }
 
 SearchSpaceConfig NbiotScheduler::ConvertNpdcchConfigDedicatedNb2SearchSpaceConfig(NbIotRrcSap::NpdcchConfigDedicatedNb configDedicated){
@@ -1122,7 +1350,7 @@ SearchSpaceConfig NbiotScheduler::ConvertNpdcchConfigDedicatedNb2SearchSpaceConf
   ssc.startSf = NbIotRrcSap::ConvertNpdcchStartSfUss2double (configDedicated);
   ssc.offset =NbIotRrcSap::ConvertNpdcchOffsetUss2double (configDedicated); 
   // CE Level not used in USS, but for simplicity set to ce0
-  ssc.ce = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
+  ssc.ce = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::none;
   return ssc;
 }
 SearchSpaceConfig NbiotScheduler::ConvertNprachParametersNb2SearchSpaceConfig(NbIotRrcSap::NprachParametersNb ce){

@@ -738,10 +738,9 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
               // 2 possible actions:
               // a) Preambles interfere with each other, so all UEs lose
               // b) eNB does cotention resolution magic and one UE surives
+              NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
               NS_BUILD_DEBUG (std::cout << "Collision" << std::endl);
-              std::cout << "==================================================" <<  std::endl;
-              std::cout << "Collision" << std::endl;
-              std::cout << "==================================================" << std::endl;
+              NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
               if (m_dropPreambleCollision)
                 {
                   m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
@@ -809,7 +808,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
           for (std::vector<NbIotRrcSap::NpdcchMessage>::iterator it = rar_dcis.begin ();
                it != rar_dcis.end (); ++it)
             {
-              m_schedulerNb->ScheduleNpdcchMessageReq (*it);
+              m_schedulerNb->ScheduleRarReq(*it,NbiotScheduler::ConvertNprachParametersNb2SearchSpaceConfig(ce));
             }
         }
     }
@@ -1111,7 +1110,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                             if ((bsr->second.retxQueueSize > 0) ||
                                 (bsr->second.txQueueSize > 0))
                               {
-                                std::cout << "Bla" << std::endl;
+                                NS_BUILD_DEBUG(std::cout << "Not enough space" << std::endl);
                               }
                           }
                   }
@@ -1125,7 +1124,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                       }
                   }
                   if(remaining.size()>0){
-                    m_schedulerNb->ScheduleDlRlcBufferReq(it->rnti,m_lastDlBSR[it->rnti],NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+                    m_schedulerNb->ScheduleDlRlcBufferReq(it->rnti,m_lastDlBSR[it->rnti]);
                   }
                 }
             }
@@ -1345,11 +1344,12 @@ LteEnbMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
       // Device has received MSG4 and neeeds UL-Resources for MSG5
       if (!m_connectionSuccessful[dlharq->GetRnti ()])
         {
-          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti (), m_ueStoredBSR[dlharq->GetRnti()],NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+          // MIGHT BE NOT NEEDED ANYMORE
+          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti (), m_ueStoredBSR[dlharq->GetRnti()]);
           m_ueStoredBSR[dlharq->GetRnti()] = 0;
         }
       else{
-          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti(),5,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti(),5);
       } 
     }
   else
@@ -1484,10 +1484,10 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
   }else if (p->RemovePacketTag(bsrTag)){
   buffersize = BufferSizeLevelBsr::BsrId2BufferSize(bsrTag.GetBufferStatusReportIndex());
   buffersize += 4; // Compensate RLC Header etc
-  std::cout << "-------------------------" << std::endl;
-  std::cout << "Buffersize: " << buffersize << std::endl;
-  std::cout << "-------------------------" << std::endl;
-  m_schedulerNb->ScheduleUlRlcBufferReq(rnti,buffersize,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+  NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
+  NS_BUILD_DEBUG(std::cout << "Buffersize: " << buffersize << std::endl);
+  NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
+  m_schedulerNb->ScheduleUlRlcBufferReq(rnti,buffersize);
   
   }
   std::map<uint16_t, std::map<uint8_t, LteMacSapUser *>>::iterator rntiIt =
@@ -1851,10 +1851,10 @@ LteEnbMac::DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParamete
   m_lastDlBSR[params.rnti][params.lcid] = params;
   if(params.lcid == 1 || params.lcid == 3){
     // We are using SRB1 or DRB -> RLC AM Header
-  m_lastDlBSR[params.rnti][params.lcid].txQueueSize +=4;
+  //m_lastDlBSR[params.rnti][params.lcid].txQueueSize;
 
   }
-  m_schedulerNb->ScheduleDlRlcBufferReq(params.rnti, m_lastDlBSR[params.rnti], searchspace);
+  m_schedulerNb->ScheduleDlRlcBufferReq(params.rnti, m_lastDlBSR[params.rnti]);
   
 }
 // ////////////////////////////////////////////

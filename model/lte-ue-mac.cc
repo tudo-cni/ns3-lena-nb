@@ -539,9 +539,9 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
       }
 
       //uint16_t frames_to_wait = (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) - window_condition*10) + (10-(m_subframeNo-1))%10;
-      std::cout << m_frameNo*10+m_subframeNo << std::endl;
+      NS_BUILD_DEBUG(std::cout << m_frameNo*10+m_subframeNo << std::endl);
       m_logging.push_back(currentsubframe+subframesToWait);
-      std::cout  << "Frames to wait:" << subframesToWait << std::endl;
+      NS_BUILD_DEBUG(std::cout  << "Frames to wait:" << subframesToWait << std::endl);
       Simulator::Schedule (MilliSeconds (subframesToWait), &LteUeMac::SendRaPreambleNb, this,
                            contention);
     }
@@ -612,24 +612,24 @@ LteUeMac::SendRaPreambleNb (bool contention)
   if (NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int (m_CeLevel) >= 64)
     {
       raWindowBegin = MilliSeconds (41);
-      std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 41 +
+      NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 41 +
                        NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod
-                << std::endl;
+                << std::endl);
       raWindowEnd = MilliSeconds (
           time + 41 + NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod);
     }
   else
     {
       raWindowBegin = MilliSeconds (4);
-      std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 4 +
+      NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 4 +
                        NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod
-                << std::endl;
+                << std::endl);
       raWindowEnd = MilliSeconds (
           time + 4 + NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod);
     }
   //Time raWindowEnd = MilliSeconds (4 + 8*10240);
   //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
-  std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time << std::endl;
+  NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time << std::endl);
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
   m_listenToSearchSpaces = true;
   m_noRaResponseReceivedEvent =
@@ -794,7 +794,7 @@ LteUeMac::RaResponseTimeoutNb (bool contention)
 {
   NS_LOG_FUNCTION (this << contention);
   m_waitingForRaResponse = false;
-  std::cout << "Window End" << std::endl;
+  NS_BUILD_DEBUG(std::cout << "Window End" << std::endl);
   // 3GPP 36.321 5.1.4
   ++m_preambleTransmissionCounter;
   //fire RA response timeout trace
@@ -1460,7 +1460,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                     if ((bsr->second.retxQueueSize > 0) ||
                         (bsr->second.txQueueSize > 0))
                       {
-                        std::cout << "Bla" << std::endl;
+                        NS_BUILD_DEBUG(std::cout << "Not enough space" << std::endl);
                       }
                   }
           }
