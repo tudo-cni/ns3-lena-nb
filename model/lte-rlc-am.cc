@@ -769,6 +769,573 @@ LteRlcAm::DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpPara
 }
 
 void
+LteRlcAm::DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
+{
+  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << txOpParams.bytes);
+
+  if (txOpParams.bytes < 4)
+    {
+      // Stingy MAC: In general, we need more bytes.
+      // There are a more restrictive test for each particular case
+      NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small");
+      NS_ASSERT_MSG (false, "TxOpportunity (size = " << txOpParams.bytes << ") too small.\n"
+                         << "Your MAC scheduler is assigned too few resource blocks.");
+      return;
+    }
+
+  if ( m_statusPduRequested && ! m_statusProhibitTimer.IsRunning ()  && txOpParams.bytes == 4)
+    {
+      if (txOpParams.bytes < m_statusPduBufferSize)
+        {
+          // Stingy MAC: We need more bytes for the STATUS PDU
+          //NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small for the STATUS PDU (size = " << m_statusPduBufferSize << ")");
+          //NS_ASSERT_MSG (false, "TxOpportunity (size = " << txOpParams.bytes << ") too small for the STATUS PDU (size = " << m_statusPduBufferSize << ")\n"
+          //                   << "Your MAC scheduler is assigned too few resource blocks.");
+          return;
+        }
+
+      NS_LOG_LOGIC ("Sending STATUS PDU");
+
+      Ptr<Packet> packet = Create<Packet> ();
+      LteRlcAmHeader rlcAmHeader;
+      rlcAmHeader.SetControlPdu (LteRlcAmHeader::STATUS_PDU);
+     
+      NS_LOG_LOGIC ("Check for SNs to NACK from " << m_vrR.GetValue() << " to " << m_vrMs.GetValue());
+      SequenceNumber10 sn;
+      sn.SetModulusBase (m_vrR);
+      std::map<uint16_t, PduBuffer>::iterator pduIt;
+      for (sn = m_vrR; sn < m_vrMs; sn++) 
+        {
+          NS_LOG_LOGIC ("SN = " << sn);          
+          if (!rlcAmHeader.OneMoreNackWouldFitIn (txOpParams.bytes))
+            {
+              NS_LOG_LOGIC ("Can't fit more NACKs in STATUS PDU");
+              break;
+            }          
+          pduIt = m_rxonBuffer.find (sn.GetValue ());
+          if (pduIt == m_rxonBuffer.end () || (!(pduIt->second.m_pduComplete)))
+            {
+              NS_LOG_LOGIC ("adding NACK_SN " << sn.GetValue ());
+              rlcAmHeader.PushNack (sn.GetValue ());              
+            }          
+        }
+      NS_LOG_LOGIC ("SN at end of NACK loop = " << sn);
+      // 3GPP TS 36.322 section 6.2.2.1.4 ACK SN
+      // find the  SN of the next not received RLC Data PDU 
+      // which is not reported as missing in the STATUS PDU. 
+      pduIt = m_rxonBuffer.find (sn.GetValue ());
+      while ((sn < m_vrMs) && (pduIt != m_rxonBuffer.end ()) && (pduIt->second.m_pduComplete))            
+        {
+          NS_LOG_LOGIC ("SN = " << sn << " < " << m_vrMs << " = " << (sn < m_vrMs));
+          sn++;
+          NS_LOG_LOGIC ("SN = " << sn);
+          pduIt = m_rxonBuffer.find (sn.GetValue ());
+        }
+      
+      NS_ASSERT_MSG (sn <= m_vrMs, "first SN not reported as missing = " << sn << ", VR(MS) = " << m_vrMs);      
+      rlcAmHeader.SetAckSn (sn); 
+
+
+      NS_LOG_LOGIC ("RLC header: " << rlcAmHeader);
+      packet->AddHeader (rlcAmHeader);
+
+      // Sender timestamp
+      RlcTag rlcTag (Simulator::Now ());
+      packet->AddByteTag (rlcTag, 1, rlcAmHeader.GetSerializedSize ());
+      m_txPdu (m_rnti, m_lcid, packet->GetSize ());
+
+      // Send RLC PDU to MAC layer
+      LteMacSapProvider::TransmitPduParameters params;
+      params.pdu = packet;
+      params.rnti = m_rnti;
+      params.lcid = m_lcid;
+      params.layer = txOpParams.layer;
+      params.harqProcessId = txOpParams.harqId;
+      params.componentCarrierId = txOpParams.componentCarrierId;
+
+      //m_macSapProvider->TransmitPdu (params);
+      Simulator::Schedule(MilliSeconds(schedulingDelay), &LteMacSapProvider::TransmitPdu, m_macSapProvider, params);
+
+      m_statusPduRequested = false;
+      m_statusPduBufferSize = 0;
+      m_statusProhibitTimer = Simulator::Schedule (m_statusProhibitTimerValue,
+                                                   &LteRlcAm::ExpireStatusProhibitTimer, this);
+      return;
+    }
+  else if ( m_retxBufferSize > 0 )
+    {
+      NS_LOG_LOGIC ("retxBufferSize = " << m_retxBufferSize);      
+      NS_LOG_LOGIC ("Sending data from Retransmission Buffer");
+      NS_ASSERT (m_vtA < m_vtS);
+      SequenceNumber10 sn;
+      sn.SetModulusBase (m_vtA);
+      for (sn = m_vtA; sn < m_vtS; sn++) 
+        {
+          uint16_t seqNumberValue = sn.GetValue ();
+          NS_LOG_LOGIC ("SN = " << seqNumberValue << " m_pdu " << m_retxBuffer.at (seqNumberValue).m_pdu);
+
+          if (m_retxBuffer.at (seqNumberValue).m_pdu != 0)
+            {
+              Ptr<Packet> packet = m_retxBuffer.at (seqNumberValue).m_pdu->Copy ();
+              
+              if (( packet->GetSize () <= txOpParams.bytes )
+                  || m_txOpportunityForRetxAlwaysBigEnough)
+                {
+                  // According to 5.2.1, the data field is left as is, but we rebuild the header
+                  LteRlcAmHeader rlcAmHeader;
+                  packet->RemoveHeader (rlcAmHeader);
+                  NS_LOG_LOGIC ("old AM RLC header: " << rlcAmHeader);
+
+                  // Calculate the Polling Bit (5.2.2.1)
+                  rlcAmHeader.SetPollingBit (LteRlcAmHeader::STATUS_REPORT_NOT_REQUESTED);
+
+                  NS_LOG_LOGIC ("polling conditions: m_txonBuffer.empty=" << m_txonBuffer.empty () 
+                                << " retxBufferSize="  << m_retxBufferSize
+                                << " packet->GetSize ()=" << packet->GetSize ());
+                  if (((m_txonBuffer.empty ()) && (m_retxBufferSize == packet->GetSize () + rlcAmHeader.GetSerializedSize ())) 
+                      || (m_vtS >= m_vtMs)
+                      || m_pollRetransmitTimerJustExpired)
+                    {
+                      m_pollRetransmitTimerJustExpired = false;
+                      rlcAmHeader.SetPollingBit (LteRlcAmHeader::STATUS_REPORT_IS_REQUESTED);
+                      m_pduWithoutPoll = 0;
+                      m_byteWithoutPoll = 0;
+
+                      m_pollSn = m_vtS - 1;
+                      NS_LOG_LOGIC ("New POLL_SN = " << m_pollSn);
+
+                      if (! m_pollRetransmitTimer.IsRunning () )
+                        {
+                          NS_LOG_LOGIC ("Start PollRetransmit timer");
+
+                          m_pollRetransmitTimer = Simulator::Schedule (m_pollRetransmitTimerValue,
+                                                                       &LteRlcAm::ExpirePollRetransmitTimer, this);
+                        }
+                      else
+                        {
+                          NS_LOG_LOGIC ("Restart PollRetransmit timer");
+
+                          m_pollRetransmitTimer.Cancel ();
+                          m_pollRetransmitTimer = Simulator::Schedule (m_pollRetransmitTimerValue,
+                                                                       &LteRlcAm::ExpirePollRetransmitTimer, this);
+                        }
+                    }
+
+                  packet->AddHeader (rlcAmHeader);
+
+                  RlcTag rlcTag;
+                  rlcTag.SetSenderTimestamp (Simulator::Now ());
+
+                  packet->AddByteTag (rlcTag, 1, rlcAmHeader.GetSerializedSize ());
+
+                  NS_LOG_LOGIC ("new AM RLC header: " << rlcAmHeader);
+
+                  m_txPdu (m_rnti, m_lcid, packet->GetSize ());
+
+                  // Send RLC PDU to MAC layer
+                  LteMacSapProvider::TransmitPduParameters params;
+                  params.pdu = packet;
+                  params.rnti = m_rnti;
+                  params.lcid = m_lcid;
+                  params.layer = txOpParams.layer;
+                  params.harqProcessId = txOpParams.harqId;
+                  params.componentCarrierId = txOpParams.componentCarrierId;
+                  
+                  //m_macSapProvider->TransmitPdu (params);
+                  Simulator::Schedule(MilliSeconds(schedulingDelay), &LteMacSapProvider::TransmitPdu, m_macSapProvider, params);
+
+                  m_retxBuffer.at (seqNumberValue).m_retxCount++;
+                  m_retxBuffer.at (seqNumberValue).m_waitingSince = Simulator::Now ();
+                  NS_LOG_INFO ("Incr RETX_COUNT for SN = " << seqNumberValue);
+                  if (m_retxBuffer.at (seqNumberValue).m_retxCount >= m_maxRetxThreshold)
+                    {
+                      NS_LOG_INFO ("Max RETX_COUNT for SN = " << seqNumberValue);
+                    }
+
+                  NS_LOG_INFO ("Move SN = " << seqNumberValue << " back to txedBuffer");
+                  m_txedBuffer.at (seqNumberValue).m_pdu = m_retxBuffer.at (seqNumberValue).m_pdu->Copy ();
+                  m_txedBuffer.at (seqNumberValue).m_retxCount = m_retxBuffer.at (seqNumberValue).m_retxCount;
+                  m_txedBuffer.at (seqNumberValue).m_waitingSince = m_retxBuffer.at (seqNumberValue).m_waitingSince;
+                  m_txedBufferSize += m_txedBuffer.at (seqNumberValue).m_pdu->GetSize ();
+
+                  m_retxBufferSize -= m_retxBuffer.at (seqNumberValue).m_pdu->GetSize ();
+                  m_retxBuffer.at (seqNumberValue).m_pdu = 0;
+                  m_retxBuffer.at (seqNumberValue).m_retxCount = 0;
+                  m_retxBuffer.at (seqNumberValue).m_waitingSince = MilliSeconds (0);
+                  
+                  NS_LOG_LOGIC ("retxBufferSize = " << m_retxBufferSize);
+
+                  return;
+                }
+              else
+                {
+                  NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small for retransmission of the packet (size = " << packet->GetSize () << ")");
+                  NS_LOG_LOGIC ("Waiting for bigger TxOpportunity");
+                  return;
+                }
+            }
+        }
+      NS_ASSERT_MSG (false, "m_retxBufferSize > 0, but no PDU considered for retx found");
+    }
+  else if ( m_txonBufferSize > 0 )
+    {
+      if (txOpParams.bytes < 7)
+      {
+        // Stingy MAC: We need more bytes for new DATA PDUs.
+        //NS_LOG_LOGIC ("TxOpportunity (size = " << txOpParams.bytes << ") too small for DATA PDU");
+        //NS_ASSERT_MSG (false, "TxOpportunity (size = " << txOpParams.bytes << ") too small for DATA PDU\n"
+        //                   << "Your MAC scheduler is assigned too few resource blocks.");
+        return;
+      }
+
+      NS_ASSERT (m_vtS <= m_vtMs);
+      if (m_vtS == m_vtMs)
+        {
+          NS_LOG_INFO ("cannot transmit new RLC PDU due to window stalling");
+          return;
+        }
+
+      NS_LOG_LOGIC ("Sending data from Transmission Buffer");
+    }
+  else
+    {
+      NS_LOG_LOGIC ("No data pending");
+      return;
+    }
+
+  //
+  //
+  // Build new PDU
+  //
+  //
+
+  Ptr<Packet> packet = Create<Packet> ();
+  LteRlcAmHeader rlcAmHeader;
+  rlcAmHeader.SetDataPdu ();
+
+  // Build Data field
+  uint32_t nextSegmentSize = txOpParams.bytes - 4;
+  uint32_t nextSegmentId = 1;
+  uint32_t dataFieldTotalSize = 0;
+  uint32_t dataFieldAddedSize = 0;
+  std::vector < Ptr<Packet> > dataField;
+
+  // Remove the first packet from the transmission buffer.
+  // If only a segment of the packet is taken, then the remaining is given back later
+  if ( m_txonBuffer.size () == 0 )
+    {
+      NS_LOG_LOGIC ("No data pending");
+      return;
+    }
+
+  NS_LOG_LOGIC ("SDUs in TxonBuffer  = " << m_txonBuffer.size ());
+  NS_LOG_LOGIC ("First SDU buffer  = " << m_txonBuffer.begin ()->m_pdu);
+  NS_LOG_LOGIC ("First SDU size    = " << m_txonBuffer.begin ()->m_pdu->GetSize ());
+  NS_LOG_LOGIC ("Next segment size = " << nextSegmentSize);
+  NS_LOG_LOGIC ("Remove SDU from TxBuffer");
+  Time firstSegmentTime = m_txonBuffer.begin ()->m_waitingSince;
+  Ptr<Packet> firstSegment = m_txonBuffer.begin ()->m_pdu->Copy ();
+  m_txonBufferSize -= m_txonBuffer.begin ()->m_pdu->GetSize ();
+  NS_LOG_LOGIC ("txBufferSize      = " << m_txonBufferSize );
+  m_txonBuffer.erase (m_txonBuffer.begin ());
+
+  while ( firstSegment && (firstSegment->GetSize () > 0) && (nextSegmentSize > 0) )
+    {
+      NS_LOG_LOGIC ("WHILE ( firstSegment && firstSegment->GetSize > 0 && nextSegmentSize > 0 )");
+      NS_LOG_LOGIC ("    firstSegment size = " << firstSegment->GetSize ());
+      NS_LOG_LOGIC ("    nextSegmentSize   = " << nextSegmentSize);
+      if ( (firstSegment->GetSize () > nextSegmentSize) ||
+           // Segment larger than 2047 octets can only be mapped to the end of the Data field
+           (firstSegment->GetSize () > 2047)
+         )
+        {
+          // Take the minimum size, due to the 2047-bytes 3GPP exception
+          // This exception is due to the length of the LI field (just 11 bits)
+          uint32_t currSegmentSize = std::min (firstSegment->GetSize (), nextSegmentSize);
+
+          NS_LOG_LOGIC ("    IF ( firstSegment > nextSegmentSize ||");
+          NS_LOG_LOGIC ("         firstSegment > 2047 )");
+
+          // Segment txBuffer.FirstBuffer and
+          // Give back the remaining segment to the transmission buffer
+          Ptr<Packet> newSegment = firstSegment->CreateFragment (0, currSegmentSize);
+          NS_LOG_LOGIC ("    newSegment size   = " << newSegment->GetSize ());
+
+          // Status tag of the new and remaining segments
+          // Note: This is the only place where a PDU is segmented and
+          // therefore its status can change
+          LteRlcSduStatusTag oldTag, newTag;
+          firstSegment->RemovePacketTag (oldTag);
+          newSegment->RemovePacketTag (newTag);
+          if (oldTag.GetStatus () == LteRlcSduStatusTag::FULL_SDU)
+            {
+              newTag.SetStatus (LteRlcSduStatusTag::FIRST_SEGMENT);
+              oldTag.SetStatus (LteRlcSduStatusTag::LAST_SEGMENT);
+            }
+          else if (oldTag.GetStatus () == LteRlcSduStatusTag::LAST_SEGMENT)
+            {
+              newTag.SetStatus (LteRlcSduStatusTag::MIDDLE_SEGMENT);
+              //oldTag.SetStatus (LteRlcSduStatusTag::LAST_SEGMENT);
+            }
+
+          // Give back the remaining segment to the transmission buffer
+          firstSegment->RemoveAtStart (currSegmentSize);
+          NS_LOG_LOGIC ("    firstSegment size (after RemoveAtStart) = " << firstSegment->GetSize ());
+          if (firstSegment->GetSize () > 0)
+            {
+              firstSegment->AddPacketTag (oldTag);
+
+              m_txonBuffer.insert (m_txonBuffer.begin (), TxPdu (firstSegment, firstSegmentTime));
+              m_txonBufferSize += m_txonBuffer.begin ()->m_pdu->GetSize ();
+
+              NS_LOG_LOGIC ("    Txon buffer: Give back the remaining segment");
+              NS_LOG_LOGIC ("    Txon buffers = " << m_txonBuffer.size ());
+              NS_LOG_LOGIC ("    Front buffer size = " << m_txonBuffer.begin ()->m_pdu->GetSize ());
+              NS_LOG_LOGIC ("    txonBufferSize = " << m_txonBufferSize );
+            }
+          else
+            {
+              // Whole segment was taken, so adjust tag
+              if (newTag.GetStatus () == LteRlcSduStatusTag::FIRST_SEGMENT)
+                {
+                  newTag.SetStatus (LteRlcSduStatusTag::FULL_SDU);
+                }
+              else if (newTag.GetStatus () == LteRlcSduStatusTag::MIDDLE_SEGMENT)
+                {
+                  newTag.SetStatus (LteRlcSduStatusTag::LAST_SEGMENT);
+                }
+            }
+          // Segment is completely taken or
+          // the remaining segment is given back to the transmission buffer
+          firstSegment = 0;
+
+          // Put status tag once it has been adjusted
+          newSegment->AddPacketTag (newTag);
+
+          // Add Segment to Data field
+          dataFieldAddedSize = newSegment->GetSize ();
+          dataFieldTotalSize += dataFieldAddedSize;
+          dataField.push_back (newSegment);
+          newSegment = 0;
+
+          // ExtensionBit (Next_Segment - 1) = 0
+          rlcAmHeader.PushExtensionBit (LteRlcAmHeader::DATA_FIELD_FOLLOWS);
+
+          // no LengthIndicator for the last one
+
+          nextSegmentSize -= dataFieldAddedSize;
+          nextSegmentId++;
+
+          // nextSegmentSize MUST be zero (only if segment is smaller or equal to 2047)
+
+          // (NO more segments) ? exit
+          // break;
+        }
+      else if ( (nextSegmentSize - firstSegment->GetSize () <= 2) || (m_txonBuffer.size () == 0) )
+        {
+          NS_LOG_LOGIC ("    IF nextSegmentSize - firstSegment->GetSize () <= 2 || txonBuffer.size == 0");
+
+          // Add txBuffer.FirstBuffer to DataField
+          dataFieldAddedSize = firstSegment->GetSize ();
+          dataFieldTotalSize += dataFieldAddedSize;
+          dataField.push_back (firstSegment);
+          firstSegment = 0;
+
+          // ExtensionBit (Next_Segment - 1) = 0
+          rlcAmHeader.PushExtensionBit (LteRlcAmHeader::DATA_FIELD_FOLLOWS);
+
+          // no LengthIndicator for the last one
+
+          nextSegmentSize -= dataFieldAddedSize;
+          nextSegmentId++;
+
+          NS_LOG_LOGIC ("        SDUs in TxBuffer  = " << m_txonBuffer.size ());
+          if (m_txonBuffer.size () > 0)
+            {
+              NS_LOG_LOGIC ("        First SDU buffer  = " << m_txonBuffer.begin ()->m_pdu);
+              NS_LOG_LOGIC ("        First SDU size    = " << m_txonBuffer.begin ()->m_pdu->GetSize ());
+            }
+          NS_LOG_LOGIC ("        Next segment size = " << nextSegmentSize);
+
+          // nextSegmentSize <= 2 (only if txBuffer is not empty)
+
+          // (NO more segments) ? exit
+          // break;
+        }
+      else // (firstSegment->GetSize () < m_nextSegmentSize) && (m_txBuffer.size () > 0)
+        {
+          NS_LOG_LOGIC ("    IF firstSegment < NextSegmentSize && txonBuffer.size > 0");
+          // Add txBuffer.FirstBuffer to DataField
+          dataFieldAddedSize = firstSegment->GetSize ();
+          dataFieldTotalSize += dataFieldAddedSize;
+          dataField.push_back (firstSegment);
+
+          // ExtensionBit (Next_Segment - 1) = 1
+          rlcAmHeader.PushExtensionBit (LteRlcAmHeader::E_LI_FIELDS_FOLLOWS);
+
+          // LengthIndicator (Next_Segment)  = txBuffer.FirstBuffer.length()
+          rlcAmHeader.PushLengthIndicator (firstSegment->GetSize ());
+
+          nextSegmentSize -= ((nextSegmentId % 2) ? (2) : (1)) + dataFieldAddedSize;
+          nextSegmentId++;
+
+          NS_LOG_LOGIC ("        SDUs in TxBuffer  = " << m_txonBuffer.size ());
+          if (m_txonBuffer.size () > 0)
+            {
+              NS_LOG_LOGIC ("        First SDU buffer  = " << m_txonBuffer.begin ()->m_pdu);
+              NS_LOG_LOGIC ("        First SDU size    = " << m_txonBuffer.begin ()->m_pdu->GetSize ());
+            }
+          NS_LOG_LOGIC ("        Next segment size = " << nextSegmentSize);
+          NS_LOG_LOGIC ("        Remove SDU from TxBuffer");
+
+          // (more segments)
+          firstSegment = m_txonBuffer.begin ()->m_pdu->Copy ();
+          firstSegmentTime = m_txonBuffer.begin ()->m_waitingSince;
+          m_txonBufferSize -= m_txonBuffer.begin ()->m_pdu->GetSize ();
+          m_txonBuffer.erase (m_txonBuffer.begin ());
+          NS_LOG_LOGIC ("        txBufferSize = " << m_txonBufferSize );
+        }
+
+    }
+
+  //
+  // Build RLC header
+  //
+
+  rlcAmHeader.SetSequenceNumber ( m_vtS++ );
+  rlcAmHeader.SetResegmentationFlag (LteRlcAmHeader::PDU);
+  rlcAmHeader.SetLastSegmentFlag (LteRlcAmHeader::LAST_PDU_SEGMENT);
+  rlcAmHeader.SetSegmentOffset (0);
+
+  NS_ASSERT_MSG(rlcAmHeader.GetSequenceNumber () < m_vtMs, "SN above TX window");
+  NS_ASSERT_MSG(rlcAmHeader.GetSequenceNumber () >= m_vtA, "SN below TX window");
+
+  // Calculate FramingInfo flag according the status of the SDUs in the DataField
+  uint8_t framingInfo = 0;
+  std::vector< Ptr<Packet> >::iterator it;
+  it = dataField.begin ();
+
+  // FIRST SEGMENT
+  LteRlcSduStatusTag tag;
+  NS_ASSERT_MSG ((*it)->PeekPacketTag (tag), "LteRlcSduStatusTag is missing");
+  (*it)->PeekPacketTag (tag);
+  if ( (tag.GetStatus () == LteRlcSduStatusTag::FULL_SDU) ||
+       (tag.GetStatus () == LteRlcSduStatusTag::FIRST_SEGMENT)
+     )
+    {
+      framingInfo |= LteRlcAmHeader::FIRST_BYTE;
+    }
+  else
+    {
+      framingInfo |= LteRlcAmHeader::NO_FIRST_BYTE;
+    }
+
+  // Add all SDUs (in DataField) to the Packet
+  while (it < dataField.end ())
+    {
+      NS_LOG_LOGIC ("Adding SDU/segment to packet, length = " << (*it)->GetSize ());
+
+      NS_ASSERT_MSG ((*it)->PeekPacketTag (tag), "LteRlcSduStatusTag is missing");
+      (*it)->RemovePacketTag (tag);
+      if (packet->GetSize () > 0)
+        {
+          packet->AddAtEnd (*it);
+        }
+      else
+        {
+          packet = (*it);
+        }
+      it++;
+    }
+
+  // LAST SEGMENT (Note: There could be only one and be the first one)
+  it--;
+  if ( (tag.GetStatus () == LteRlcSduStatusTag::FULL_SDU) ||
+        (tag.GetStatus () == LteRlcSduStatusTag::LAST_SEGMENT) )
+    {
+      framingInfo |= LteRlcAmHeader::LAST_BYTE;
+    }
+  else
+    {
+      framingInfo |= LteRlcAmHeader::NO_LAST_BYTE;
+    }
+
+  // Set the FramingInfo flag after the calculation
+  rlcAmHeader.SetFramingInfo (framingInfo);
+
+
+  // Calculate the Polling Bit (5.2.2.1)
+  rlcAmHeader.SetPollingBit (LteRlcAmHeader::STATUS_REPORT_NOT_REQUESTED);
+
+  m_pduWithoutPoll++;
+  NS_LOG_LOGIC ("PDU_WITHOUT_POLL = " << m_pduWithoutPoll);
+  m_byteWithoutPoll += packet->GetSize ();
+  NS_LOG_LOGIC ("BYTE_WITHOUT_POLL = " << m_byteWithoutPoll);
+
+  if ( (m_pduWithoutPoll >= m_pollPdu) || (m_byteWithoutPoll >= m_pollByte) ||
+       ( (m_txonBuffer.empty ()) && (m_retxBufferSize == 0) ) ||
+       (m_vtS >= m_vtMs)
+       || m_pollRetransmitTimerJustExpired
+     )
+    {
+      m_pollRetransmitTimerJustExpired = false;
+      rlcAmHeader.SetPollingBit (LteRlcAmHeader::STATUS_REPORT_IS_REQUESTED);
+      m_pduWithoutPoll = 0;
+      m_byteWithoutPoll = 0;
+
+      m_pollSn = m_vtS - 1;
+      NS_LOG_LOGIC ("New POLL_SN = " << m_pollSn);
+
+      if (! m_pollRetransmitTimer.IsRunning () )
+        {
+          NS_LOG_LOGIC ("Start PollRetransmit timer");
+
+          m_pollRetransmitTimer = Simulator::Schedule (m_pollRetransmitTimerValue,
+                                                       &LteRlcAm::ExpirePollRetransmitTimer, this);
+        }
+      else
+        {
+          NS_LOG_LOGIC ("Restart PollRetransmit timer");
+
+          m_pollRetransmitTimer.Cancel ();
+          m_pollRetransmitTimer = Simulator::Schedule (m_pollRetransmitTimerValue,
+                                                       &LteRlcAm::ExpirePollRetransmitTimer, this);
+        }
+    }
+
+
+  // Build RLC PDU with DataField and Header
+  NS_LOG_LOGIC ("AM RLC header: " << rlcAmHeader);
+
+  RlcTag rlcTag;
+  rlcTag.SetSenderTimestamp (Simulator::Now ());
+
+  packet->AddHeader (rlcAmHeader);
+  packet->AddByteTag (rlcTag, 1, rlcAmHeader.GetSerializedSize ());
+
+  // Store new PDU into the Transmitted PDU Buffer
+  NS_LOG_LOGIC ("Put transmitted PDU in the txedBuffer");
+  m_txedBufferSize += packet->GetSize ();
+  m_txedBuffer.at ( rlcAmHeader.GetSequenceNumber ().GetValue () ).m_pdu = packet->Copy ();
+  m_txedBuffer.at ( rlcAmHeader.GetSequenceNumber ().GetValue () ).m_retxCount = 0;
+  m_txedBuffer.at ( rlcAmHeader.GetSequenceNumber ().GetValue () ).m_waitingSince = Simulator::Now ();
+
+  m_txPdu (m_rnti, m_lcid, packet->GetSize ());
+
+  // Send RLC PDU to MAC layer
+  LteMacSapProvider::TransmitPduParameters params;
+  params.pdu = packet;
+  params.rnti = m_rnti;
+  params.lcid = m_lcid;
+  params.layer = txOpParams.layer;
+  params.harqProcessId = txOpParams.harqId;
+  params.componentCarrierId = txOpParams.componentCarrierId;
+
+  //m_macSapProvider->TransmitPdu (params);
+  Simulator::Schedule(MilliSeconds(schedulingDelay), &LteMacSapProvider::TransmitPdu, m_macSapProvider, params);
+}
+
+void
 LteRlcAm::DoNotifyHarqDeliveryFailure ()
 {
   NS_LOG_FUNCTION (this);
@@ -1639,7 +2206,7 @@ LteRlcAm::DoReportBufferStatus (void)
   r.lcid = m_lcid;
   r.txQueueSize = m_txonBufferSize;
   r.txQueueHolDelay = txonQueueHolDelay.GetMilliSeconds ();
-  r.retxQueueSize = m_retxBufferSize + m_txedBufferSize;
+  r.retxQueueSize = m_retxBufferSize;
   r.retxQueueHolDelay = retxQueueHolDelay.GetMilliSeconds ();
 
   if ( m_statusPduRequested && ! m_statusProhibitTimer.IsRunning () )
@@ -1661,11 +2228,10 @@ LteRlcAm::DoReportBufferStatus (void)
                                                << r.statusPduSize);
       m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
     }
-  else
+  else 
     {
-      m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+      //m_macSapProvider->ReportBufferStatusNb (r, NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
       m_macSapProvider->ReportNoTransmissionNb(m_rnti,m_lcid);
-
       NS_LOG_INFO ("ReportBufferStatus don't needed");
     }
 }

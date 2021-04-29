@@ -58,6 +58,9 @@ public:
    * \param txOpParams the LteMacSapUser::TxOpportunityParameters
    */
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+
+  virtual void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
+
   virtual void DoNotifyHarqDeliveryFailure ();
   virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
 

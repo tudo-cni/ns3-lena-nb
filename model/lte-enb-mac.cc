@@ -42,6 +42,7 @@
 
 #include "nb-iot-data-volume-and-power-headroom-tag.h"
 #include "nb-iot-buffer-status-report-tag.h"
+#include "lte-rlc-am-header.h"
 
 #include <algorithm>
 namespace ns3 {
@@ -738,10 +739,9 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
               // 2 possible actions:
               // a) Preambles interfere with each other, so all UEs lose
               // b) eNB does cotention resolution magic and one UE surives
+              NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
               NS_BUILD_DEBUG (std::cout << "Collision" << std::endl);
-              std::cout << "==================================================" <<  std::endl;
-              std::cout << "Collision" << std::endl;
-              std::cout << "==================================================" << std::endl;
+              NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
               if (m_dropPreambleCollision)
                 {
                   m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
@@ -809,7 +809,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
           for (std::vector<NbIotRrcSap::NpdcchMessage>::iterator it = rar_dcis.begin ();
                it != rar_dcis.end (); ++it)
             {
-              m_schedulerNb->ScheduleNpdcchMessageReq (*it);
+              m_schedulerNb->ScheduleRarReq(*it,NbiotScheduler::ConvertNprachParametersNb2SearchSpaceConfig(ce));
             }
         }
     }
@@ -1026,7 +1026,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                     std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>::iterator bsr = m_lastDlBSR[it->rnti].find((*lcit));
                     std::map<uint8_t, LteMacSapUser *>::iterator lcidIt = rntiIt->second.find (bsr->second.lcid);
                     if ((bsr->second.statusPduSize > 0) &&
-                            (bytesforallLc > bsr->second.statusPduSize))
+                            (bytesforallLc >= bsr->second.statusPduSize))
                       {
                         txOpParams.bytes = bsr->second.statusPduSize;
                         txOpParams.layer = 0;
@@ -1034,8 +1034,9 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                         txOpParams.componentCarrierId = m_componentCarrierId;
                         txOpParams.rnti = bsr->second.rnti;
                         txOpParams.lcid = bsr->second.lcid;
-                        Simulator::Schedule (MilliSeconds (subframestowait), &LteMacSapUser::NotifyTxOpportunity,
-                            (*lcidIt).second, txOpParams);
+                        (*lcidIt).second->NotifyTxOpportunityNb(txOpParams, subframestowait);
+                        //Simulator::Schedule (MilliSeconds (subframestowait), &LteMacSapUser::NotifyTxOpportunity,
+                        //   (*lcidIt).second, txOpParams);
                         bytesforallLc -= bsr->second.statusPduSize;
                         bsr->second.statusPduSize = 0;
                       }
@@ -1074,8 +1075,9 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                             txOpParams.componentCarrierId = m_componentCarrierId;
                             txOpParams.rnti = bsr->second.rnti;
                             txOpParams.lcid = bsr->second.lcid;
-                            Simulator::Schedule (MilliSeconds (subframestowait), &LteMacSapUser::NotifyTxOpportunity,
-                              (*lcidIt).second, txOpParams);
+                            //Simulator::Schedule (MilliSeconds (subframestowait), &LteMacSapUser::NotifyTxOpportunity,
+                            //  (*lcidIt).second, txOpParams);
+                            (*lcidIt).second->NotifyTxOpportunityNb(txOpParams, subframestowait);
                           }
                         else if (bsr->second.txQueueSize > 0)
                           {
@@ -1085,12 +1087,12 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                               bsr->second.txQueueSize -= bytesforallLc;
                               bytesforallLc = 0;
                             }else{
-                              if(bsr->second.txQueueSize < 7){
+                              if(bsr->second.txQueueSize+4 < 7){
                                 txOpParams.bytes = 7;
                                 bytesforallLc -= 7;
                               }else{
-                                txOpParams.bytes = bsr->second.txQueueSize;
-                                bytesforallLc -= bsr->second.txQueueSize;
+                                txOpParams.bytes = bsr->second.txQueueSize+4;
+                                bytesforallLc -= bsr->second.txQueueSize+4;
                               }
 
                               bsr->second.txQueueSize = 0;
@@ -1101,8 +1103,9 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                             txOpParams.rnti = bsr->second.rnti;
                             txOpParams.lcid = bsr->second.lcid;
 
-                            Simulator::Schedule (MilliSeconds (subframestowait), &LteMacSapUser::NotifyTxOpportunity,
-                              (*lcidIt).second, txOpParams);
+                            //Simulator::Schedule (MilliSeconds (subframestowait), &LteMacSapUser::NotifyTxOpportunity,
+                            //  (*lcidIt).second, txOpParams);
+                            (*lcidIt).second->NotifyTxOpportunityNb(txOpParams,subframestowait);
                             
                           }
                           }
@@ -1111,7 +1114,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                             if ((bsr->second.retxQueueSize > 0) ||
                                 (bsr->second.txQueueSize > 0))
                               {
-                                std::cout << "Bla" << std::endl;
+                                NS_BUILD_DEBUG(std::cout << "Not enough space" << std::endl);
                               }
                           }
                   }
@@ -1125,7 +1128,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                       }
                   }
                   if(remaining.size()>0){
-                    m_schedulerNb->ScheduleDlRlcBufferReq(it->rnti,m_lastDlBSR[it->rnti],NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+                    m_schedulerNb->ScheduleDlRlcBufferReq(it->rnti,m_lastDlBSR[it->rnti]);
                   }
                 }
             }
@@ -1345,12 +1348,10 @@ LteEnbMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
       // Device has received MSG4 and neeeds UL-Resources for MSG5
       if (!m_connectionSuccessful[dlharq->GetRnti ()])
         {
-          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti (), m_ueStoredBSR[dlharq->GetRnti()],NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+          // MIGHT BE NOT NEEDED ANYMORE
+          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti (), m_ueStoredBSR[dlharq->GetRnti()]);
           m_ueStoredBSR[dlharq->GetRnti()] = 0;
         }
-      else{
-          m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti(),5,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
-      } 
     }
   else
     {
@@ -1484,10 +1485,10 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
   }else if (p->RemovePacketTag(bsrTag)){
   buffersize = BufferSizeLevelBsr::BsrId2BufferSize(bsrTag.GetBufferStatusReportIndex());
   buffersize += 4; // Compensate RLC Header etc
-  std::cout << "-------------------------" << std::endl;
-  std::cout << "Buffersize: " << buffersize << std::endl;
-  std::cout << "-------------------------" << std::endl;
-  m_schedulerNb->ScheduleUlRlcBufferReq(rnti,buffersize,NbIotRrcSap::NpdcchMessage::SearchSpaceType::type2);
+  NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
+  NS_BUILD_DEBUG(std::cout << "Buffersize: " << buffersize << std::endl);
+  NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
+  m_schedulerNb->ScheduleUlRlcBufferReq(rnti,buffersize);
   
   }
   std::map<uint16_t, std::map<uint8_t, LteMacSapUser *>>::iterator rntiIt =
@@ -1813,6 +1814,18 @@ void
 LteEnbMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
 {
   NS_LOG_FUNCTION (this);
+
+  // Peek RLC Header to issue StatusPDU scheduling if needed
+
+  LteRlcAmHeader rlcAmHeader;
+  if(params.pdu->PeekHeader(rlcAmHeader) != 0){
+    // Is RLC AM, check if status pdu is requested
+    if ( rlcAmHeader.GetPollingBit () == LteRlcAmHeader::STATUS_REPORT_IS_REQUESTED )
+      {
+        m_schedulerNb->AddToUlBufferReq(params.rnti, 4); // Add Status Pdu to be scheduled (4 Byte)
+      }
+  }
+
   LteRadioBearerTag tag (params.rnti, params.lcid, params.layer);
   params.pdu->AddPacketTag (tag);
   params.componentCarrierId = m_componentCarrierId;
@@ -1851,10 +1864,10 @@ LteEnbMac::DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParamete
   m_lastDlBSR[params.rnti][params.lcid] = params;
   if(params.lcid == 1 || params.lcid == 3){
     // We are using SRB1 or DRB -> RLC AM Header
-  m_lastDlBSR[params.rnti][params.lcid].txQueueSize +=4;
+  //m_lastDlBSR[params.rnti][params.lcid].txQueueSize;
 
   }
-  m_schedulerNb->ScheduleDlRlcBufferReq(params.rnti, m_lastDlBSR[params.rnti], searchspace);
+  m_schedulerNb->ScheduleDlRlcBufferReq(params.rnti, m_lastDlBSR[params.rnti]);
   
 }
 // ////////////////////////////////////////////

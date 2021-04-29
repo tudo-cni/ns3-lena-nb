@@ -161,6 +161,56 @@ LteRlcTm::DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpPara
 }
 
 void
+LteRlcTm::DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
+{
+  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << txOpParams.bytes  << (uint32_t) txOpParams.layer << (uint32_t) txOpParams.harqId);
+
+  // 5.1.1.1 Transmit operations 
+  // 5.1.1.1.1 General
+  // When submitting a new TMD PDU to lower layer, the transmitting TM RLC entity shall:
+  // - submit a RLC SDU without any modification to lower layer.
+
+
+  if ( m_txBuffer.size () == 0 )
+    {
+      NS_LOG_LOGIC ("No data pending");
+      return;
+    }
+
+  Ptr<Packet> packet = m_txBuffer.begin ()->m_pdu->Copy ();
+
+  if (txOpParams.bytes < packet->GetSize ())
+    {
+      NS_LOG_WARN ("TX opportunity too small = " << txOpParams.bytes <<
+                   " (PDU size: " << packet->GetSize () << ")");
+      return;
+    }
+
+  m_txBufferSize -= packet->GetSize ();
+  m_txBuffer.erase (m_txBuffer.begin ());
+
+  m_txPdu (m_rnti, m_lcid, packet->GetSize ());
+
+  // Send RLC PDU to MAC layer
+  LteMacSapProvider::TransmitPduParameters params;
+  params.pdu = packet;
+  params.rnti = m_rnti;
+  params.lcid = m_lcid;
+  params.layer = txOpParams.layer;
+  params.harqProcessId = txOpParams.harqId;
+  params.componentCarrierId = txOpParams.componentCarrierId;
+
+  Simulator::Schedule(MilliSeconds(schedulingDelay), &LteMacSapProvider::TransmitPdu, m_macSapProvider, params);
+  //m_macSapProvider->TransmitPdu (params);
+
+  if (! m_txBuffer.empty ())
+    {
+      m_rbsTimer.Cancel ();
+      m_rbsTimer = Simulator::Schedule (MilliSeconds (10), &LteRlcTm::ExpireRbsTimer, this);
+    }
+}
+
+void
 LteRlcTm::DoNotifyHarqDeliveryFailure ()
 {
   NS_LOG_FUNCTION (this);

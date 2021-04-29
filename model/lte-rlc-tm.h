@@ -63,6 +63,12 @@ public:
    */
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
   /**
+   * MAC SAP
+   * 
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
+  virtual void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
+  /**
    * Notify HARQ deliver failure
    */
   virtual void DoNotifyHarqDeliveryFailure ();
