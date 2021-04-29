@@ -133,6 +133,19 @@ NoOpComponentCarrierManager::DoNotifyTxOpportunity (LteMacSapUser::TxOpportunity
 }
 
 void
+NoOpComponentCarrierManager::DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
+{
+  NS_LOG_FUNCTION (this);
+  std::map <uint16_t, std::map<uint8_t, LteMacSapUser*> >::iterator rntiIt = m_ueAttached.find (txOpParams.rnti);
+  NS_ASSERT_MSG (rntiIt != m_ueAttached.end (), "could not find RNTI" << txOpParams.rnti);
+  std::map<uint8_t, LteMacSapUser*>::iterator lcidIt = rntiIt->second.find (txOpParams.lcid);
+  NS_ASSERT_MSG (lcidIt != rntiIt->second.end (), "could not find LCID " << (uint16_t) txOpParams.lcid);
+  NS_LOG_DEBUG (this << " rnti= " << txOpParams.rnti << " lcid= " << (uint32_t) txOpParams.lcid << " layer= " << (uint32_t)txOpParams.layer<<" ccId="<< (uint32_t)txOpParams.componentCarrierId);
+  (*lcidIt).second->NotifyTxOpportunityNb (txOpParams, schedulingDelay);
+
+}
+
+void
 NoOpComponentCarrierManager::DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams)
 {
   NS_LOG_FUNCTION (this);

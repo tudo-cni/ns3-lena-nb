@@ -723,7 +723,11 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
       dci_candidate = CreateDciNpdcchMessage((*it), NbIotRrcSap::NpdcchMessage::DciType::n0); 
       if(ScheduleNpdcchMessage(dci_candidate,ssc)){
         scheduledMessages.push_back(dci_candidate);
-        m_rntiUeConfigMap[(*it)].rlcUlBuffer = 0;
+        if(int(m_rntiUeConfigMap[(*it)].rlcUlBuffer - (dci_candidate.tbs/8)) > 0){
+          m_rntiUeConfigMap[(*it)].rlcUlBuffer = m_rntiUeConfigMap[(*it)].rlcUlBuffer - (dci_candidate.tbs/8);
+        }else{
+          m_rntiUeConfigMap[(*it)].rlcUlBuffer =0;
+        }
       }
     }
         ++it;
@@ -1279,12 +1283,10 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
 
     if(m_rntiUeConfigMap[rnti].rlcUlBuffer*8 > 1000){ // max TBS Uplink Rel. 13
       tbs = 1000;
-      m_rntiUeConfigMap[rnti].rlcUlBuffer = m_rntiUeConfigMap[rnti].rlcUlBuffer - (1000/8);
 
     }
     else{
       tbs = (10+m_rntiUeConfigMap[rnti].rlcUlBuffer)* 8;
-      m_rntiUeConfigMap[rnti].rlcUlBuffer = 0;
     }
 
     std::pair<NbIotRrcSap::DciN0, uint64_t> dci_tbs = m_Amc.getBareboneDciN0 (
@@ -1320,9 +1322,11 @@ NbiotScheduler::ScheduleDlRlcBufferReq (uint64_t rnti, std::map<uint8_t,LteMacSa
     for(it= lcids.begin(); it != lcids.end(); ++it){
       if(it->second.txQueueSize != 0 || it->second.retxQueueSize != 0 || it->second.statusPduSize != 0){
         buffer_size +=  it->second.txQueueSize + it->second.retxQueueSize+it->second.statusPduSize;
+        if(it->second.txQueueSize > 0){
+          buffer_size += 4; // RLC Header
+        }
     }
   }
-  buffer_size += 10;
   m_lastDlBuffer.push_back(std::pair<uint16_t, std::map<uint8_t,LteMacSapProvider::ReportBufferStatusParameters>>(rnti,lcids));
 
   m_rntiUeConfigMap[rnti].rlcDlBuffer = buffer_size;
@@ -1336,6 +1340,18 @@ void
 NbiotScheduler::ScheduleUlRlcBufferReq(uint64_t rnti, uint64_t dataSize)
 {
   m_rntiUeConfigMap[rnti].rlcUlBuffer = dataSize;
+  m_lastUlBuffer.push_back(std::pair<uint16_t, uint64_t>(rnti,dataSize));
+  SearchSpaceConfig searchSpace= m_rntiUeConfigMap[rnti].searchSpaceConfig;
+  std::vector<uint16_t>::iterator it = std::find(m_searchSpaceRntiMap[searchSpace].begin(), m_searchSpaceRntiMap[searchSpace].end(), rnti);
+  if( it == m_searchSpaceRntiMap[searchSpace].end()){
+    m_searchSpaceRntiMap[searchSpace].push_back(rnti);
+  }
+}
+
+void
+NbiotScheduler::AddToUlBufferReq(uint64_t rnti, uint64_t dataSize)
+{
+  m_rntiUeConfigMap[rnti].rlcUlBuffer += dataSize;
   m_lastUlBuffer.push_back(std::pair<uint16_t, uint64_t>(rnti,dataSize));
   SearchSpaceConfig searchSpace= m_rntiUeConfigMap[rnti].searchSpaceConfig;
   std::vector<uint16_t>::iterator it = std::find(m_searchSpaceRntiMap[searchSpace].begin(), m_searchSpaceRntiMap[searchSpace].end(), rnti);

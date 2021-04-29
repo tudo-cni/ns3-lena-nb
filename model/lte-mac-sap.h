@@ -144,6 +144,14 @@ public:
   virtual void NotifyTxOpportunity (TxOpportunityParameters params) = 0;
 
   /**
+   * Called by the MAC to notify the RLC that the scheduler granted a
+   * transmission opportunity to this RLC instance.
+   *
+   * \param params the TxOpportunityParameters
+   */
+  virtual void NotifyTxOpportunityNb (TxOpportunityParameters params, uint32_t schedulingDelay) = 0;
+
+  /**
    * Called by the MAC to notify the RLC that an HARQ process related
    * to this RLC instance has failed
    *

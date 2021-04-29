@@ -99,6 +99,12 @@ protected:
    */
   void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
   /**
+   * \brief Notify TX opportunity function
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
+  void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
+  /**
    * \brief Receive PDU function
    *
    * \param rxPduParams the LteMacSapUser::ReceivePduParameters

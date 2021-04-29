@@ -102,6 +102,7 @@ public:
 
   // inherited from LteMacSapUser
   virtual void NotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+  virtual void NotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
   virtual void ReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
   virtual void NotifyHarqDeliveryFailure ();
 
@@ -121,6 +122,14 @@ SimpleUeCcmMacSapUser::NotifyTxOpportunity (LteMacSapUser::TxOpportunityParamete
   NS_LOG_INFO ("SimpleUeCcmMacSapUser::NotifyTxOpportunity for ccId:"<<(uint32_t)txOpParams.componentCarrierId);
   m_mac->DoNotifyTxOpportunity (txOpParams);
 }
+
+void
+SimpleUeCcmMacSapUser::NotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
+{
+  NS_LOG_INFO ("SimpleUeCcmMacSapUser::NotifyTxOpportunity for ccId:"<<(uint32_t)txOpParams.componentCarrierId);
+  m_mac->DoNotifyTxOpportunityNb (txOpParams, schedulingDelay);
+}
+
 
 
 void
@@ -273,6 +282,21 @@ SimpleUeComponentCarrierManager::DoNotifyTxOpportunity (LteMacSapUser::TxOpportu
   NS_LOG_DEBUG (this << " MAC is asking component carrier id = " << (uint16_t) txOpParams.componentCarrierId
                 << " with lcid = " << (uint32_t) txOpParams.lcid << " to transmit "<< txOpParams.bytes<< " bytes");
   (*lcidIt).second->NotifyTxOpportunity (txOpParams);
+}
+
+void 
+SimpleUeComponentCarrierManager::DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
+{
+  NS_LOG_FUNCTION (this);
+  std::map<uint8_t, LteMacSapUser*>::iterator lcidIt = m_lcAttached.find (txOpParams.lcid);
+  NS_ABORT_MSG_IF (lcidIt == m_lcAttached.end (), "could not find LCID" << (uint16_t) txOpParams.lcid);
+  NS_LOG_DEBUG (this << " lcid = " << (uint32_t) txOpParams.lcid << " layer= "
+                << (uint16_t) txOpParams.layer << " componentCarierId "
+                << (uint16_t) txOpParams.componentCarrierId << " rnti " << txOpParams.rnti);
+
+  NS_LOG_DEBUG (this << " MAC is asking component carrier id = " << (uint16_t) txOpParams.componentCarrierId
+                << " with lcid = " << (uint32_t) txOpParams.lcid << " to transmit "<< txOpParams.bytes<< " bytes");
+  (*lcidIt).second->NotifyTxOpportunityNb (txOpParams, schedulingDelay);
 }
 void
 SimpleUeComponentCarrierManager::DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams)

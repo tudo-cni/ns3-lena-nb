@@ -100,6 +100,8 @@ bool ScheduleNpdcchMessage(NbIotRrcSap::NpdcchMessage &message, SearchSpaceConfi
 void SetRntiRsrpMap(std::map<uint16_t, double> map);
 void ScheduleUlRlcBufferReq(uint64_t rnti, uint64_t dataSize); // Data in Byte
 void ScheduleDlRlcBufferReq(uint64_t rnti, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters> lcids); // Data in Byte
+
+void AddToUlBufferReq(uint64_t rnti, uint64_t dataSize);
 void AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace);
 void SortBasedOnSelectedSchedulingAlgorithm(std::vector<uint16_t>& rntis);
 std::vector<uint64_t> GetNextAvailableSearchSpaceCandidate(uint32_t rnti, uint64_t SearchSpaceStartFrame, uint64_t SearchSpaceStartSubframe, uint64_t R_max, uint64_t R);

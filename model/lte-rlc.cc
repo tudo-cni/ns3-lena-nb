@@ -45,6 +45,7 @@ public:
 
   // Interface implemented from LteMacSapUser
   virtual void NotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters params);
+  virtual void NotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters params, uint32_t schedulingDelay);
   virtual void NotifyHarqDeliveryFailure ();
   virtual void ReceivePdu (LteMacSapUser::ReceivePduParameters params);
 
@@ -67,6 +68,12 @@ LteRlcSpecificLteMacSapUser::NotifyTxOpportunity (TxOpportunityParameters params
 {
   m_rlc->DoNotifyTxOpportunity (params);
 }
+void
+LteRlcSpecificLteMacSapUser::NotifyTxOpportunityNb (TxOpportunityParameters params, uint32_t schedulingDelay)
+{
+  m_rlc->DoNotifyTxOpportunityNb (params, schedulingDelay);
+}
+
 
 void
 LteRlcSpecificLteMacSapUser::NotifyHarqDeliveryFailure ()
@@ -244,6 +251,37 @@ LteRlcSm::DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams)
 
 void
 LteRlcSm::DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams)
+{
+  NS_LOG_FUNCTION (this << txOpParams.bytes);
+  LteMacSapProvider::TransmitPduParameters params;
+  RlcTag tag (Simulator::Now ());
+
+  params.pdu = Create<Packet> (txOpParams.bytes);
+  NS_ABORT_MSG_UNLESS (txOpParams.bytes > 0, "Bytes must be > 0");
+  /**
+   * For RLC SM, the packets are not passed to the upper layers, therefore,
+   * in the absence of an header we can safely byte tag the entire packet.
+   */
+  params.pdu->AddByteTag (tag, 1, params.pdu->GetSize ());
+
+  params.rnti = m_rnti;
+  params.lcid = m_lcid;
+  params.layer = txOpParams.layer;
+  params.harqProcessId = txOpParams.harqId;
+  params.componentCarrierId = txOpParams.componentCarrierId;
+
+  // RLC Performance evaluation
+  NS_LOG_LOGIC (" RNTI=" << m_rnti
+                << " LCID=" << (uint32_t) m_lcid
+                << " size=" << txOpParams.bytes);
+  m_txPdu(m_rnti, m_lcid, txOpParams.bytes);
+
+  m_macSapProvider->TransmitPdu (params);
+  ReportBufferStatus ();
+}
+
+void
+LteRlcSm::DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
 {
   NS_LOG_FUNCTION (this << txOpParams.bytes);
   LteMacSapProvider::TransmitPduParameters params;
