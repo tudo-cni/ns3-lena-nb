@@ -103,7 +103,7 @@ void ScheduleDlRlcBufferReq(uint64_t rnti, std::map<uint8_t, LteMacSapProvider::
 
 void AddToUlBufferReq(uint64_t rnti, uint64_t dataSize);
 void AddRntiDatatoNpdcchQueue(NbIotRrcSap::NpdcchMessage::SearchSpaceType seachspace);
-void SortBasedOnSelectedSchedulingAlgorithm(std::vector<uint16_t>& rntis);
+void SortBasedOnSelectedSchedulingAlgorithm(SearchSpaceConfig ssc);
 std::vector<uint64_t> GetNextAvailableSearchSpaceCandidate(uint32_t rnti, uint64_t SearchSpaceStartFrame, uint64_t SearchSpaceStartSubframe, uint64_t R_max, uint64_t R);
 std::vector<uint64_t> GetDlSubframeRangeWithoutSystemResources(uint64_t overallSubframeNo, uint64_t numSubframes);
 std::vector<uint64_t> GetUlSubframeRangeWithoutSystemResources(uint64_t overallSubframeNo, uint64_t numSubframes, uint64_t carrier);
@@ -115,6 +115,8 @@ std::vector<NbIotRrcSap::NpdcchMessage> ScheduleSearchSpace(SearchSpaceConfig ss
 std::vector<std::pair<uint64_t, std::vector<uint64_t>>> GetNextAvailableNpuschCandidate(uint64_t endSubframeNpdsch, uint64_t minSchedulingDelay, uint64_t numSubframes, bool isHarq);
 std::pair<NbIotRrcSap::UlGrant, std::pair<uint64_t,std::vector<uint64_t>>> GetNextAvailableMsg3UlGrantCandidate(uint64_t endSubframeMsg2, uint64_t numSubframes);
 NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::DciType dci_type);
+
+void RoundRobinScheduling(SearchSpaceConfig ssc);
 std::vector<int> m_downlink;
 protected:
   std::vector<std::vector<int>> m_uplink;
@@ -159,7 +161,7 @@ protected:
   NbIotRrcSap::SystemInformationBlockType2Nb m_sib2config;
   std::vector<std::pair<uint16_t, uint64_t>> m_lastUlBuffer;
   std::vector<std::pair<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>>> m_lastDlBuffer;
-
+  std::map<SearchSpaceConfig, uint16_t> m_RoundRobinLastScheduled;
 //std::vector<std::pair<uint64_t,uint64_t>> GetAllPossibleSearchSpaceCandidates(std::vector<uint64_t> subframes, uint64_t R_max);
 };
 

@@ -502,7 +502,35 @@ NbiotScheduler::Schedule (uint64_t frameNo, uint64_t subframeNo)
 //      }
 //}
 
-void NbiotScheduler::SortBasedOnSelectedSchedulingAlgorithm(std::vector<uint16_t>& rntis){
+void NbiotScheduler::SortBasedOnSelectedSchedulingAlgorithm(SearchSpaceConfig ssc){
+  // When implementing new Scheduling Algorithms
+  RoundRobinScheduling(ssc);
+}
+
+void NbiotScheduler::RoundRobinScheduling(SearchSpaceConfig ssc){
+  std::vector<uint16_t>& rntis = m_searchSpaceRntiMap[ssc];
+  // Optional : Sort List by RNTI
+  if(rntis.size() == 0){
+    // Nothing to sort
+    return;
+  }
+  std::sort(rntis.begin(),rntis.end());
+
+  // Find last scheduled RNTI of this searchspace
+  uint16_t start_rnti = m_RoundRobinLastScheduled[ssc];
+  std::vector<uint16_t>::iterator it =std::find(rntis.begin(), rntis.end(), start_rnti);
+  // Rnti not in list anymore, e.g. RrcRelease or moved to another Search Space
+  uint16_t offset = 0;
+  if(it != rntis.end()){
+    offset = it-rntis.begin()+1;
+  }else{
+    while(it == rntis.end()){
+      start_rnti = ((start_rnti+1)%65535)+1;
+      it =std::find(rntis.begin(), rntis.end(), start_rnti);
+    }
+    offset = it-rntis.begin();
+  }
+  std::rotate(rntis.begin(), rntis.begin()+offset, rntis.end());
 
 }
 
@@ -706,7 +734,7 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
   /*
   Scheduling Magic. For now FIFO
   */
-  SortBasedOnSelectedSchedulingAlgorithm(m_searchSpaceRntiMap[ssc]);
+  SortBasedOnSelectedSchedulingAlgorithm(ssc);
   std::vector<uint16_t > test_tmp = m_searchSpaceRntiMap[ssc];
   for(std::vector<uint16_t>::iterator it = m_searchSpaceRntiMap[ssc].begin(); it != m_searchSpaceRntiMap[ssc].end(); ){
     NbIotRrcSap::NpdcchMessage dci_candidate;
@@ -716,6 +744,7 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
       if(ScheduleNpdcchMessage(dci_candidate,ssc)){
         scheduledMessages.push_back(dci_candidate);
         m_rntiUeConfigMap[(*it)].rlcDlBuffer = 0;
+        m_RoundRobinLastScheduled[ssc] = (*it);
       }
       
       
@@ -728,6 +757,7 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
         }else{
           m_rntiUeConfigMap[(*it)].rlcUlBuffer =0;
         }
+        m_RoundRobinLastScheduled[ssc] = (*it);
       }
     }
         ++it;
