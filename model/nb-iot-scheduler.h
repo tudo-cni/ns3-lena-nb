@@ -73,6 +73,10 @@ struct UeConfig{
   uint64_t lastDl;
 };
 
+
+
+
+
 class NbiotScheduler : public Object
 {
 public:
@@ -118,6 +122,7 @@ NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::Np
 
 void RoundRobinScheduling(SearchSpaceConfig ssc);
 std::vector<int> m_downlink;
+void RemoveUe(uint16_t rnti);
 protected:
   std::vector<std::vector<int>> m_uplink;
   std::vector<NbIotRrcSap::NpdcchMessage> m_rars_to_schedule;
@@ -162,7 +167,10 @@ protected:
   std::vector<std::pair<uint16_t, uint64_t>> m_lastUlBuffer;
   std::vector<std::pair<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>>> m_lastDlBuffer;
   std::map<SearchSpaceConfig, uint16_t> m_RoundRobinLastScheduled;
+
 //std::vector<std::pair<uint64_t,uint64_t>> GetAllPossibleSearchSpaceCandidates(std::vector<uint64_t> subframes, uint64_t R_max);
+  void LogUplinkGrid();
+  void LogDownlinkGrid();
 };
 
 }  // namespace ns3

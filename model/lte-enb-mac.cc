@@ -72,6 +72,7 @@ public:
   virtual void RemoveUe (uint16_t rnti);
   virtual void MoveUeToResume(uint16_t rnti,uint64_t resumeId);
   virtual void ResumeUe(uint16_t rnti,uint64_t resumeId);
+  virtual void RemoveUeFromScheduler(uint16_t rnti);
   virtual void AddLc (LcInfo lcinfo, LteMacSapUser *msu);
   virtual void ReconfigureLc (LcInfo lcinfo);
   virtual void ReleaseLc (uint16_t rnti, uint8_t lcid);
@@ -110,6 +111,11 @@ void
 EnbMacMemberLteEnbCmacSapProvider::MoveUeToResume(uint16_t rnti, uint64_t resumeId)
 {
   m_mac->DoMoveUeToResume(rnti,resumeId);
+}
+void
+EnbMacMemberLteEnbCmacSapProvider::RemoveUeFromScheduler(uint16_t rnti)
+{
+  m_mac->DoRemoveUeFromScheduler(rnti);
 }
 void
 EnbMacMemberLteEnbCmacSapProvider::ResumeUe(uint16_t rnti, uint64_t resumeId)
@@ -425,6 +431,7 @@ LteEnbMac::DoDispose ()
   m_dlInfoListReceived.clear ();
   m_ulInfoListReceived.clear ();
   m_miDlHarqProcessesPackets.clear ();
+  m_schedulerNb->DoDispose();
   delete m_macSapProvider;
   delete m_cmacSapProvider;
   delete m_schedSapUser;
@@ -1595,6 +1602,10 @@ LteEnbMac::DoResumeUe(uint16_t rnti, uint64_t resumeId){
   buf.push_back (dlHarqLayer1pkt);
   m_miDlHarqProcessesPackets.insert (std::pair<uint16_t, DlHarqProcessesBuffer_t> (rnti, buf));
 }
+
+void LteEnbMac::DoRemoveUeFromScheduler(uint16_t rnti){
+  m_schedulerNb->RemoveUe(rnti);
+}
 void
 LteEnbMac::DoRemoveUe (uint16_t rnti)
 {
@@ -1638,6 +1649,7 @@ LteEnbMac::DoRemoveUe (uint16_t rnti)
           itCeRxd++;
         }
     }
+
 }
 
 void

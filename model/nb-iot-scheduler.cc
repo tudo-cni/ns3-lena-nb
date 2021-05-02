@@ -59,7 +59,26 @@ NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces
   uint64_t numHyperframes = 1024;
   uint64_t numFrames = 1024;
   uint64_t numSubframes = 10;
+  // SIB1 Scheduling
+  NbIotRrcSap::MasterInformationBlockNb m_mibNb;
+  m_mibNb.schedulingInfoSib1 = 2;
+  bool sib1NbPeriod = false;
+  uint16_t sib1NbRepetitions=0;
   m_downlink.resize (numHyperframes * numFrames * numSubframes, 0);
+  NbIotRrcSap::SystemInformationBlockType1Nb sib1;
+  NbIotRrcSap::SchedulingInfoNb info;
+  info.sibMappingInfo.push_back(2);
+  info.siPeriodicity = NbIotRrcSap::SchedulingInfoNb::SiPeriodicityNb::rf64;
+  info.siRepetitionPattern = NbIotRrcSap::SchedulingInfoNb::SiRepetitionPatternNb::every8thRF;
+  info.siTb = NbIotRrcSap::SchedulingInfoNb::SiTbNb::b680;
+  sib1.schedulingInfoList.push_back(info);
+  sib1.siWindowLength = NbIotRrcSap::SystemInformationBlockType1Nb::SiWindowLengthNb::ms160;
+  sib1.siRadioFrameOffset = 0;
+  bool si=false;
+  uint8_t siRepetitions = 0;
+  uint8_t siRepetitionPattern = 0;
+  uint8_t tmpSiRepetitions = 0;
+  uint16_t siWindow = 0;
   for (size_t i = 0; i < m_downlink.size (); ++i)
     {
       if ((i % 10) == 0)
@@ -74,7 +93,79 @@ NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces
         {
           m_downlink[i] = -1; // NSSS
         }
+      if (((i/10) % 256) == 0){
+        sib1NbPeriod=true;
+        switch(m_mibNb.schedulingInfoSib1){
+          case 0:
+          case 3:
+          case 6:
+          case 9:
+            sib1NbRepetitions= 4;
+            break;
+          case 1:
+          case 4:
+          case 7:
+          case 10:
+            sib1NbRepetitions = 8;
+            break;
+          default:
+            sib1NbRepetitions = 16;
+            break;
+        }
+      }
+      if( sib1NbPeriod && (i/160) % 2 == 0){
+
+        if(((i%10) == 4) && ((i / 10)%2 == 0)){
+          m_downlink[i] = -1; // SIB1-NB
+        }
+
+      }else if (sib1NbPeriod && (i/10) % 16 == 0 && i%10 == 0){
+        sib1NbRepetitions--;
+      }
+      if(sib1NbRepetitions == 0){
+        sib1NbPeriod = false;
+      }
+      // SI Scheduling
+      
+
+      for(size_t j = 0; j < sib1.schedulingInfoList.size(); j++){
+        
+        uint16_t lhs = i/10 % NbIotRrcSap::ConvertSchedulingInfoPeriodicity2int(sib1.schedulingInfoList[j]);
+        uint16_t x = (j)*NbIotRrcSap::ConvertSiWindowLength2int(sib1)+sib1.siRadioFrameOffset;
+        uint16_t rhs = x/10+sib1.siRadioFrameOffset;
+        if(lhs == rhs && !si){
+          si = true;
+          if (NbIotRrcSap::ConvertSchedulingInfoTb2int(sib1.schedulingInfoList[j]) > 120){
+            siRepetitions = 8;
+          }else{
+            siRepetitions = 2;
+          }
+          siWindow = NbIotRrcSap::ConvertSiWindowLength2int(sib1);
+          siRepetitionPattern = NbIotRrcSap::ConvertSchedulingInfoRepetitionPattern2int(sib1.schedulingInfoList[j]);
+          // Begin of SI Message
+        }
+
+      }
+      if(si){
+        if(((i/10)-sib1.siRadioFrameOffset)%siRepetitionPattern == 0 && i % 10 == 0){
+          tmpSiRepetitions = siRepetitions;
+        }
+        if(tmpSiRepetitions > 0){
+          if(m_downlink[i] != -1){
+            m_downlink[i] = -1;
+            tmpSiRepetitions--;
+          }
+        }
+
+      }
+      if(siWindow > 0){
+        siWindow--;
+      }else{
+        si = false;
+      }
     }
+
+
   if (m_only15KhzSpacing)
     {
       m_uplink.resize (12, std::vector<int> ());
@@ -122,6 +213,8 @@ NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces
 void
 NbiotScheduler::DoDispose ()
 {
+  //LogUplinkGrid();
+  LogDownlinkGrid();
   NS_LOG_FUNCTION (this);
 }
 
@@ -170,8 +263,8 @@ NbiotScheduler::ScheduleRarReq (NbIotRrcSap::NpdcchMessage msg, SearchSpaceConfi
 
   if (msg.ce == m_ce0.coverageEnhancementLevel)
     {
-      msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
-      msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
+      msg.dciN0.dciRepetitions = NbIotRrcSap::DciN0::DciRepetitions::r16;
+      msg.dciN1.dciRepetitions = NbIotRrcSap::DciN1::DciRepetitions::r16;
 
     }
   else if (msg.ce == m_ce1.coverageEnhancementLevel)
@@ -739,7 +832,8 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
   for(std::vector<uint16_t>::iterator it = m_searchSpaceRntiMap[ssc].begin(); it != m_searchSpaceRntiMap[ssc].end(); ){
     NbIotRrcSap::NpdcchMessage dci_candidate;
     if(m_rntiUeConfigMap[(*it)].rlcDlBuffer > 0){
-
+      uint32_t buffer =m_rntiUeConfigMap[(*it)].rlcDlBuffer;
+      std::cout << buffer;
       dci_candidate= CreateDciNpdcchMessage((*it), NbIotRrcSap::NpdcchMessage::DciType::n1); 
       if(ScheduleNpdcchMessage(dci_candidate,ssc)){
         scheduledMessages.push_back(dci_candidate);
@@ -749,6 +843,8 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
       
       
     }else if(m_rntiUeConfigMap[(*it)].rlcUlBuffer > 0){
+      uint32_t buffer_ul =m_rntiUeConfigMap[(*it)].rlcUlBuffer;
+      std::cout << buffer_ul;
       dci_candidate = CreateDciNpdcchMessage((*it), NbIotRrcSap::NpdcchMessage::DciType::n0); 
       if(ScheduleNpdcchMessage(dci_candidate,ssc)){
         scheduledMessages.push_back(dci_candidate);
@@ -1269,8 +1365,8 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
   else if (m_rntiRsrpMap[rnti] > m_sib2config.radioResourceConfigCommon.nprachConfig
                                               .rsrpThresholdsPrachInfoList.ce1_lowerbound)
     {
-      dciN1Repetitions = NbIotRrcSap::DciN1::DciRepetitions::r2;
-      dciN0Repetitions = NbIotRrcSap::DciN0::DciRepetitions::r2;
+      dciN1Repetitions = NbIotRrcSap::DciN1::DciRepetitions::r8;
+      dciN0Repetitions = NbIotRrcSap::DciN0::DciRepetitions::r8;
       ceLevel = m_ce0.coverageEnhancementLevel;
     }
   else{
@@ -1294,7 +1390,7 @@ NbIotRrcSap::NpdcchMessage NbiotScheduler::CreateDciNpdcchMessage(uint16_t rnti,
         tbs = (m_rntiUeConfigMap[rnti].rlcDlBuffer)* 8;
       }
       std::pair<NbIotRrcSap::DciN1, uint64_t> dci_tbs = m_Amc.getBareboneDciN1 (
-        m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, "inband");
+        m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, "standalone");
 
       NbIotRrcSap::DciN1 dci = dci_tbs.first;
 
@@ -1406,6 +1502,53 @@ SearchSpaceConfig NbiotScheduler::ConvertNprachParametersNb2SearchSpaceConfig(Nb
   ssc.offset =NbIotRrcSap::ConvertNpdcchOffsetRa2double (ce); 
   ssc.ce = ce.coverageEnhancementLevel;
   return ssc;
+}
+
+void NbiotScheduler::RemoveUe(uint16_t rnti){
+  if (m_rntiUeConfigMap.find(rnti) == m_rntiUeConfigMap.end()){
+    // Ue was not added to Scheduler
+    return;
+  }
+  UeConfig ue = m_rntiUeConfigMap[rnti];
+  std::vector<uint16_t>::iterator it = std::find(m_searchSpaceRntiMap[ue.searchSpaceConfig].begin(), m_searchSpaceRntiMap[ue.searchSpaceConfig].end(),rnti);
+  if(it != m_searchSpaceRntiMap[ue.searchSpaceConfig].end()){
+    m_searchSpaceRntiMap[ue.searchSpaceConfig].erase(it);
+  }
+  m_rntiUeConfigMap.erase(rnti);
+   
+}
+
+void NbiotScheduler::LogUplinkGrid(){
+  std::string logfile_path = "logs/Spectral_Uplink.log";
+  std::ofstream logfile;
+  logfile.open(logfile_path, std::ios_base::app);
+  for(size_t i = 0; i < m_uplink.size(); i++){
+    for(int64_t j = 0; j <  Simulator::Now().GetMilliSeconds(); j++){
+      logfile << m_uplink[i][j] << ",";
+    }
+    logfile << "\n";
+  }
+  logfile.close();
+}
+
+void NbiotScheduler::LogDownlinkGrid(){
+  std::string logfile_path = "logs/Spectral_Downlink.log";
+  std::ofstream logfile;
+  logfile.open(logfile_path, std::ios_base::app);
+  for(int64_t i = 0; i < Simulator::Now().GetMilliSeconds(); i++){
+    //if((i/10)% 16 == 0 && (i%10) == 0){
+    //  logfile << "\n";
+    //}
+    if(m_downlink[i] > -1){
+      logfile << " ";
+
+    }
+    //logfile  << " "<< m_downlink[i]<< ",";
+    logfile  << " "<< m_downlink[i]<< "\n";
+    
+  }
+
+  logfile.close();
 }
 
 

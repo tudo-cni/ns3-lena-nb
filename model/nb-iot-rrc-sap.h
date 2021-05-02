@@ -151,25 +151,41 @@ class NbIotRrcSap{
             dB9
             }crs;
         };
-        struct SchedulingInfoListNb {
-            uint32_t siTb;
+
+
+        struct SchedulingInfoNb {
+            enum class SiPeriodicityNb {
+                rf64,
+                rf128,
+                rf256,
+                rf512,
+                rf1024,
+                rf2048,
+                rf4096,
+                spare
+            }siPeriodicity;
+            enum class SiRepetitionPatternNb {
+                every2ndRF,
+                every4thRF,
+                every8thRF,
+                every16thRF
+            }siRepetitionPattern;
+            enum class SiTbNb{
+                b56,
+                b120,
+                b208,
+                b256,
+                b328,
+                b440,
+                b552,
+                b680
+            } siTb;
+            std::vector<uint8_t> sibMappingInfo; // IDs of SIB
         };
 
-        struct SiWindowLengthNb
-        {
-            enum class Swl{
-            ms160,
-            ms320,
-            ms480,
-            ms640,
-            ms960,
-            ms1280,
-            ms1600,
-            spare1
-            } swl;
-        };
+        
 
-        struct SiRadioFrameOffsetNb {};
+
         struct SystemInfoValueTagListNb {};
         struct LateNonCriticalExtensionNb {};
         struct NonCriticalExtensionNb {};
@@ -185,9 +201,18 @@ class NbIotRrcSap{
             DownlinkBitmapNb downlinkBitMap;
             EutraControlRegionSizeNb eutraControlRegionSize;
             NrsCrsPowerOffsetNb nrsCrsPowerOffset;
-            SchedulingInfoListNb schedulingInfoList;
-            SiWindowLengthNb siWindowLength;
-            SiRadioFrameOffsetNb siRadioFrameOffset;
+            std::vector<SchedulingInfoNb>schedulingInfoList;
+            enum class SiWindowLengthNb{
+                ms160,
+                ms320,
+                ms480,
+                ms640,
+                ms960,
+                ms1280,
+                ms1600,
+                spare1
+            } siWindowLength;
+            uint16_t siRadioFrameOffset; // 0-15
             SystemInfoValueTagListNb systemInfoValueTagList;
             LateNonCriticalExtensionNb lateNonCriticalExtension;
             NonCriticalExtensionNb nonCriticalExtension;
@@ -1025,37 +1050,37 @@ class NbIotRrcSap{
             }
             return res;
         }
-        static double ConvertSiWindowLength2Double (SiWindowLengthNb siWindowLength)
+        static int ConvertSiWindowLength2int(SystemInformationBlockType1Nb sib1)
         {
             double res = 0;
-            switch (siWindowLength.swl)
+            switch (sib1.siWindowLength)
             {
-            case SiWindowLengthNb::Swl::ms160:
-                res = 160.0;
+            case SystemInformationBlockType1Nb::SiWindowLengthNb::ms160:
+                res = 160;
                 break;
 
-            case SiWindowLengthNb::Swl::ms320:
-                res = 320.0;
+            case SystemInformationBlockType1Nb::SiWindowLengthNb::ms320:
+                res = 320;
                 break;
 
-            case SiWindowLengthNb::Swl::ms480:
-                res = 480.0;
+            case SystemInformationBlockType1Nb::SiWindowLengthNb::ms480:
+                res = 480;
                 break;
 
-            case SiWindowLengthNb::Swl::ms640:
-                res = 640.0;
+            case SystemInformationBlockType1Nb::SiWindowLengthNb::ms640:
+                res = 640;
                 break;
 
-            case SiWindowLengthNb::Swl::ms960:
-                res = 960.0;
+            case SystemInformationBlockType1Nb::SiWindowLengthNb::ms960:
+                res = 960;
                 break;
 
-            case SiWindowLengthNb::Swl::ms1280:
-                res = 1280.0;
+            case SystemInformationBlockType1Nb::SiWindowLengthNb::ms1280:
+                res = 1280;
                 break;
 
-            case SiWindowLengthNb::Swl::ms1600:
-                res = 1600.0;
+            case SystemInformationBlockType1Nb::SiWindowLengthNb::ms1600:
+                res = 1600;
                 break;
 
             default:
@@ -1841,8 +1866,87 @@ class NbIotRrcSap{
              }
             return res;
         }
-
- 
+        static uint16_t ConvertSchedulingInfoPeriodicity2int(SchedulingInfoNb schedulingInfoNb){
+            uint16_t res = 0;
+            switch(schedulingInfoNb.siPeriodicity){
+                case SchedulingInfoNb::SiPeriodicityNb::rf64:
+                    res = 64;
+                    break;
+                case SchedulingInfoNb::SiPeriodicityNb::rf128:
+                    res = 128;
+                    break;
+                case SchedulingInfoNb::SiPeriodicityNb::rf256:
+                    res = 256;
+                    break;
+                case SchedulingInfoNb::SiPeriodicityNb::rf512:
+                    res = 512;
+                    break;
+                case SchedulingInfoNb::SiPeriodicityNb::rf1024:
+                    res = 1024;
+                    break;
+                case SchedulingInfoNb::SiPeriodicityNb::rf2048:
+                    res = 2048;
+                    break;
+                case SchedulingInfoNb::SiPeriodicityNb::rf4096:
+                    res = 4096;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertSchedulingInfoRepetitionPattern2int(SchedulingInfoNb schedulingInfoNb){
+            uint16_t res = 0;
+            switch(schedulingInfoNb.siRepetitionPattern){
+                case SchedulingInfoNb::SiRepetitionPatternNb::every2ndRF:
+                    res = 2;
+                    break;
+                case SchedulingInfoNb::SiRepetitionPatternNb::every4thRF:
+                    res = 4;
+                    break;
+                case SchedulingInfoNb::SiRepetitionPatternNb::every8thRF:
+                    res = 8;
+                    break;
+                case SchedulingInfoNb::SiRepetitionPatternNb::every16thRF:
+                    res = 16;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
+        static uint16_t ConvertSchedulingInfoTb2int(SchedulingInfoNb schedulingInfoNb){
+            uint16_t res = 0;
+            switch(schedulingInfoNb.siTb){
+                case SchedulingInfoNb::SiTbNb::b56:
+                    res = 56;
+                    break;
+            case SchedulingInfoNb::SiTbNb::b120:
+                    res = 120;
+                    break;
+            case SchedulingInfoNb::SiTbNb::b208:
+                    res = 208;
+                    break;
+            case SchedulingInfoNb::SiTbNb::b256:
+                    res = 256;
+                    break;
+            case SchedulingInfoNb::SiTbNb::b328:
+                    res = 328;
+                    break;
+            case SchedulingInfoNb::SiTbNb::b440:
+                    res = 440;
+                    break;
+            case SchedulingInfoNb::SiTbNb::b552:
+                    res = 552;
+                    break;
+            case SchedulingInfoNb::SiTbNb::b680:
+                    res = 680;
+                    break;
+                default:
+                    break;
+             }
+            return res;
+        }
 
 };
 }

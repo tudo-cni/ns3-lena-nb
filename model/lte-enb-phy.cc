@@ -638,7 +638,7 @@ LteEnbPhy::StartFrame (void)
     mibMsg->SetMib (m_mibNb);
     m_controlMessagesQueue.at(0).push_back(mibMsg);
 
-    if ((m_nrFrames % 256) == 0){
+    if ((m_nrFrames % 257) == 0){
       m_sib1NbPeriod=true;
       switch(m_mibNb.schedulingInfoSib1){
         case 0:
@@ -689,7 +689,7 @@ LteEnbPhy::StartSubFrame (void)
       }
   }
   else{
-    if((m_nrSubFrames == 4) && (m_sib1NbPeriod) && (m_sib1NbRepetitions > 0) && ((m_nrFrames % 2) == 1)){
+    if((m_nrSubFrames == 5) && (m_sib1NbPeriod) && (m_sib1NbRepetitions > 0) && ((m_nrFrames % 2) == 1)){
       m_sib1NbRepetitions--;
 
       m_sib1Nb.hyperSfnMsb = std::bitset<8>(0);

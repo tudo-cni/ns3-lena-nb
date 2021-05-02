@@ -754,8 +754,9 @@ LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
       //EnergyStateChange on the next Subframe after Transmission Completed
       Simulator::Schedule(MilliSeconds(subframes+1), &LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
 
-      Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
-                           lc0InfoIt->second.macSapUser, txOpParams);
+      //Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+      //                     lc0InfoIt->second.macSapUser, txOpParams);
+      lc0InfoIt->second.macSapUser->NotifyTxOpportunityNb(txOpParams,subframes);
       lc0BsrIt->second.txQueueSize = 0;
     }
 }
@@ -1367,8 +1368,9 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                 txOpParams.componentCarrierId = m_componentCarrierId;
                 txOpParams.rnti = bsr->second.rnti;
                 txOpParams.lcid = bsr->second.lcid;
-                Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
-                    (*lcidIt).second.macSapUser, txOpParams);
+                //Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+                //    (*lcidIt).second.macSapUser, txOpParams);
+                (*lcidIt).second.macSapUser->NotifyTxOpportunityNb(txOpParams,subframes);
                 bytesforallLc -= bsr->second.statusPduSize;
                 bsr->second.statusPduSize = 0;
               }
@@ -1407,8 +1409,9 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                     txOpParams.componentCarrierId = m_componentCarrierId;
                     txOpParams.rnti = bsr->second.rnti;
                     txOpParams.lcid = bsr->second.lcid;
-                    Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
-                      (*lcidIt).second.macSapUser, txOpParams);
+                    //Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+                    //  (*lcidIt).second.macSapUser, txOpParams);
+                    (*lcidIt).second.macSapUser->NotifyTxOpportunityNb(txOpParams,subframes);
                   }
                 else if (bsr->second.txQueueSize > 0)
                   {
@@ -1450,8 +1453,9 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                     txOpParams.rnti = bsr->second.rnti;
                     txOpParams.lcid = bsr->second.lcid;
 
-                    Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
-                      (*lcidIt).second.macSapUser, txOpParams);
+                    //Simulator::Schedule (MilliSeconds (subframes), &LteMacSapUser::NotifyTxOpportunity,
+                    //  (*lcidIt).second.macSapUser, txOpParams);
+                    (*lcidIt).second.macSapUser->NotifyTxOpportunityNb(txOpParams,subframes);
                     
                   }
                   }

@@ -79,6 +79,13 @@ public:
    * \param rnti 
    */
   virtual void ResumeUe(uint16_t rnti, uint64_t resumeId) = 0;
+
+  /** 
+   * remove the UE, e.g., after handover or termination of the RRC connection
+   * 
+   * \param rnti 
+   */
+  virtual void RemoveUeFromScheduler(uint16_t rnti) = 0;
   /**
    * Logical Channel information to be passed to CmacSapProvider::ConfigureLc
    *

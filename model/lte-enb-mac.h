@@ -526,7 +526,7 @@ private:
   void SetCoverageLevelAndSib2Nb();
   
   
-  
+  void DoRemoveUeFromScheduler(uint16_t rnti);
   
 
   NbiotScheduler* m_schedulerNb = nullptr;
