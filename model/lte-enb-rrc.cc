@@ -1173,7 +1173,6 @@ UeManager::RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
                 tag.SetRnti (m_rnti);
                 tag.SetBid (Lcid2Bid (3));
                 msg.dedicatedInfoNas->AddPacketTag (tag);
-                std::cout << "Bla" << std::endl;
                 m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
               }
 
@@ -1914,7 +1913,7 @@ void UeManager::SwitchToResumeNb(){
   msg.resumeIdentity = m_resumeId; 
   m_rrc->m_rrcSapUser->SendRrcConnectionReleaseNb(m_rnti, msg);
   SwitchToState(IDLE_SUSPEND_EDRX);
-  Simulator::Schedule(MilliSeconds(30000), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti, m_resumeId);
+  Simulator::Schedule(MilliSeconds(50000), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti, m_resumeId);
 }
 
 ///////////////////////////////////////////

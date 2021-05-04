@@ -644,7 +644,6 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
           if (m_rntiUeConfigMap[(*it)].rlcDlBuffer > 0)
             {
               uint32_t buffer = m_rntiUeConfigMap[(*it)].rlcDlBuffer;
-              std::cout << buffer;
               dci_candidate =
                   CreateDciNpdcchMessage ((*it), NbIotRrcSap::NpdcchMessage::DciType::n1);
               if (ScheduleNpdcchMessage (dci_candidate, ssc))
@@ -658,7 +657,6 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
               else if (m_rntiUeConfigMap[(*it)].rlcUlBuffer > 0)
                 {
                   uint32_t buffer_ul = m_rntiUeConfigMap[(*it)].rlcUlBuffer;
-                  std::cout << buffer_ul;
                   dci_candidate =
                       CreateDciNpdcchMessage ((*it), NbIotRrcSap::NpdcchMessage::DciType::n0);
                   if (ScheduleNpdcchMessage (dci_candidate, ssc))
@@ -682,7 +680,6 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
           if (m_rntiUeConfigMap[(*it)].rlcUlBuffer > 0)
             {
               uint32_t buffer_ul = m_rntiUeConfigMap[(*it)].rlcUlBuffer;
-              std::cout << buffer_ul;
               dci_candidate =
                   CreateDciNpdcchMessage ((*it), NbIotRrcSap::NpdcchMessage::DciType::n0);
               if (ScheduleNpdcchMessage (dci_candidate, ssc))
@@ -704,7 +701,6 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
           else if (m_rntiUeConfigMap[(*it)].rlcDlBuffer > 0)
             {
               uint32_t buffer = m_rntiUeConfigMap[(*it)].rlcDlBuffer;
-              std::cout << buffer;
               dci_candidate =
                   CreateDciNpdcchMessage ((*it), NbIotRrcSap::NpdcchMessage::DciType::n1);
               if (ScheduleNpdcchMessage (dci_candidate, ssc))
