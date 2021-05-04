@@ -458,6 +458,9 @@ std::pair<NbIotRrcSap::DciN1, int>
 NbiotAmc::getBareboneDciN1 (double couplingloss, int dataSize, std::string opMode)
 {
   NpdschMeasurementValues value = getNpdschParameters (couplingloss, dataSize, opMode);
+  //value.NSF=8;
+  //value.NRep=16;
+  //value.IMCS = 5;
   NbIotRrcSap::DciN1 dci = mapMeasurementValuetoDciN1 (value);
   uint16_t tbs = TransportBlockSizeTableDlNb[value.IMCS][value.NSF];
   return std::make_pair (dci, tbs);
@@ -467,9 +470,9 @@ std::pair<NbIotRrcSap::DciN0, int>
 NbiotAmc::getBareboneDciN0 (double couplingloss, int dataSize, double scs, double bandwidth)
 {
   NpuschMeasurementValues value = getNpuschParameters (couplingloss, dataSize, scs, bandwidth);
-  value.NRep = 1;
-  value.NRU = 8;
-  value.ITBS= 7;
+  //value.NRep = 4;
+  //value.NRU = 10;
+  //value.ITBS= 6;
   NbIotRrcSap::DciN0 dci = mapMeasurementValuetoDciN0 (value);
   uint16_t tbs = TransportBlockSizeTableUlNb[value.ITBS][value.NRU];
   return std::make_pair (dci, tbs);

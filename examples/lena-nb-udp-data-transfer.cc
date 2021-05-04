@@ -120,8 +120,10 @@ main (int argc, char *argv[])
   bool disableUl = false;
   bool disablePl = true;
   bool scenario = false;
+  bool edt = true;
+  bool ciot = false;
   uint8_t worker = 0;
-  int seed = 1;
+  int seed = 25238723;
 
   // Command line arguments
   CommandLine cmd (__FILE__);
@@ -137,6 +139,8 @@ main (int argc, char *argv[])
   cmd.AddValue ("disableDl", "Disable downlink data flows", disableDl);
   cmd.AddValue ("disableUl", "Disable uplink data flows", disableUl);
   cmd.AddValue ("disablePl", "Disable data flows between peer UEs", disablePl);
+  cmd.AddValue ("ciot", "Enable Control Plane Optimization", ciot);
+  cmd.AddValue ("edt", "Enable Early Data Transmission", edt);
   cmd.AddValue ("scenario", "1 if should use scenario csv", scenario);
   cmd.AddValue ("worker", "worker id when using multithreading to not confuse logging", worker);
   cmd.AddValue ("randomSeed", "randomSeed",seed);
@@ -164,6 +168,8 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (false));
+  Config::SetDefault ("ns3::LteUeRrc::CIoT-Opt", BooleanValue(ciot));
+  Config::SetDefault ("ns3::LteUeRrc::EDT", BooleanValue(edt));
 
   std::vector<double> positions;
   if(scenario){
@@ -282,7 +288,7 @@ main (int argc, char *argv[])
   for (uint16_t i = 0; i < ueNodes.GetN(); i++)
     {
 
-      int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds()/2);
+      int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds());
       lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
 
       //lteHelper->Attach(ueLteDevs.Get(i)); //, enbLteDevs.Get(i)
@@ -301,7 +307,7 @@ main (int argc, char *argv[])
         UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
         ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
         ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(20));
+        ulClient.SetAttribute ("PacketSize", UintegerValue(11+1));
         clientApps.Add (ulClient.Install (ueNodes.Get(i)));
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
@@ -315,15 +321,27 @@ main (int argc, char *argv[])
      std::string logdir = "logs/";
   std::string makedir = "mkdir -p ";
   //auto start = std::chrono::system_clock::now();
-
+  std::string techdir = makedir;
+  if(edt){
+    logdir+= "earlydata/";
+  }
+  if(ciot){
+    logdir+= "ciotopt/";
+  }
+  if(!edt && !ciot){
+    logdir+= "release13/";
+  }
+  techdir += logdir;
+  int z = std::system(techdir.c_str());
   logdir += std::to_string(ueNodes.GetN());
   logdir += "_";
   logdir += std::to_string(simTime.GetInteger());
+  
   std::string top_dirmakedir = makedir+logdir; 
   int a = std::system(top_dirmakedir.c_str());
   std::cout << a << std::endl;
   logdir += "/";
-
+  
   if (scenario){
     logdir += "_";
     logdir += "predifined_scenario";
@@ -366,7 +384,7 @@ main (int argc, char *argv[])
   // Uncomment to enable PCAP tracing
   //p2ph.EnablePcapAll("lena-simple-epc");
 
-  Simulator::Stop (simTime+Seconds(50));
+  Simulator::Stop (2*simTime);
   Simulator::Run ();
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;

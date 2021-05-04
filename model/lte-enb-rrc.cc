@@ -1173,6 +1173,7 @@ UeManager::RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
                 tag.SetRnti (m_rnti);
                 tag.SetBid (Lcid2Bid (3));
                 msg.dedicatedInfoNas->AddPacketTag (tag);
+                std::cout << "Bla" << std::endl;
                 m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
               }
 
@@ -3330,7 +3331,7 @@ LteEnbRrc::MoveUeToResumed(uint16_t rnti, uint64_t resumeId){
   m_ccmRrcSapProvider->MoveUeToResume(rnti, resumeId);
   m_rrcSapUser->MoveUeToResume(rnti,resumeId);
   m_s1SapProvider->MoveUeToResume(rnti, resumeId);
-
+  m_cmacSapProvider.at(0)->RemoveUeFromScheduler(rnti);
   RemoveUeNb(rnti, true);
   //// Delete Ue
   //std::map <uint16_t, Ptr<UeManager> >::iterator it = m_ueActiveMap.find (rnti);
@@ -3789,7 +3790,6 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
   ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
   ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
   NbIotRrcSap::NprachParametersNb ce1;
   ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
   ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
@@ -3817,6 +3817,49 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
   ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
+  //CMW
+
+  //NbIotRrcSap::NprachParametersNb ce0;
+  //ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
+  //ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+  //ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms16;
+  //ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
+  //ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  //ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::oneThird;
+  //ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n6;
+  //ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
+  //ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r16;
+  //ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
+  //ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+  //NbIotRrcSap::NprachParametersNb ce1;
+  //ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
+  //ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+  //ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms64;
+  //ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
+  //ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  //ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::oneThird;
+  //ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n6;
+  //ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n4;
+  //ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r16;
+  //ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
+  //ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+  //NbIotRrcSap::NprachParametersNb ce2;
+  //ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
+  //ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+  //ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
+  //ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
+  //ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
+  //ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::oneThird;
+  //ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n6;
+  //ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
+  //ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r16;
+  //ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
+  //ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
+
+
   NbIotRrcSap::NprachParametersNbR14 ce0v14;
   ce0v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
   ce0v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
@@ -3829,26 +3872,27 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce0v14.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
   NbIotRrcSap::NprachParametersNbR14 ce1v14;
-  ce1v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
-  ce1v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
-  ce1v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
-  ce1v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+  ce1v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
+  ce1v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
+  ce1v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce1v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
   ce1v14.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
   ce1v14.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-  ce1v14.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
-  ce1v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+  ce1v14.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r64;
+  ce1v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
   ce1v14.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
   NbIotRrcSap::NprachParametersNbR14 ce2v14;
-  ce2v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
-  ce2v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
-  ce2v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
-  ce2v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
+  ce2v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
+  ce2v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
+  ce2v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce2v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
   ce2v14.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
   ce2v14.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
-  ce2v14.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
-  ce2v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
+  ce2v14.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
+  ce2v14.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
   ce2v14.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+
 
   sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb0 = ce0;
   sib2.radioResourceConfigCommon.nprachConfig.nprachParametersList.nprachParametersNb1 = ce1;

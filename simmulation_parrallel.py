@@ -14,13 +14,15 @@ callgrind_command = "cd ../../ && ./waf --command-template\"valgrind --tool=call
 
 
 class SimulationParameters:
-    def __init__(self, numUesCe0, numUesCe1, numUesCe2, simulation, simTime, randomSeed):
+    def __init__(self, numUesCe0, numUesCe1, numUesCe2, simulation, simTime, randomSeed,edt, ciot):
         self.numUesCe0 = numUesCe0 
         self.numUesCe1 = numUesCe1 
         self.numUesCe2 = numUesCe2 
         self.simulation = simulation # .cc file to execute
         self.simTime = simTime # in MilliSeconds
         self.randomSeed = randomSeed
+        self.edt = edt
+        self.ciot = ciot
 
     def generateExecutableCall(self):
         #--numUesCe0={params[0]} --numUesCe1={params[1]} --numUesCe2={params[2]} --simTime={simTime} --randomSeed={seed}
@@ -31,6 +33,8 @@ class SimulationParameters:
         call += f" --simTime={self.simTime}"
         call += f" --randomSeed={self.randomSeed}"
         call += f" --scenario=0"
+        call += f" --edt={str(self.edt).lower()}"
+        call += f" --ciot={str(self.ciot).lower()}"
         return call
 
 class TaskQueue(queue.Queue):
@@ -62,12 +66,93 @@ class TaskQueue(queue.Queue):
             self.task_done()
 
 start_time = time.time()
-simTime = 100
-simu_queue = TaskQueue(1)
-seed =2 
+simTime = 600 
+simu_queue = TaskQueue(4)
+seed =10 
 for i in range(1,seed):
-    simu_queue.add_task(SimulationParameters(numUesCe0=10,numUesCe1=0,numUesCe2=0,simulation=callgrind_command,simTime=simTime,randomSeed=i))
+    simu_queue.add_task(SimulationParameters(numUesCe0=0,numUesCe1=10,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i,edt=False,ciot=False))
+    simu_queue.add_task(SimulationParameters(numUesCe0=0,numUesCe1=10,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i,edt=True,ciot=False))
+    simu_queue.add_task(SimulationParameters(numUesCe0=0,numUesCe1=10,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i,edt=False,ciot=True))
 
+    #simu_queue.add_task(SimulationParameters(numUesCe0=10,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=20,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=30,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=40,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=50,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=60,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=70,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=80,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=90,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=100,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=200,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=300,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=400,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=500,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=600,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=700,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=800,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=900,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=1000,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+
+    #simu_queue.add_task(SimulationParameters(numUesCe1=10,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=20,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=30,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=40,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=50,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=60,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=70,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=80,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=90,  numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=100, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=200, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=300, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=400, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=500, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=600, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=700, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=800, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=900, numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe1=1000,numUesCe0=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+
+    #simu_queue.add_task(SimulationParameters(numUesCe0=10, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=20, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=30, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=40, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=50, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=60, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=70, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=80, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=90, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=100, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=200, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=300, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=400, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=500, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=600, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=700, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=800, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=900, numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=1000,numUesCe1=1,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+
+    #simu_queue.add_task(SimulationParameters(numUesCe0=10, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=20, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=30, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=40, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=50, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=60, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=70, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=80, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=90, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=100, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=200, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=300, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=400, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=500, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=600, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=700, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=800, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=900, numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
+    #simu_queue.add_task(SimulationParameters(numUesCe0=1000,numUesCe1=5,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
 simu_queue.start_workers()
 
 simu_queue.join()
