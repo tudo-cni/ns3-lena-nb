@@ -3873,7 +3873,7 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   NbIotRrcSap::NprachParametersNbR14 ce1v14;
   ce1v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
   ce1v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-  ce1v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce1v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms512;
   ce1v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
   ce1v14.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
   ce1v14.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
@@ -3884,7 +3884,7 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   NbIotRrcSap::NprachParametersNbR14 ce2v14;
   ce2v14.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
   ce2v14.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
-  ce2v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce2v14.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms16;
   ce2v14.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
   ce2v14.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
   ce2v14.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
