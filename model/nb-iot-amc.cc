@@ -15,10 +15,10 @@ NbiotAmc::NbiotAmc ()
   m_npusch_params = readNpuschCSV (npusch_file);
   m_npdsch_params = readNpdschCSV (npdsch_file);
   m_r13 = true;
-  m_highestmcl = m_npdsch_params.inband.begin ()->Pathloss;
-  m_lowestmcl = m_npdsch_params.inband.begin ()->Pathloss;
-  for (std::vector<NpdschMeasurementValues>::iterator it = m_npdsch_params.inband.begin ();
-       it != m_npdsch_params.inband.end (); ++it)
+  m_highestmcl = m_npdsch_params.standalone.begin ()->Pathloss;
+  m_lowestmcl = m_npdsch_params.standalone.begin ()->Pathloss;
+  for (std::vector<NpdschMeasurementValues>::iterator it = m_npdsch_params.standalone.begin ();
+       it != m_npdsch_params.standalone.end (); ++it)
     {
       if (it->Pathloss < m_lowestmcl)
         {
