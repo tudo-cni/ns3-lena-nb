@@ -74,6 +74,9 @@ def build(bld):
     obj = bld.create_ns3_program('lena-nb-udp-data-transfer',
                                  ['lte'])
     obj.source = 'lena-nb-udp-data-transfer.cc'
+    obj = bld.create_ns3_program('lena-nb-csv-based-scenario',
+                                 ['lte'])
+    obj.source = 'lena-nb-csv-based-scenario.cc'
     if bld.env['ENABLE_EMU']:
         obj = bld.create_ns3_program('lena-simple-epc-emu',
                                      ['lte', 'fd-net-device'])
