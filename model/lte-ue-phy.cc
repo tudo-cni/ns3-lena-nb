@@ -192,7 +192,7 @@ LteUePhy::LteUePhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
 
   NS_ASSERT_MSG (Simulator::Now ().GetNanoSeconds () == 0,
                  "Cannot create UE devices after simulation started");
-  Simulator::Schedule (m_ueMeasurementsFilterPeriod, &LteUePhy::ReportUeMeasurements, this);
+  m_measurementEvent = Simulator::Schedule (m_ueMeasurementsFilterPeriod, &LteUePhy::ReportUeMeasurements, this);
 
   DoReset ();
 }
@@ -387,6 +387,7 @@ LteUePhy::DoInitialize ()
 
   //ScheduleWithContext() is needed here to set context for logs,
   //because Initialize() is called outside of Node::AddDevice().
+  wokeup = false;
 
   Simulator::ScheduleWithContext (nodeId, Seconds (0), &LteUePhy::SubframeIndication, this, 1, 1);
 
@@ -1594,7 +1595,13 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo){
     }
 
   // schedule next subframe indication
-  Simulator::Schedule (Seconds (GetTti ()), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+  if(wokeup){
+    m_subIndEvent = Simulator::Schedule (Seconds (GetTti ())+NanoSeconds(1), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+    wokeup = false;
+  }else{
+
+    m_subIndEvent = Simulator::Schedule (Seconds (GetTti ()), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+  }
 }
 
 
@@ -1619,6 +1626,22 @@ LteUePhy::SendSrs ()
   m_uplinkSpectrumPhy->StartTxUlSrsFrame ();
 }
 
+void LteUePhy::DoResetUlConfigured(){
+  m_ulConfigured = false;
+  m_subIndEvent.Cancel();
+  m_measurementEvent.Cancel();
+
+}
+
+void LteUePhy::DoStartUp(){
+  m_ulConfigured = true;
+  uint64_t microseconds2wait = 1000-(Simulator::Now().GetMicroSeconds()%1000);
+  uint64_t frameNo = (Simulator::Now().GetMilliSeconds()/10)+1;
+  uint64_t subframeNo = (Simulator::Now().GetMilliSeconds()%10)+1;
+  m_subIndEvent = Simulator::Schedule (MicroSeconds(microseconds2wait)-NanoSeconds(1), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+  m_measurementEvent = Simulator::Schedule (m_ueMeasurementsFilterPeriod, &LteUePhy::ReportUeMeasurements, this);
+  wokeup = true;
+}
 
 void
 LteUePhy::DoReset ()

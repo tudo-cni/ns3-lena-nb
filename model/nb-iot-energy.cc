@@ -88,9 +88,13 @@ void NbiotEnergyModel::DoNotifyStateChange(PowerState newState){
 
 }
 double NbiotEnergyModel::GetEnergyRemaining(){
+    // Update Power when reading
+    DoNotifyStateChange(m_lastState);
     return m_battery->GetRemainingEnergy();
 }
 double NbiotEnergyModel::GetEnergyRemainingFraction(){
+    // Update Power when reading
+    DoNotifyStateChange(m_lastState);
     return m_battery->GetEnergyFraction();
 }
 }

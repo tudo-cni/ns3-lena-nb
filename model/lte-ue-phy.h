@@ -487,8 +487,20 @@ private:
   // UE CPHY SAP methods
   /**
    * \brief Do Reset function
+   *
+   * 
    */
+  bool wokeup;
   void DoReset ();
+// UE CPHY SAP methods
+  /**
+   * \brief Do Reset function
+   */
+  void DoResetUlConfigured();
+  /**
+   * \brief Do Reset function
+   */
+  void DoStartUp();
   /**
    * \brief Start the cell search function
    *
@@ -806,6 +818,8 @@ private:
   TracedCallback<uint16_t, uint16_t, double, double, bool, uint8_t> m_reportUeMeasurements;
 
   EventId m_sendSrsEvent; ///< send SRS event
+  EventId m_subIndEvent; ///< send SRS event
+  EventId m_measurementEvent; ///< send SRS event
 
   /**
    * The `UlPhyTransmission` trace source. Contains trace information regarding

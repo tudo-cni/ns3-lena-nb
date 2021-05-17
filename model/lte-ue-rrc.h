@@ -1397,7 +1397,7 @@ private:
   // NBIOT SPECIFIC
   // Temporary Logging method for successful random access
   void LogRA(bool success, Time timetillconnection);
-  void LogDataTransmission(Time timetillconnection);
+  void LogDataTransmission();
   void LogEnergyRemaining();
   std::string m_logdir;
 
@@ -1414,12 +1414,14 @@ private:
   Time m_t3324;
   bool m_cIotOpt;
   bool m_edt;
+  bool m_logging;
   std::vector<Ptr<Packet>> m_packetStored;
   NbIotRrcSap::RadioResourceConfigCommonNb m_rc;
 public:
   /** 
    * The number of component carriers.
    */
+  void EnableLogging();
   void AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si);
   void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
   bool DoGetEdtEnabled();

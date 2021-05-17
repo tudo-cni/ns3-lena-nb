@@ -152,6 +152,8 @@ public:
    */
   virtual void SetPa (double pa) = 0;
 
+  virtual void ResetUlConfigured() = 0;
+  virtual void StartUp() = 0;
   /**
    * \brief Set RSRP filter coefficient.
    *
@@ -351,6 +353,8 @@ public:
   virtual void SetTransmissionMode (uint8_t txMode);
   virtual void SetSrsConfigurationIndex (uint16_t srcCi);
   virtual void SetPa (double pa);
+  virtual void ResetUlConfigured();
+  virtual void StartUp();
   virtual void SetRsrpFilterCoefficient (uint8_t rsrpFilterCoefficient);
   virtual void ResetPhyAfterRlf ();
   virtual void ResetRlfParams ();
@@ -450,6 +454,18 @@ MemberLteUeCphySapProvider<C>::SetPa (double pa)
   m_owner->DoSetPa (pa);
 }
 
+template <class C>
+void
+MemberLteUeCphySapProvider<C>::ResetUlConfigured()
+{
+  m_owner->DoResetUlConfigured();
+}
+template <class C>
+void
+MemberLteUeCphySapProvider<C>::StartUp()
+{
+  m_owner->DoStartUp();
+}
 template <class C>
 void
 MemberLteUeCphySapProvider<C>::SetRsrpFilterCoefficient (uint8_t rsrpFilterCoefficient)

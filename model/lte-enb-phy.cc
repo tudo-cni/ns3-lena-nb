@@ -710,7 +710,7 @@ LteEnbPhy::StartSubFrame (void)
   //    m_currentSrsOffset = (((m_nrFrames-1)*10 + (m_nrSubFrames-1)) % m_srsPeriodicity);
   //  }
   NS_LOG_INFO ("-----sub frame " << m_nrSubFrames << "-----");
-  m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
+  //m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
 
   // update info on TB to be received
   std::list<UlDciLteControlMessage> uldcilist = DequeueUlDci ();

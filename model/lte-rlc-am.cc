@@ -97,7 +97,7 @@ LteRlcAm::GetTypeId (void)
     .AddConstructor<LteRlcAm> ()
     .AddAttribute ("PollRetransmitTimer",
                    "Value of the t-PollRetransmit timer (See section 7.3 of 3GPP TS 36.322)",
-                   TimeValue (MilliSeconds (500000)),
+                   TimeValue (MilliSeconds (25000)), // 
                    MakeTimeAccessor (&LteRlcAm::m_pollRetransmitTimerValue),
                    MakeTimeChecker ())
     .AddAttribute ("ReorderingTimer",

@@ -248,6 +248,11 @@ LteSpectrumPhy::GetTypeId (void)
                     BooleanValue (false),
                     MakeBooleanAccessor (&LteSpectrumPhy::m_ctrlErrorModelEnabled),
                     MakeBooleanChecker ())
+    .AddAttribute ("EnableInterference",
+                    "Activate/Deactivate the error model of control (PCFICH-PDCCH decodification) [by default is active].",
+                    BooleanValue (false),
+                    MakeBooleanAccessor (&LteSpectrumPhy::m_interferenceEnabled),
+                    MakeBooleanChecker ())
     .AddTraceSource ("DlPhyReception",
                      "DL reception PHY layer statistics.",
                      MakeTraceSourceAccessor (&LteSpectrumPhy::m_dlPhyReception),
@@ -743,28 +748,40 @@ LteSpectrumPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
   Ptr<NbiotSpectrumSignalParametersDlCtrlFrame> nbiotDlCtrlRxParams = DynamicCast<NbiotSpectrumSignalParametersDlCtrlFrame> (spectrumRxParams);
   if (lteDataRxParams != 0)
     {
-      m_interferenceData->AddSignal (rxPsd, duration);
+      if(m_interferenceEnabled){
+        m_interferenceData->AddSignal (rxPsd, duration);
+      }
       StartRxData (lteDataRxParams);
     }
   else if (lteDlCtrlRxParams!=0)
     {
+      if(m_interferenceEnabled){
       m_interferenceCtrl->AddSignal (rxPsd, duration);
+      }
       StartRxDlCtrl (lteDlCtrlRxParams);
     }
   else if (lteUlSrsRxParams!=0)
     {
+
+      if(m_interferenceEnabled){
       m_interferenceCtrl->AddSignal (rxPsd, duration);
+      }
       StartRxUlSrs (lteUlSrsRxParams);
     }
   else if (nbiotDlCtrlRxParams != 0){
-    m_interferenceCtrl->AddSignal(rxPsd, duration);
+    
+    if(m_interferenceEnabled){
+      m_interferenceCtrl->AddSignal(rxPsd, duration);
+    }
     StartRxDlCtrlNb(nbiotDlCtrlRxParams);
   }
   else
     {
       // other type of signal (could be 3G, GSM, whatever) -> interference
-      m_interferenceData->AddSignal (rxPsd, duration);
-      m_interferenceCtrl->AddSignal (rxPsd, duration);
+      if(m_interferenceEnabled){
+        m_interferenceData->AddSignal (rxPsd, duration);
+        m_interferenceCtrl->AddSignal (rxPsd, duration);
+      }
     }    
 }
 
@@ -819,7 +836,9 @@ LteSpectrumPhy::StartRxData (Ptr<LteSpectrumSignalParametersDataFrame> params)
               if (params->packetBurst)
                 {
                   m_rxPacketBurstList.push_back (params->packetBurst);
-                  m_interferenceData->StartRx (params->psd);
+                  if(m_interferenceEnabled){
+                    m_interferenceData->StartRx (params->psd);
+                  }
                   
                   m_phyRxStartTrace (params->packetBurst);
                 }
@@ -907,7 +926,9 @@ LteSpectrumPhy::StartRxDlCtrlNb (Ptr<NbiotSpectrumSignalParametersDlCtrlFrame> n
               m_rxControlMessageList = nbiotDlCtrlRxParams->ctrlMsgList;
               m_endRxDlCtrlEvent = Simulator::Schedule (nbiotDlCtrlRxParams->duration, &LteSpectrumPhy::EndRxDlCtrl, this);
               ChangeState (RX_DL_CTRL);
-              m_interferenceCtrl->StartRx (nbiotDlCtrlRxParams->psd);            
+              if(m_interferenceEnabled){
+                m_interferenceCtrl->StartRx (nbiotDlCtrlRxParams->psd);            
+              }
             }
           else
             {
@@ -988,7 +1009,9 @@ LteSpectrumPhy::StartRxDlCtrl (Ptr<LteSpectrumSignalParametersDlCtrlFrame> lteDl
               m_rxControlMessageList = lteDlCtrlRxParams->ctrlMsgList;
               m_endRxDlCtrlEvent = Simulator::Schedule (lteDlCtrlRxParams->duration, &LteSpectrumPhy::EndRxDlCtrl, this);
               ChangeState (RX_DL_CTRL);
-              m_interferenceCtrl->StartRx (lteDlCtrlRxParams->psd);            
+              if(m_interferenceEnabled){
+                m_interferenceCtrl->StartRx (lteDlCtrlRxParams->psd);            
+              }
             }
           else
             {
@@ -1066,7 +1089,9 @@ LteSpectrumPhy::StartRxUlSrs (Ptr<LteSpectrumSignalParametersUlSrsFrame> lteUlSr
                            && (m_firstRxDuration == lteUlSrsRxParams->duration));
               }            
             ChangeState (RX_UL_SRS);
-            m_interferenceCtrl->StartRx (lteUlSrsRxParams->psd);          
+            if(m_interferenceEnabled){
+              m_interferenceCtrl->StartRx (lteUlSrsRxParams->psd);          
+            }
           }
         else
           {
@@ -1144,7 +1169,9 @@ LteSpectrumPhy::EndRxData ()
 
   // this will trigger CQI calculation and Error Model evaluation
   // as a side effect, the error model should update the error status of all TBs
-  m_interferenceData->EndRx ();
+  if(m_interferenceEnabled){
+    m_interferenceData->EndRx ();
+  }
   NS_LOG_DEBUG (this << " No. of burts " << m_rxPacketBurstList.size ());
   NS_LOG_DEBUG (this << " Expected TBs " << m_expectedTbs.size ());
   expectedTbs_t::iterator itTb = m_expectedTbs.begin ();
@@ -1344,7 +1371,9 @@ LteSpectrumPhy::EndRxDlCtrl ()
   
   // this will trigger CQI calculation and Error Model evaluation
   // as a side effect, the error model should update the error status of all TBs
-  m_interferenceCtrl->EndRx ();
+  if(m_interferenceEnabled){
+    m_interferenceCtrl->EndRx ();
+  }
   // apply transmission mode gain
   NS_LOG_DEBUG (this << " txMode " << (uint16_t)m_transmissionMode << " gain " << m_txModeGain.at (m_transmissionMode));
   NS_ASSERT (m_transmissionMode < m_txModeGain.size ());
@@ -1387,7 +1416,9 @@ LteSpectrumPhy::EndRxUlSrs ()
 {
   NS_ASSERT (m_state == RX_UL_SRS);
   ChangeState (IDLE);
-  m_interferenceCtrl->EndRx ();
+  if(m_interferenceEnabled){
+    m_interferenceCtrl->EndRx ();
+  }
   // nothing to do (used only for SRS at this stage)
 }
 

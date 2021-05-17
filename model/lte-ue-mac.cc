@@ -1708,7 +1708,7 @@ LteUeMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
   NS_LOG_FUNCTION (this);
   m_frameNo = frameNo;
   m_subframeNo = subframeNo;
-  RefreshHarqProcessesPacketBuffer ();
+  //RefreshHarqProcessesPacketBuffer ();
   //
   if(m_edrx && GetBufferSizeComplete() == 0 && !m_transmissionScheduled){
     m_listenToSearchSpaces = false;
