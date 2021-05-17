@@ -111,10 +111,9 @@ main (int argc, char *argv[])
   bool scenario = true;
   uint8_t worker = 0;
   int seed = 1;
-  std::string path;
+  std::string path = "scenarios/just_release13/szenario_5.0.csv";
   //double cellsize = 0;
   std::vector<std::vector<std::string>> ue_configs;
-
   // Command line arguments
   CommandLine cmd (__FILE__);
   cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
@@ -162,7 +161,8 @@ main (int argc, char *argv[])
   }
 
   // Calculate UES to consider
-  ues_to_consider = ue_configs.size()*simTime.GetDays();
+  ues_to_consider = ue_configs.size()*simTime.GetDays()*2;
+  ues_to_consider = 10; 
   std::cout << "ues_to_consider :" << ues_to_consider<< std::endl;
 
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
@@ -210,7 +210,11 @@ main (int argc, char *argv[])
         positionAlloc->Add (Vector (distance, 0, 0));
         }
   }
-  
+  MobilityHelper mobility;
+  mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  mobility.SetPositionAllocator(positionAlloc);
+  mobility.Install(enbNodes);
+  mobility.Install(ueNodes);
   // Install LTE Devices to the nodes
   NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
   NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
@@ -231,13 +235,15 @@ main (int argc, char *argv[])
   RngSeedManager::SetSeed (seed);  // Changes seed from default of 1 to 3
   Ptr<UniformRandomVariable> RaUeUniformVariable = CreateObject<UniformRandomVariable> ();
 
+
+
   // Install and start applications on UEs and remote host
   uint16_t ulPort = 2000;
   ApplicationContainer clientApps;
   ApplicationContainer serverApps;
+  // Pre-Run
 
-
-  for (uint16_t i = 0; i < ues_to_consider; i++)
+  for (uint16_t i = 0; i < ues_to_consider/2; i++)
     {
       int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds());
       lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
@@ -276,12 +282,53 @@ main (int argc, char *argv[])
 
       serverApps.Get(i)->SetStartTime (MilliSeconds (access));
       clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        }
-  MobilityHelper mobility;
-  mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  mobility.SetPositionAllocator(positionAlloc);
-  mobility.Install(enbNodes);
-  mobility.Install(ueNodes);
+    }
+
+
+  // UEs to be considered 
+  for (uint16_t i = ues_to_consider/2; i < ues_to_consider; i++)
+    {
+      int access = RaUeUniformVariable->GetInteger (simTime.GetMilliSeconds(), 2*simTime.GetMilliSeconds());
+      lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
+
+      Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
+      Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+      ueRrc->EnableLogging();
+      if(ue_configs[i][7].compare("True") == 0){
+        std::cout << "daata" << std::endl;
+        ueRrc->SetAttribute("CIoT-Opt", BooleanValue(true));
+      }
+      else{
+        ueRrc->SetAttribute("CIoT-Opt", BooleanValue(false));
+      }
+      if(ue_configs[i][8].compare("True\r") == 0){
+        std::cout << "daata" << std::endl;
+        ueRrc->SetAttribute("EDT", BooleanValue(true));
+      }
+      else{
+        ueRrc->SetAttribute("EDT", BooleanValue(false));
+      }
+
+      ++ulPort;
+      UdpEchoServerHelper server (ulPort);
+      serverApps.Add(server.Install (remoteHost));
+      //
+      // Create a UdpEchoClient application to send UDP datagrams from node zero to
+      // node one.
+      //
+
+      uint packetsize = stoi(ue_configs[i][5]);
+      UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
+      ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
+      ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
+      ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
+      clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+
+      serverApps.Get(i)->SetStartTime (MilliSeconds (access));
+      clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+    }
+
+  
 
 
 
@@ -305,16 +352,7 @@ main (int argc, char *argv[])
   std::cout << a << std::endl;
   logdir += "/";
   
-  if (scenario){
-    logdir += "predifined_scenario";
-  }
-  else{
 
-  }
-  std::string second_dirmakedir = makedir+logdir; 
-  a = std::system(second_dirmakedir.c_str());
-  std::cout << a << std::endl;
-  logdir += "/";
   auto tm = *std::localtime(&start_time);
   std::stringstream ss;
   ss << std::put_time(&tm, "%d_%m_%Y_%H_%M_%S");
@@ -330,13 +368,15 @@ main (int argc, char *argv[])
     Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
     ueRrc->SetLogDir(logdir); // Will be changed to real ns3 traces later on
   }
-
+  Ptr<LteEnbNetDevice> enbLteDevice = enbLteDevs.Get(0)->GetObject<LteEnbNetDevice>();
+  Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
+  enbRrc->SetLogDir(logdir);
   
   //lteHelper->EnableTraces ();
   // Uncomment to enable PCAP tracing
   //p2ph.EnablePcapAll("lena-simple-epc");
 
-  Simulator::Stop (2*simTime);
+  Simulator::Stop (3*simTime);
   Simulator::Run ();
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;

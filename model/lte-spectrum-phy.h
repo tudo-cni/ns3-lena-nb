@@ -560,6 +560,7 @@ private:
   Ptr<UniformRandomVariable> m_random;
   bool m_dataErrorModelEnabled; ///< when true (default) the phy error model is enabled
   bool m_ctrlErrorModelEnabled; ///< when true (default) the phy error model is enabled for DL ctrl frame
+  bool m_interferenceEnabled; ///< when true (default) the phy error model is enabled for DL ctrl frame
   
   uint8_t m_transmissionMode; ///< for UEs: store the transmission mode
   uint8_t m_layersNum; ///< layers num

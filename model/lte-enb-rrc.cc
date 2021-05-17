@@ -40,6 +40,7 @@
 #include <ns3/eps-bearer-tag.h>
 #include <ns3/packet.h>
 
+#include <fstream>
 #include <ns3/lte-rlc.h>
 #include <ns3/lte-rlc-tm.h>
 #include <ns3/lte-rlc-um.h>
@@ -1505,6 +1506,7 @@ UeManager::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params)
       tag.SetRnti (params.rnti);
       tag.SetBid (Lcid2Bid (params.lcid));
       params.pdcpSdu->AddPacketTag (tag);
+      m_rrc->LogDataReception(m_imsi);
       m_rrc->m_forwardUpCallback (params.pdcpSdu);
     }
 }
@@ -3909,6 +3911,18 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   }else{
     m_sib2Nb.back()= sib2;
   }
+}
+
+void LteEnbRrc::SetLogDir(std::string logdir){
+  m_logdir = logdir;
+}
+
+void LteEnbRrc::LogDataReception(uint32_t imsi){
+        std::string logfile_path = m_logdir+"DataRecep.log";
+        std::ofstream logfile;
+        logfile.open(logfile_path, std::ios_base::app);
+        logfile <<  imsi <<  ","<< Simulator::Now().GetMilliSeconds() << "\n";
+        logfile.close();
 }
 } // namespace ns3
 

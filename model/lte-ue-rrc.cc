@@ -202,7 +202,9 @@ void
 LteUeRrc::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
-  LogEnergyRemaining();
+  if(m_logging){
+    LogEnergyRemaining();
+  }
   for ( uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
    {
       delete m_cphySapUser.at(i);
@@ -641,11 +643,11 @@ void LteUeRrc::LogRA(bool success, Time timetillconnection){
         logfile.close();
 }
 
-void LteUeRrc::LogDataTransmission(Time timetillconnection){
-        std::string logfile_path = m_logdir+"Data.log";
+void LteUeRrc::LogDataTransmission(){
+        std::string logfile_path = m_logdir+"DataTrans.log";
         std::ofstream logfile;
         logfile.open(logfile_path, std::ios_base::app);
-        logfile <<  m_imsi << ","  << uint(m_cmacSapProvider.at(0)->GetCoverageEnhancementLevel())<< ","<< timetillconnection.GetMilliSeconds() << "\n";
+        logfile <<  m_imsi << "," << Simulator::Now().GetMilliSeconds() << "\n";
         logfile.close();
 }
 
@@ -665,8 +667,9 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
 {
   NS_LOG_FUNCTION (this << packet);
 
-  
-  m_dataSendTime = Simulator::Now();
+  if(m_logging){
+    LogDataTransmission();
+  }
   uint32_t msg3offset = 5;
   if(m_edt){
     if(m_edt && (packet->GetSize() + msg3offset)*8 < 1000){ // 1000 Bit is max TBS, MAC checks later if transmission is possible
@@ -688,6 +691,7 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
       if(!m_psmTimeout.IsExpired()){
         m_psmTimeout.Cancel();
       }
+    //m_cphySapProvider.at(0)->StartUp();
     m_hasReceivedMibNb = false;
     m_resumePending = true;
     SwitchToState(IDLE_WAIT_MIB); // After PSM UE hast to receive MIB again
@@ -757,7 +761,6 @@ LteUeRrc::DoDisconnect ()
 void
 LteUeRrc::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params)
 {
-  LogDataTransmission(Simulator::Now()-m_dataSendTime);
   NS_LOG_FUNCTION (this);
   m_asSapUser->RecvData (params.pdcpSdu);
 }
@@ -874,11 +877,14 @@ LteUeRrc::DoNotifyRandomAccessFailed ()
     {
     case IDLE_RANDOM_ACCESS:
       {
-        SwitchToState (IDLE_CAMPED_NORMALLY);
+        //SwitchToState (IDLE_CAMPED_NORMALLY);
+        SwitchToState(IDLE_SUSPEND_PSM);
         m_asSapUser->NotifyConnectionFailed ();
         //std::cout << "I'm dead" << std::endl;
-        LogRA(false, m_connectStartTime);
+        if(m_logging){
 
+        LogRA(false, m_connectStartTime);
+        }
 
       }
       break;
@@ -1378,7 +1384,6 @@ LteUeRrc::DoRecvRrcEarlyDataCompleteNb(NbIotRrcSap::RrcEarlyDataCompleteNb msg){
           
         }
         if (msg.dedicatedInfoNas->GetSize() > 0){
-          LogDataTransmission(Simulator::Now()-m_dataSendTime);
           m_asSapUser->RecvData (msg.dedicatedInfoNas);
         }
 
@@ -1523,7 +1528,9 @@ LteUeRrc::DoRecvRrcConnectionReconfiguration (LteRrcSap::RrcConnectionReconfigur
             }
           LteRrcSap::RrcConnectionReconfigurationCompleted msg2;
           msg2.rrcTransactionIdentifier = msg.rrcTransactionIdentifier;
-          LogRA(true, Simulator::Now()-m_connectStartTime);
+          if(m_logging){
+            LogRA(true, Simulator::Now()-m_connectStartTime);
+          }
           m_rrcSapUser->SendRrcConnectionReconfigurationCompleted (msg2);
           m_connectionReconfigurationTrace (m_imsi, m_cellId, m_rnti);
         }
@@ -3753,6 +3760,7 @@ LteUeRrc::SwitchToState (State newState)
         for (uint16_t i = 0; i < m_numberOfComponentCarriers; i++)
           {
             m_cmacSapProvider.at(i)->NotifyPsm(); // reset the MAC
+            //m_cphySapProvider.at(i)->ResetUlConfigured();
           }
       }
       if(oldState == IDLE_SUSPEND_EDRX){
@@ -3765,7 +3773,9 @@ LteUeRrc::SwitchToState (State newState)
       // usually wait for TAU but no TAU implemented yet
       //m_hasReceivedMibNb = false; // UE has to received MasterInformationBlock again after PSM see 3GPP TR 45 820 13_1
       //m_resumePending = true;
+      //m_cphySapProvider.at(0)->StartUp();
       DoConnect();
+
       break;
     default:
       break;
@@ -3925,6 +3935,9 @@ bool LteUeRrc::DoGetEdtEnabled(){
   return m_edt;
 }
 
+void LteUeRrc::EnableLogging(){
+  m_logging = true;
+}
 
 } // namespace ns3
 

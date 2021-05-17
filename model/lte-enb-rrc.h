@@ -1888,9 +1888,11 @@ private:
   void GenerateSystemInformationBlockType1Nb();
   void GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, ns3::Ptr<ns3::ComponentCarrierBaseStation>> cc);
   bool m_edt;
-
+  std::string m_logdir;
 public:
   uint64_t AttachSuspendedUeNb(uint32_t imsi);
+  void SetLogDir(std::string logfile);
+  void LogDataReception(uint32_t imsi);
 
   NbIotRrcSap::SystemInformationBlockType1Nb GetSib1Nb();
   NbIotRrcSap::SystemInformationNb GetSiNb();

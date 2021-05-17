@@ -245,9 +245,11 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
   NpuschMeasurementValues value;
   value.TTI = 10000;
   value.BLER = 1;
-  int max_tbs;
+  int max_tbs = 1000;
+  int max_tbsi = 13;
   if(m_r13){
     max_tbs = 1000;
+    max_tbsi = 12;
   }
   for (std::vector<NpuschMeasurementValues>::iterator it = m_npusch_params.measurements.begin ();
        it != m_npusch_params.measurements.end (); ++it)
@@ -261,7 +263,10 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
                   if (it->TTI < value.TTI)
                     { 
                       if (it->BLER < value.BLER){
-                        value = *it;
+                        NpuschMeasurementValues tmp = *it;
+                        if(tmp.ITBS <= max_tbsi){
+                          value = *it;
+                        }
                       }
                     }
                 }
