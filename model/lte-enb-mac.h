@@ -528,6 +528,8 @@ private:
   
   void DoRemoveUeFromScheduler(uint16_t rnti);
   
+  void DoSetLogDir(std::string logdir);
+  
 
   NbiotScheduler* m_schedulerNb = nullptr;
   std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
@@ -558,6 +560,7 @@ private:
   std::map<uint16_t, uint8_t> m_ueStoredBSR;
   std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
   std::map<uint16_t, EventId> m_noDataIndicators;
+  std::string m_logdir;
   bool m_edt;
   };
 

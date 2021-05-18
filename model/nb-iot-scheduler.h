@@ -29,6 +29,7 @@
 #include <unordered_map>
 #include "nb-iot-amc.h"
 #include <tuple>
+#include <string> 
 
 namespace ns3 {
 
@@ -114,6 +115,7 @@ std::vector<std::pair<uint64_t, std::vector<uint64_t>>> GetNextAvailableNpuschCa
 std::pair<NbIotRrcSap::UlGrant, std::pair<uint64_t,std::vector<uint64_t>>> GetNextAvailableMsg3UlGrantCandidate(uint64_t endSubframeMsg2, uint64_t numSubframes);
 NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::DciType dci_type);
 
+void SetLogDir(std::string logdir);
 void RoundRobinScheduling(SearchSpaceConfig ssc);
 std::vector<int> m_downlink;
 void RemoveUe(uint16_t rnti);
@@ -152,6 +154,7 @@ protected:
   NbIotRrcSap::SystemInformationBlockType2Nb m_sib2config;
   std::map<SearchSpaceConfig, uint16_t> m_RoundRobinLastScheduled;
 
+  std::string m_logdir;
 //std::vector<std::pair<uint64_t,uint64_t>> GetAllPossibleSearchSpaceCandidates(std::vector<uint64_t> subframes, uint64_t R_max);
   void LogUplinkGrid();
   void LogDownlinkGrid();

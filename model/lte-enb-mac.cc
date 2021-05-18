@@ -81,6 +81,7 @@ public:
   virtual RachConfigNb GetRachConfigNb ();
   virtual void NotifyConnectionSuccessful(uint16_t rnti);
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti);
+  virtual void SetLogDir(std::string logdir);
 
 private:
   LteEnbMac *m_mac; ///< the MAC
@@ -167,6 +168,12 @@ LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue
 EnbMacMemberLteEnbCmacSapProvider::AllocateNcRaPreamble (uint16_t rnti)
 {
   return m_mac->DoAllocateNcRaPreamble (rnti);
+}
+
+void
+EnbMacMemberLteEnbCmacSapProvider::SetLogDir(std::string logdir)
+{
+  return m_mac->DoSetLogDir(logdir);
 }
 
 /// EnbMacMemberFfMacSchedSapUser class
@@ -973,6 +980,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
           std::vector<NbIotRrcSap::NprachParametersNb>{m_ce0Parameter, m_ce1Parameter,
                                                        m_ce2Parameter},
           m_sib2Nb);
+      m_schedulerNb->SetLogDir(m_logdir);
     }
   // Implement NB-IoT DCI Searchspaces Type2-CSS All AL2  Liberg et al. p 282
   // Find out if current subframe is start of Type2/UE-specific search space
@@ -1605,6 +1613,9 @@ LteEnbMac::DoResumeUe(uint16_t rnti, uint64_t resumeId){
 
 void LteEnbMac::DoRemoveUeFromScheduler(uint16_t rnti){
   m_schedulerNb->RemoveUe(rnti);
+}
+void LteEnbMac::DoSetLogDir(std::string logdir){
+  m_logdir = logdir;
 }
 void
 LteEnbMac::DoRemoveUe (uint16_t rnti)

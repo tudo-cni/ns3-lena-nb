@@ -22,6 +22,7 @@ NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces
   m_DciTimeOffsetRmaxSmall.reserve (8);
   m_DciTimeOffsetRmaxBig.reserve (8);
   m_Msg3TimeOffset.reserve (4);
+  m_logdir = "";
 
   m_DciTimeOffsetRmaxSmall.insert (
       m_DciTimeOffsetRmaxSmall.begin (),
@@ -230,8 +231,8 @@ NbiotScheduler::NbiotScheduler (std::vector<NbIotRrcSap::NprachParametersNb> ces
 void
 NbiotScheduler::DoDispose ()
 {
-  //LogUplinkGrid();
-  //LogDownlinkGrid ();
+  LogUplinkGrid();
+  LogDownlinkGrid ();
   NS_LOG_FUNCTION (this);
 }
 
@@ -1191,7 +1192,7 @@ NbiotScheduler::RemoveUe (uint16_t rnti)
 void
 NbiotScheduler::LogUplinkGrid ()
 {
-  std::string logfile_path = "logs/Spectral_Uplink.log";
+  std::string logfile_path = m_logdir+"Spectral_Uplink.log";
   std::ofstream logfile;
   logfile.open (logfile_path, std::ios_base::app);
   for (size_t i = 0; i < m_uplink.size (); i++)
@@ -1205,10 +1206,15 @@ NbiotScheduler::LogUplinkGrid ()
   logfile.close ();
 }
 
+void NbiotScheduler::SetLogDir(std::string logdir){
+  std::cout << logdir << std::endl;
+  m_logdir = logdir;
+}
+
 void
 NbiotScheduler::LogDownlinkGrid ()
 {
-  std::string logfile_path = "logs/Spectral_Downlink.log";
+  std::string logfile_path = m_logdir+"Spectral_Downlink.log";
   std::ofstream logfile;
   logfile.open (logfile_path, std::ios_base::app);
   for (int64_t i = 0; i < Simulator::Now ().GetMilliSeconds (); i++)

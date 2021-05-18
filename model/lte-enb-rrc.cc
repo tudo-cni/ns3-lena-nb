@@ -3915,6 +3915,7 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
 
 void LteEnbRrc::SetLogDir(std::string logdir){
   m_logdir = logdir;
+  m_cmacSapProvider.at(0)->SetLogDir(m_logdir);
 }
 
 void LteEnbRrc::LogDataReception(uint32_t imsi){
