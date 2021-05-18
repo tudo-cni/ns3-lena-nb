@@ -334,8 +334,10 @@ LteSpectrumPhy::SetNoisePowerSpectralDensity (Ptr<const SpectrumValue> noisePsd)
   NS_LOG_FUNCTION (this << noisePsd);
   NS_ASSERT (noisePsd);
   m_rxSpectrumModel = noisePsd->GetSpectrumModel ();
+  if(m_interferenceEnabled){
   m_interferenceData->SetNoisePowerSpectralDensity (noisePsd);
   m_interferenceCtrl->SetNoisePowerSpectralDensity (noisePsd);
+  }
 }
 
   

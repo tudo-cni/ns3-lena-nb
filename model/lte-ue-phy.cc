@@ -1389,11 +1389,11 @@ LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
    * (to be called from ChunkProcessor after RX is finished).
    */
   m_pssReceived = true;
-  PssElement el;
-  el.cellId = cellId;
-  el.pssPsdSum = sum;
-  el.nRB = nRB;
-  m_pssList.push_back (el);
+  //PssElement el;
+  //el.cellId = cellId;
+  //el.pssPsdSum = sum;
+  //el.nRB = nRB;
+  //m_pssList.push_back (el);
 
 } // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
 void

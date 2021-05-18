@@ -111,7 +111,7 @@ main (int argc, char *argv[])
   bool scenario = true;
   uint8_t worker = 0;
   int seed = 1;
-  std::string path = "scenarios/just_release13/szenario_5.0.csv";
+  std::string path = "scenarios/just_release13/szenario_2.0.csv";
   //double cellsize = 0;
   std::vector<std::vector<std::string>> ue_configs;
   // Command line arguments
@@ -162,7 +162,6 @@ main (int argc, char *argv[])
 
   // Calculate UES to consider
   ues_to_consider = ue_configs.size()*simTime.GetDays()*2;
-  ues_to_consider = 10; 
   std::cout << "ues_to_consider :" << ues_to_consider<< std::endl;
 
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
