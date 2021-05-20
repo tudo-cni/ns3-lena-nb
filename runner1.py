@@ -13,6 +13,8 @@ simulation_command = "cd ../../ && ./waf --run \"lena-nb-csv-based-scenario"
 
 callgrind_command = "cd ../../ && ./waf --command-template\"valgrind --tool=callgrind  \%\s\" --run \"lena-nb-udp-data-transfer"
 
+sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-csv-based-scenario-optimized"
+
 
 class SimulationParameters:
     def __init__(self, simulation, simTime, randomSeed, path):
@@ -55,33 +57,34 @@ class TaskQueue(queue.Queue):
             simulationParameters = self.get()
             print(simulationParameters)
             cmd = simulationParameters[0].generateExecutableCall()
-            cmd += f" --worker={id}\""
+            cmd += f" --worker={id}"
+            print(cmd)
             try:
                 result = subprocess.run(cmd, shell=True, check=True)
                 if result.returncode != 0:
-                    print("BLALALALALA")
+                    print("Something failed")
                     self.put(simulationParameters)
             except:
                 # Task failed, maybe because of missing resources
                 # put simulation back on stac
-                print("BLALALALALA")
+                print("Something Failed")
                 self.put(simulationParameters)
 
             self.task_done()
 
 start_time = time.time()
 simTime =300 
-simu_queue = TaskQueue(20)
+simu_queue = TaskQueue(40)
 seed =10 
 to_simulate = "../../scenarios"
 for i in range(1,seed):
     for filename in os.listdir(to_simulate):
         print(filename)
-        filepath=to_simulate[6:]+"/"+filename
-        filepath.replace("/","\/")
-        filepath = "\'"+filepath+"\'"
-        print(filepath)
-        simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=simulation_command, randomSeed=i,path=to_simulate[6:]+"/"+filename))
+        #filepath=to_simulate[6:]+"/"+filename
+        #filepath.replace("/","\/")
+        #filepath = "\'"+filepath+"\'"
+        #print(filepath)
+        simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename))
 
     #simu_queue.add_task(SimulationParameters(numUesCe0=10,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))
     #simu_queue.add_task(SimulationParameters(numUesCe0=20,numUesCe1=0,numUesCe2=0,simulation=simulation_command,simTime=simTime,randomSeed=i))

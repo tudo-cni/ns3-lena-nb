@@ -111,7 +111,7 @@ main (int argc, char *argv[])
   bool scenario = true;
   uint8_t worker = 0;
   int seed = 1;
-  std::string path = "scenarios/just_release13/szenario_2.0.csv";
+  std::string path = "scenarios/szenario_2.0.csv";
   //double cellsize = 0;
   std::vector<std::vector<std::string>> ue_configs;
   // Command line arguments
