@@ -111,13 +111,15 @@ main (int argc, char *argv[])
   bool scenario = true;
   uint8_t worker = 0;
   int seed = 1;
-  std::string path = "scenarios/szenario_2.0.csv";
+  std::string path = "scenarios/release_13_and_ciot/5.0.csv";
+  std::string simName = "test";
   //double cellsize = 0;
   std::vector<std::vector<std::string>> ue_configs;
   // Command line arguments
   CommandLine cmd (__FILE__);
   cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
   cmd.AddValue ("path", "Total duration of the simulation", path);
+  cmd.AddValue ("simName", "Total duration of the simulation", simName);
   cmd.AddValue ("interPacketInterval", "Inter packet interval", interPacketInterval);
   cmd.AddValue ("scenario", "1 if should use scenario csv", scenario);
   cmd.AddValue ("worker", "worker id when using multithreading to not confuse logging", worker);
@@ -342,6 +344,13 @@ main (int argc, char *argv[])
   techdir += logdir;
   int z = std::system(techdir.c_str());
   std::cout << z;
+  techdir += "/";
+  techdir += simName;
+  techdir += "/";
+  z = std::system(techdir.c_str());
+  std::cout << z;
+  logdir += simName;
+  logdir += "/";
   logdir += std::to_string(ueNodes.GetN());
   logdir += "_";
   logdir += std::to_string(simTime.GetInteger());

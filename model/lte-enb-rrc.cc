@@ -1175,6 +1175,8 @@ UeManager::RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
                 tag.SetRnti (m_rnti);
                 tag.SetBid (Lcid2Bid (3));
                 msg.dedicatedInfoNas->AddPacketTag (tag);
+
+                m_rrc->LogDataReception(m_imsi);
                 m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
               }
 
@@ -1276,6 +1278,7 @@ UeManager::RecvRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeC
             tag.SetRnti (m_rnti);
             tag.SetBid (Lcid2Bid (3));
             msg.dedicatedInfoNas->AddPacketTag (tag);
+            m_rrc->LogDataReception(m_imsi);
             m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
           }
         }
