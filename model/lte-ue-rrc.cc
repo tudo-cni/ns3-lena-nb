@@ -816,6 +816,9 @@ LteUeRrc::DoNotifyRandomAccessSuccessful (bool edt)
           else{
             
             m_srb0->m_rlc->SetRnti(m_rnti);
+            if(m_srb1 == 0){
+              return;
+            }
             m_srb1->m_rlc->SetRnti(m_rnti);
             m_srb1->m_pdcp->SetRnti(m_rnti);
             for(std::map<uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator it =   m_drbMap.begin(); it != m_drbMap.end(); ++it){

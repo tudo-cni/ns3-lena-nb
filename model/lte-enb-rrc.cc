@@ -854,6 +854,7 @@ UeManager::SendData (uint8_t bid, Ptr<Packet> p)
     case HANDOVER_PREPARATION:
     case HANDOVER_PATH_SWITCH:
     case IDLE_SUSPEND_EDRX:
+    case CONNECTION_RESUME:
     case IDLE_SUSPEND_PSM: // This is not correct, but will stay until paging is implemented
       {
         NS_LOG_LOGIC ("queueing data on PDCP for transmission over the air");
