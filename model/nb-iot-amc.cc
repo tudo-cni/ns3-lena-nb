@@ -256,20 +256,22 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
     {
       if (it->SCS == scs)
         {
-          if (it->Pathloss == couplingloss)
-            {
-              if (it->TBS >= dataSize && it->TBS <= max_tbs) 
-                {
-                  if (it->TTI < value.TTI)
-                    { 
-                      if (it->BLER < value.BLER){
-                        NpuschMeasurementValues tmp = *it;
-                        if(tmp.ITBS <= max_tbsi){
-                          value = *it;
+          if(it->bandwidth = bandwidth){
+            if (it->Pathloss == couplingloss)
+              {
+                if (it->TBS >= dataSize && it->TBS <= max_tbs) 
+                  {
+                    if (it->TTI < value.TTI)
+                      { 
+                        if (it->BLER < value.BLER){
+                          NpuschMeasurementValues tmp = *it;
+                          if(tmp.ITBS <= max_tbsi){
+                            value = *it;
+                          }
                         }
                       }
-                    }
-                }
+                  }
+              }
             }
         }
     }
