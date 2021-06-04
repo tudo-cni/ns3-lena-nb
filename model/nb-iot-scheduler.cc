@@ -1057,15 +1057,15 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
     {
       uint64_t tbs = 0;
       //std::cout << m_rntiRsrpMap[rnti] << std::endl;
-      NpuschMeasurementValues val = m_Amc.getMaxTbsforCl(m_rntiRsrpMap[rnti] - 43.0 - correction_factor,15000,15);
+      //NpuschMeasurementValues val = m_Amc.getMaxTbsforCl(m_rntiRsrpMap[rnti] - 43.0 - correction_factor,15000,15);
 
-      if (m_rntiUeConfigMap[rnti].rlcUlBuffer * 8 > val.TBS)
+      if (m_rntiUeConfigMap[rnti].rlcUlBuffer * 8 > 1000)
         { // max TBS Uplink Rel. 13
-          tbs = val.TBS;
+          tbs = 1000;
         }
       else
         {
-          tbs = (m_rntiUeConfigMap[rnti].rlcUlBuffer) * 8;
+          tbs = (10+m_rntiUeConfigMap[rnti].rlcUlBuffer) * 8;
         }
 
       std::pair<NbIotRrcSap::DciN0, uint64_t> dci_tbs =
