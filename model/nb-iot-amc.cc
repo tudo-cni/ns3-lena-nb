@@ -231,6 +231,40 @@ NbiotAmc::getNpdschParameters (double couplingloss, int dataSize, std::string op
 }
 
 NpuschMeasurementValues
+NbiotAmc::getMaxTbsforCl(double couplingloss, double scs, double bandwidth)
+{
+  couplingloss = abs (floor (couplingloss));
+  if (couplingloss < m_lowestmcl)
+    {
+      couplingloss = m_lowestmcl;
+    }
+  if (couplingloss > m_highestmcl)
+    {
+      couplingloss = m_highestmcl;
+    }
+  NpuschMeasurementValues value;
+  value.TTI = 10000;
+  value.BLER = 1;
+  value.TBS = 100;
+  for (std::vector<NpuschMeasurementValues>::iterator it = m_npusch_params.measurements.begin ();
+       it != m_npusch_params.measurements.end (); ++it){
+      if (it->SCS == scs){
+        if(it->bandwidth == bandwidth){
+          if(it->Pathloss > couplingloss){
+            if(it->TBS > value.TBS){
+              value = *it;
+            }
+          }
+        }
+      }
+    }
+
+
+  //std::cout << "Value: " << value.TBS << std::endl;
+  return value;
+}
+
+NpuschMeasurementValues
 NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, double bandwidth)
 {
   couplingloss = abs (floor (couplingloss));
@@ -256,7 +290,6 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
     {
       if (it->SCS == scs)
         {
-          if(it->bandwidth == bandwidth){
             if (it->Pathloss == couplingloss)
               {
                 if (it->TBS >= dataSize && it->TBS <= max_tbs) 
@@ -272,7 +305,7 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
                       }
                   }
               }
-            }
+            
         }
     }
   return value;

@@ -250,7 +250,7 @@ LteSpectrumPhy::GetTypeId (void)
                     MakeBooleanChecker ())
     .AddAttribute ("EnableInterference",
                     "Activate/Deactivate the error model of control (PCFICH-PDCCH decodification) [by default is active].",
-                    BooleanValue (false),
+                    BooleanValue (true),
                     MakeBooleanAccessor (&LteSpectrumPhy::m_interferenceEnabled),
                     MakeBooleanChecker ())
     .AddTraceSource ("DlPhyReception",

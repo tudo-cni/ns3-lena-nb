@@ -82,6 +82,7 @@ public:
   MatlabNpdschMeasurement readNpdschF2CSV (std::istream &in);    
   NpdschMeasurementValues getNpdschParameters(double couplingloss, int dataSize, std::string opMode);
   NpuschMeasurementValues getNpuschParameters(double couplingloss, int dataSize, double scs, double bandwidth);
+  NpuschMeasurementValues getMaxTbsforCl(double couplingloss,  double scs, double bandwidth);
   std::pair<NbIotRrcSap::DciN1, int> getBareboneDciN1(double couplingloss, int dataSize, std::string opMode);
   std::pair<NbIotRrcSap::DciN0, int> getBareboneDciN0(double couplingloss, int dataSize, double scs, double bandwidth);
   int getMsg3Subframes (double couplingloss, int dataSize, double scs, double bandwidth);

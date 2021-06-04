@@ -571,7 +571,8 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
           NbIotRrcSap::ConvertDciN0Repetitions2int (message.dciN0));
       if (test.size () > 0)
         {
-          uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0) *
+          uint64_t size_ru = 8; // 15 khz spacing
+          uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0)*size_ru *
                                      NbIotRrcSap::ConvertNumNpuschRepetitions2int (message.dciN0);
           // Have to be set by higher layer | 4 for debugging
           std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschsubframes =
@@ -711,7 +712,6 @@ NbiotScheduler::ScheduleSearchSpace (SearchSpaceConfig ssc)
       ++it;
     }
 
-  
   return scheduledMessages;
 }
 
@@ -1056,14 +1056,16 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
   else if (dci_type == NbIotRrcSap::NpdcchMessage::DciType::n0)
     {
       uint64_t tbs = 0;
+      //std::cout << m_rntiRsrpMap[rnti] << std::endl;
+      NpuschMeasurementValues val = m_Amc.getMaxTbsforCl(m_rntiRsrpMap[rnti] - 43.0 - correction_factor,15000,15);
 
-      if (m_rntiUeConfigMap[rnti].rlcUlBuffer * 8 > 1000)
+      if (m_rntiUeConfigMap[rnti].rlcUlBuffer * 8 > val.TBS)
         { // max TBS Uplink Rel. 13
-          tbs = 1000;
+          tbs = val.TBS;
         }
       else
         {
-          tbs = (10 + m_rntiUeConfigMap[rnti].rlcUlBuffer) * 8;
+          tbs = (m_rntiUeConfigMap[rnti].rlcUlBuffer) * 8;
         }
 
       std::pair<NbIotRrcSap::DciN0, uint64_t> dci_tbs =
