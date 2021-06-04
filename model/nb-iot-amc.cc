@@ -256,7 +256,7 @@ NbiotAmc::getNpuschParameters (double couplingloss, int dataSize, double scs, do
     {
       if (it->SCS == scs)
         {
-          if(it->bandwidth = bandwidth){
+          if(it->bandwidth == bandwidth){
             if (it->Pathloss == couplingloss)
               {
                 if (it->TBS >= dataSize && it->TBS <= max_tbs) 
