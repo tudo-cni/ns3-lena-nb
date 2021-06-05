@@ -1139,14 +1139,16 @@ NbiotScheduler::ScheduleUlRlcBufferReq (uint64_t rnti, uint64_t dataSize)
 void
 NbiotScheduler::AddToUlBufferReq (uint64_t rnti, uint64_t dataSize)
 {
-  m_rntiUeConfigMap[rnti].rlcUlBuffer += dataSize;
-  SearchSpaceConfig searchSpace = m_rntiUeConfigMap[rnti].searchSpaceConfig;
-  std::vector<uint16_t>::iterator it = std::find (m_searchSpaceRntiMap[searchSpace].begin (),
-                                                  m_searchSpaceRntiMap[searchSpace].end (), rnti);
-  if (it == m_searchSpaceRntiMap[searchSpace].end ())
-    {
-      m_searchSpaceRntiMap[searchSpace].push_back (rnti);
-    }
+  if(m_rntiUeConfigMap.find(rnti) != m_rntiUeConfigMap.end()){
+    m_rntiUeConfigMap[rnti].rlcUlBuffer += dataSize;
+    SearchSpaceConfig searchSpace = m_rntiUeConfigMap[rnti].searchSpaceConfig;
+    std::vector<uint16_t>::iterator it = std::find (m_searchSpaceRntiMap[searchSpace].begin (),
+                                                    m_searchSpaceRntiMap[searchSpace].end (), rnti);
+    if (it == m_searchSpaceRntiMap[searchSpace].end ())
+      {
+        m_searchSpaceRntiMap[searchSpace].push_back (rnti);
+      }
+  }
 }
 
 SearchSpaceConfig
