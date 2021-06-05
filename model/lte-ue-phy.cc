@@ -1285,7 +1285,17 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
                       //  {
                       //    ulRb.push_back (i + it->rarPayload.m_grant.m_rbStart);
                       //  }
+                      Ptr<DlCqiLteControlMessage> report = Create<DlCqiLteControlMessage>();
+                      CqiListElement_s dlcqi;
 
+                      dlcqi.m_rnti = it->rarPayload.cellRnti;
+                      dlcqi.m_ri = 1; // not yet used
+                      dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
+
+                      report->SetDlCqi (dlcqi);
+                      std::cout << DoGetRSRP() << std::endl;
+                      report->rsrp = DoGetRSRP();
+                      DoSendLteControlMessage (report);
                       //Simulator::Schedule() QueueSubChannelsForTransmission (std::vector<int>{0});
                       // pass the info to the MACo
                       int subframes = *(it->rarPayload.ulGrant.subframes.second.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
@@ -1440,10 +1450,10 @@ LteUePhy::ReceiveNpss (uint16_t cellId, Ptr<SpectrumValue> p)
    */
   m_pssReceived = true;
   PssElement el;
-  el.cellId = cellId;
-  el.pssPsdSum = sum;
-  el.nRB = nRB;
-  m_pssList.push_back (el);
+  //el.cellId = cellId;
+  //el.pssPsdSum = sum;
+  //el.nRB = nRB;
+  //m_pssList.push_back (el);
 
 } // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
 
@@ -1492,10 +1502,10 @@ LteUePhy::ReceiveNsss (uint16_t cellId, Ptr<SpectrumValue> p)
    */
   m_pssReceived = true;
   PssElement el;
-  el.cellId = cellId;
-  el.pssPsdSum = sum;
-  el.nRB = nRB;
-  m_pssList.push_back (el);
+  //el.cellId = cellId;
+  //el.pssPsdSum = sum;
+  //el.nRB = nRB;
+  //m_pssList.push_back (el);
 
 } // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
 
