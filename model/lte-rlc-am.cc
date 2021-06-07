@@ -1438,9 +1438,10 @@ LteRlcAm::DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams)
         {
           m_statusPduRequested = true;
           m_statusPduBufferSize = 4;
-
+          m_lastStatusPduSize = 0;
           if (! m_statusProhibitTimer.IsRunning ())
             {
+
               DoReportBufferStatus ();
             }
         }

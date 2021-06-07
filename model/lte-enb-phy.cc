@@ -618,7 +618,7 @@ LteEnbPhy::StartFrame (void)
     mibMsg->SetMib (m_mib);
     m_controlMessagesQueue.at (0).push_back (mibMsg);
   }else{
-    if((m_nrFrames % 64) == 0){
+    if((m_nrFrames % 65) == 0){
       m_mibNbRepetitionsCounter = 0; // Cout Repetitions
       std::bitset<4> systemFrameNumberMsb(m_nrFrames >> 6);
       m_mibNb.systemFrameNumberMsb = systemFrameNumberMsb;

@@ -693,8 +693,8 @@ void
 LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool edt) 
 {
   uint32_t currentsubframe = Simulator::Now().GetMilliSeconds();
-  uint16_t window_condition = ( currentsubframe/10 - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (ce) / 10);
-  uint32_t lastPeriodStart = (currentsubframe/10 - 1) - window_condition;
+  uint16_t window_condition = ( currentsubframe/10) % (NbIotRrcSap::ConvertNprachPeriodicity2int (ce) / 10);
+  uint32_t lastPeriodStart = (currentsubframe/10) - window_condition;
   uint32_t startSubframeNprachOccasion = lastPeriodStart*10 + NbIotRrcSap::ConvertNprachStartTime2int(ce);
   uint16_t timeSinceOcassion = currentsubframe - startSubframeNprachOccasion;
 
@@ -1365,6 +1365,7 @@ LteEnbMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
         {
           // MIGHT BE NOT NEEDED ANYMORE
           m_schedulerNb->ScheduleUlRlcBufferReq(dlharq->GetRnti (), m_ueStoredBSR[dlharq->GetRnti()]);
+          m_connectionSuccessful[dlharq->GetRnti ()] = true;
           m_ueStoredBSR[dlharq->GetRnti()] = 0;
         }
     }

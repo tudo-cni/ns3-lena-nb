@@ -344,6 +344,7 @@ private:
   bool m_listenToSearchSpaces;
   bool m_edrx;
   bool m_psm;
+  bool m_nextIsMsg5;
   NbIotRrcSap::EdtTbsNb DoGetEdtTbsInfo(); // return EdtTbsInfo based on RSRP (Coverage level)
   uint32_t m_subframesInSearchSpace;
   std::vector<uint32_t> m_logging;

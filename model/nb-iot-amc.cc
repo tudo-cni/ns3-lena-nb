@@ -325,7 +325,7 @@ NbiotAmc::getMsg3Subframes (double couplingloss, int dataSize, double scs, doubl
   NpuschMeasurementValues value = getNpuschParameters (couplingloss, dataSize, scs, bandwidth);
   // Only singletone 15khz supported yet
   // Extension later on
-  return value.NRep * value.NRU*8;
+  return value.NRep * value.NRU*1;
 }
 
 NbIotRrcSap::DciN1

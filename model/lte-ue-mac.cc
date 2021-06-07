@@ -320,6 +320,7 @@ LteUeMac::LteUeMac ()
   m_uePhySapUser = new UeMemberLteUePhySapUser (this);
   m_raPreambleUniformVariable = CreateObject<UniformRandomVariable> ();
   m_componentCarrierId = 0;
+  m_nextIsMsg5 = false;
 }
 
 LteUeMac::~LteUeMac ()
@@ -407,8 +408,11 @@ LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
   //DoSetTransmissionScheduled(false);
   if(m_msg5Buffer > 0){
     // We are just about to send MSG3, add DPR Element for MSG5 (potentially CIoT-Opt)
-    dprTag.SetDataVolumeValue(DataVolumeDPR::BufferSize2DVId(m_msg5Buffer));
+    std::cout << " set payload" << std::endl;
+    uint8_t dataVolumeIndex = DataVolumeDPR::BufferSize2DVId(m_msg5Buffer);
     m_msg5Buffer = 0;
+    m_nextIsMsg5 = true;
+    dprTag.SetDataVolumeValue(dataVolumeIndex);
     params.pdu->AddPacketTag(dprTag);
   }
   else{
@@ -424,8 +428,8 @@ LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
   
   params.pdu->AddPacketTag (radioTag);
   // store pdu in HARQ buffer
-  m_miUlHarqProcessesPacket.at (m_harqProcessId)->AddPacket (params.pdu);
-  m_miUlHarqProcessesPacketTimer.at (m_harqProcessId) = HARQ_PERIOD;
+  //m_miUlHarqProcessesPacket.at (m_harqProcessId)->AddPacket (params.pdu);
+  //m_miUlHarqProcessesPacketTimer.at (m_harqProcessId) = HARQ_PERIOD;
   m_uePhySapProvider->SendMacPdu (params.pdu);
 }
 
@@ -526,8 +530,8 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
   // NPRACH WINDOW STARTS at framenumber mod (NPRACH_PERIOD/10) = 0 (A Tutorial on NB-IoT Physical Layer Design, Mathhieu Kanj, et al.)
   //uint32_t currentsubframe = (m_frameNo - 1)*10 +(m_subframeNo-1);
   uint32_t currentsubframe = Simulator::Now().GetMilliSeconds();
-  uint16_t window_condition = ( currentsubframe/10 - 1) % (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10);
-  uint32_t lastPeriodStart = (currentsubframe/10 - 1) - window_condition;
+  uint16_t window_condition = ( currentsubframe/10) % (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) / 10);
+  uint32_t lastPeriodStart = (currentsubframe/10) - window_condition;
   uint32_t startSubframeNprachOccasion = lastPeriodStart*10 + NbIotRrcSap::ConvertNprachStartTime2int(m_CeLevel);
   if (startSubframeNprachOccasion != currentsubframe)
     {
@@ -1350,8 +1354,17 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
             if (((*itBsr).second.statusPduSize > 0) || ((*itBsr).second.retxQueueSize > 0) ||
                 ((*itBsr).second.txQueueSize > 0))
               {
+                if(m_nextIsMsg5){
+                  // We might get a bigger TxOp as the size of the MSG5, so we don't want user data transmitted there
+                  if(itBsr->first >2){
+                    continue;
+                  }
+                }
                 activeLcs.push_back(itBsr->first);
               }
+          }
+          if(m_nextIsMsg5){
+            m_nextIsMsg5 = false;
           }
           LteMacSapUser::TxOpportunityParameters txOpParams;
           // Prioritise SRBs over DataBs

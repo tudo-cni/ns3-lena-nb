@@ -571,7 +571,7 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
           NbIotRrcSap::ConvertDciN0Repetitions2int (message.dciN0));
       if (test.size () > 0)
         {
-          uint64_t size_ru = 8; // 15 khz spacing
+          uint64_t size_ru = 1; // 15 khz spacing
           uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0)*size_ru *
                                      NbIotRrcSap::ConvertNumNpuschRepetitions2int (message.dciN0);
           // Have to be set by higher layer | 4 for debugging
@@ -1059,7 +1059,7 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
       //std::cout << m_rntiRsrpMap[rnti] << std::endl;
       //NpuschMeasurementValues val = m_Amc.getMaxTbsforCl(m_rntiRsrpMap[rnti] - 43.0 - correction_factor,15000,15);
 
-      if (m_rntiUeConfigMap[rnti].rlcUlBuffer * 8 > 1000)
+      if (m_rntiUeConfigMap[rnti].rlcUlBuffer * 8 >= 1000)
         { // max TBS Uplink Rel. 13
           tbs = 1000;
         }

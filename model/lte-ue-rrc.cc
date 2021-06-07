@@ -179,6 +179,7 @@ LteUeRrc::LteUeRrc ()
     m_connEstFailCount (0),
     m_t3412(Days(5)),
     m_t3324(MilliSeconds(3500)),
+    m_useEdtPreamble(false),
     m_numberOfComponentCarriers (MIN_NO_CC),
     m_energyModel(NbiotEnergyModel(BG96(),0))
 {
