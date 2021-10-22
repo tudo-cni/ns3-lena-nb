@@ -27,6 +27,8 @@
 #include "ns3/config-store-module.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/lte-module.h"
+#include <ns3/okumura-hata-propagation-loss-model.h>
+#include <ns3/winner-plus-propagation-loss-model.h>
 //#include "ns3/gtk-config-store.h"
 #include <chrono>
 #include <iomanip>
@@ -34,6 +36,9 @@
 #include <ctime>    
 #include <fstream>
 using namespace ns3;
+
+
+
 
 /**
  * Sample simulation script for LTE+EPC. It instantiates several eNodeBs,
@@ -133,12 +138,22 @@ main (int argc, char *argv[])
   cmd.Parse(argc, argv);
   //std::cout << simTime << std::endl;
 
+  //Ptr<OkumuraHataPropagationLossModel> propagationLossModel = CreateObject<OkumuraHataPropagationLossModel> ();
+  //propagationLossModel->SetAttribute ("Frequency", DoubleValue (869e6));
+  //propagationLossModel->SetAttribute ("Environment", EnumValue (UrbanEnvironment));
+  //propagationLossModel->SetAttribute ("CitySize", EnumValue (LargeCity));
+
+  Ptr<WinnerPlusPropagationLossModel> propagationLossModel = CreateObject<WinnerPlusPropagationLossModel> ();
+  propagationLossModel->SetAttribute ("Frequency", DoubleValue (869e6));
+  propagationLossModel->SetAttribute ("LineOfSight", BooleanValue (false));
+  propagationLossModel->SetAttribute ("Environment", EnumValue (UMaEnvironment));
+
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
   lteHelper->SetUeAntennaModelType ("ns3::IsotropicAntennaModel");
-  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::FriisPropagationLossModel"));
+  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::WinnerPlusPropagationLossModel"));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
@@ -203,12 +218,15 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
 
 
-  positionAlloc->Add (Vector (0, 0, 0));
+  positionAlloc->Add (Vector (2500, 2500, 25));
 
   if(scenario){
       for(std::vector<std::vector<std::string>>::iterator it = ue_configs.begin(); it != ue_configs.begin()+ues_to_consider; ++it){
+        double x = stod((*it)[0])*1000.0;
+        double y = stod((*it)[1])*1000.0;
+        double height = 1.5; // 1.5m UE height
         double distance = stod((*it)[2])*1000.0;
-        positionAlloc->Add (Vector (distance, 0, 0));
+        positionAlloc->Add (Vector (x, y, height));
         }
   }
   MobilityHelper mobility;
