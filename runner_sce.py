@@ -46,7 +46,7 @@ class TaskQueue(queue.Queue):
 
     def start_workers(self):
         for i in range(self.num_workers):
-            print("Bla")
+            #print("Bla")
             t = Thread(target=self.worker, args=(i,))
             t.daemon = True
             t.start()
@@ -79,7 +79,7 @@ seed =2
 to_simulate = "../../scenarios"
 for i in range(1,seed):
     for filename in os.listdir(to_simulate):
-        print(filename)
+        #print(filename)
         #filepath=to_simulate[6:]+"/"+filename
         #filepath.replace("/","\/")
         #filepath = "\'"+filepath+"\'"

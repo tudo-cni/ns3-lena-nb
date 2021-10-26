@@ -49,63 +49,6 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("LenaNb5G");
 
-std::vector<std::string> readCSVRow (const std::string &row)
-{
-  CSVState state = CSVState::UnquotedField;
-  std::vector<std::string> fields{""};
-  size_t i = 0; // index of the current field
-  for (char c : row)
-    {
-      switch (state)
-        {
-        case CSVState::UnquotedField:
-          switch (c)
-            {
-            case ',': // end of field
-              fields.push_back ("");
-              i++;
-              break;
-            case '"':
-              state = CSVState::QuotedField;
-              break;
-            default:
-              fields[i].push_back (c);
-              break;
-            }
-          break;
-        case CSVState::QuotedField:
-          switch (c)
-            {
-            case '"':
-              state = CSVState::QuotedQuote;
-              break;
-            default:
-              fields[i].push_back (c);
-              break;
-            }
-          break;
-        case CSVState::QuotedQuote:
-          switch (c)
-            {
-            case ',': // , after closing quote
-              fields.push_back ("");
-              i++;
-              state = CSVState::UnquotedField;
-              break;
-            case '"': // "" -> "
-              fields[i].push_back ('"');
-              state = CSVState::QuotedField;
-              break;
-            default: // end of quote
-              state = CSVState::UnquotedField;
-              break;
-            }
-          break;
-        }
-    }
-  return fields;
-}
-
 int
 main (int argc, char *argv[])
 {
@@ -140,7 +83,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("worker", "worker id when using multithreading to not confuse logging", worker);
   cmd.AddValue ("randomSeed", "randomSeed",seed);
   cmd.Parse (argc, argv);
-  std::cout << path;
+  //std::cout << path;
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
@@ -273,7 +216,7 @@ main (int argc, char *argv[])
   
   
   // Pre-Run
-  for (uint16_t i = 0; i < ues_to_consider/3; i++)
+  for (uint16_t i = 0; i < ues_to_consider; i++)
     {
       int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds());
       lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
@@ -302,7 +245,7 @@ main (int argc, char *argv[])
       // Create a UdpEchoClient application to send UDP datagrams from node zero to
       // node one.
       //
-      if (i <= num_ues_app_a){
+      if (i < num_ues_app_a){
         uint packetsize = packetsize_app_a;
         UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
         ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_a));
@@ -312,9 +255,8 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "a" <<std::endl;
       }
-      else if (i <= num_ues_app_a+num_ues_app_b){
+      else if (i < num_ues_app_a+num_ues_app_b){
         uint packetsize = packetsize_app_b;
         UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
         ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_b));
@@ -324,7 +266,6 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "b" <<std::endl;
       }
       else {
         uint packetsize = packetsize_app_c;
@@ -336,13 +277,12 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "c" <<std::endl;
       }
     }
 
 
   // UEs to be considered 
-  for (uint16_t i = ues_to_consider/3; i < ues_to_consider*2/3; i++)
+  for (uint16_t i = ues_to_consider; i < ues_to_consider*2; i++)
     {
       int access = RaUeUniformVariable->GetInteger (simTime.GetMilliSeconds(), 2*simTime.GetMilliSeconds());
       lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
@@ -373,7 +313,7 @@ main (int argc, char *argv[])
       // node one.
       //
 
-      if (i <= ues_to_consider/3+num_ues_app_a){
+      if (i < ues_to_consider+num_ues_app_a){
         uint packetsize = packetsize_app_a;
         UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
         ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_a));
@@ -383,9 +323,8 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "a" <<std::endl;
       }
-      else if (i <= ues_to_consider/3+num_ues_app_a+num_ues_app_b){
+      else if (i < ues_to_consider+num_ues_app_a+num_ues_app_b){
         uint packetsize = packetsize_app_b;
         UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
         ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_b));
@@ -395,7 +334,6 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "b" <<std::endl;
       }
       else {
         uint packetsize = packetsize_app_c;
@@ -407,14 +345,13 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "c" <<std::endl;
       }
     }
   
 
 
   // Post-Run
-  for (uint16_t i = ues_to_consider*2/3; i < ues_to_consider; i++)
+  for (uint16_t i = ues_to_consider*2; i < ues_to_consider*3; i++)
     {
       int access = RaUeUniformVariable->GetInteger (simTime.GetMilliSeconds()*2, simTime.GetMilliSeconds()*3);
       lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
@@ -443,7 +380,7 @@ main (int argc, char *argv[])
       // Create a UdpEchoClient application to send UDP datagrams from node zero to
       // node one.
       //
-      if (i <= ues_to_consider*2/3 + num_ues_app_a){
+      if (i < ues_to_consider*2 + num_ues_app_a){
         uint packetsize = packetsize_app_a;
         UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
         ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_a));
@@ -453,9 +390,8 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "a" <<std::endl;
       }
-      else if (i <= ues_to_consider*2/3 + num_ues_app_a+num_ues_app_b){
+      else if (i < ues_to_consider*2 + num_ues_app_a+num_ues_app_b){
         uint packetsize = packetsize_app_b;
         UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
         ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_b));
@@ -465,7 +401,6 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "b" <<std::endl;
       }
       else {
         uint packetsize = packetsize_app_c;
@@ -477,7 +412,6 @@ main (int argc, char *argv[])
 
         serverApps.Get(i)->SetStartTime (MilliSeconds (access));
         clientApps.Get(i)->SetStartTime (MilliSeconds (access));
-        std::cout << "c" <<std::endl;
       }
     }
 

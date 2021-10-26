@@ -511,7 +511,6 @@ private:
   void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
   void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce, bool edt);
   void CheckPreambleReceptionForAllCoverageClases();
-  void VerySimpleNbiotDownlinkScheduler();
   /**
   * \brief Receive RACH Preamble function
   * \param prachId PRACH ID number

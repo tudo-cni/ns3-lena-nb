@@ -98,7 +98,7 @@ LteRadioBearerTag::SetBSR (uint8_t bsrIndex)
 uint32_t
 LteRadioBearerTag::GetSerializedSize (void) const
 {
-  return 5;
+  return 5; // PASCAL: Woher kommt die Zahl?
 }
 
 void

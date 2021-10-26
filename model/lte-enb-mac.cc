@@ -829,83 +829,6 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
     }
 }
 
-void
-LteEnbMac::VerySimpleNbiotDownlinkScheduler ()
-{
-  //bool isCe0SearchSpace = false;
-  uint32_t searchSpacePeriodicityce0 =
-      NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (m_ce0Parameter) *
-      NbIotRrcSap::ConvertNpdcchStartSfCssRa2double (m_ce0Parameter);
-  uint32_t searchSpaceConditionLeftSidece0 =
-      (10 * (m_frameNo - 1) + (m_subframeNo - 1)) % searchSpacePeriodicityce0;
-  uint32_t searchSpaceConditionRightSidece0 =
-      NbIotRrcSap::ConvertNpdcchOffsetRa2double (m_ce0Parameter) * searchSpacePeriodicityce0;
-  int8_t subcarrieroffset = NbIotRrcSap::ConvertNprachSubcarrierOffset2int (m_ce0Parameter);
-  if (searchSpaceConditionLeftSidece0 == searchSpaceConditionRightSidece0)
-    {
-      // IS CE1 SEACH SPACE
-      m_SearchSpaceType2C0 = true;
-      m_SearchSpaceType2C0SfBegin = 0;
-
-      if (m_DlDcis[subcarrieroffset].size () > 0)
-        {
-          Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage> ();
-          msg->SetDci (*(m_DlDcis[subcarrieroffset].begin ()));
-          m_enbPhySapProvider->SendLteControlMessage (msg);
-          m_currentRepetitions = R - 1;
-        }
-    }
-  else if (m_SearchSpaceType2C0 && (m_currentRepetitions > 0))
-    {
-      if (m_DlDcis[subcarrieroffset].size () > 0)
-        {
-          Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage> ();
-          msg->SetDci (*(m_DlDcis[subcarrieroffset].begin ()));
-          m_enbPhySapProvider->SendLteControlMessage (msg);
-          m_currentRepetitions--;
-        }
-    }
-  // else if ((m_SearchSpaceType2C0SfBegin + R ==  && m_SearchSpaceType2C0 && (m_currentRepetitions==0)){
-  //   m_DlDcis[subcarrieroffset].erase(m_DlDcis[subcarrieroffset].begin());
-  //   if (m_DlDcis[subcarrieroffset].size() > 0){
-  //       Ptr<DlDciN1NbiotControlMessage> msg = Create<DlDciN1NbiotControlMessage>();
-  //       msg->SetDci(*(m_DlDcis[subcarrieroffset].begin()));
-  //       m_enbPhySapProvider->SendLteControlMessage (msg);
-  //       m_currentRepetitions = R-1;
-  //   }else{
-  //     std::cout << "No DCI to send" << std::endl;
-  //   }
-  // }
-  if (m_SearchSpaceType2C0)
-    {
-      m_SearchSpaceType2C0SfBegin++;
-    }
-  // CE1 Type2
-  //bool isCe1SearchSpace = false;
-  uint32_t searchSpacePeriodicityce1 =
-      NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (m_ce1Parameter) *
-      NbIotRrcSap::ConvertNpdcchStartSfCssRa2double (m_ce1Parameter);
-  uint32_t searchSpaceConditionLeftSidece1 =
-      (10 * (m_frameNo - 1) + (m_subframeNo - 1)) % searchSpacePeriodicityce1;
-  uint32_t searchSpaceConditionRightSidece1 =
-      NbIotRrcSap::ConvertNpdcchOffsetRa2double (m_ce1Parameter) * searchSpacePeriodicityce1;
-  if (searchSpaceConditionLeftSidece1 == searchSpaceConditionRightSidece1)
-    {
-    }
-
-  // CE2 Type 2
-  //bool isCe2SearchSpace = false;
-  uint32_t searchSpacePeriodicityce2 =
-      NbIotRrcSap::ConvertNpdcchNumRepetitionsRa2int (m_ce2Parameter) *
-      NbIotRrcSap::ConvertNpdcchStartSfCssRa2double (m_ce2Parameter);
-  uint32_t searchSpaceConditionLeftSidece2 =
-      (10 * (m_frameNo - 1) + (m_subframeNo - 1)) % searchSpacePeriodicityce2;
-  uint32_t searchSpaceConditionRightSidece2 =
-      NbIotRrcSap::ConvertNpdcchOffsetRa2double (m_ce2Parameter) * searchSpacePeriodicityce2;
-  if (searchSpaceConditionLeftSidece2 == searchSpaceConditionRightSidece2)
-    {
-    }
-}
 void LteEnbMac::SetCoverageLevelAndSib2Nb(){
   m_sib2Nb = m_cmacSapUser->GetCurrentSystemInformationBlockType2Nb ();
   m_ce0Parameter =
@@ -965,11 +888,12 @@ void LteEnbMac::SetCoverageLevelAndSib2Nb(){
   m_ce2ParameterEdt = tmp;
 
 }
+
 void
 LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
 {
   NS_LOG_FUNCTION (this << " EnbMac - frame " << frameNo << " subframe " << subframeNo);
-  m_edt = true;
+  m_edt = true; // PASCAL: Warum immer true? Was, wenn EDT als false definiert wurde?
   m_frameNo = frameNo;
   m_subframeNo = subframeNo;
   if (m_schedulerNb == nullptr)
@@ -1201,6 +1125,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
     }
     scheduled.clear();
 
+  // PASCAL: Was ist das hier unten genau?
   //// CE0 Type2
   //// --- DOWNLINK ---
   //// Send Dl-CQI info to the scheduler
