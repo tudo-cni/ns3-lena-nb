@@ -82,9 +82,9 @@ start_time = time.time()
 simTime =300
 simu_queue = TaskQueue(40)
 seed =2
-num_ues_app_a = 1
-num_ues_app_b = 0
-num_ues_app_c = 0
+num_ues_app_a = 1 # Outdoor
+num_ues_app_b = 1 # Indoor
+num_ues_app_c = 1 # Deep Indoor
 to_simulate = "../../scenarios"
 for i in range(1,seed):
     for filename in os.listdir(to_simulate):

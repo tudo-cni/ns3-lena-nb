@@ -138,15 +138,11 @@ main (int argc, char *argv[])
   cmd.Parse(argc, argv);
   //std::cout << simTime << std::endl;
 
-  //Ptr<OkumuraHataPropagationLossModel> propagationLossModel = CreateObject<OkumuraHataPropagationLossModel> ();
-  //propagationLossModel->SetAttribute ("Frequency", DoubleValue (869e6));
-  //propagationLossModel->SetAttribute ("Environment", EnumValue (UrbanEnvironment));
-  //propagationLossModel->SetAttribute ("CitySize", EnumValue (LargeCity));
-
   Ptr<WinnerPlusPropagationLossModel> propagationLossModel = CreateObject<WinnerPlusPropagationLossModel> ();
   propagationLossModel->SetAttribute ("Frequency", DoubleValue (869e6));
   propagationLossModel->SetAttribute ("LineOfSight", BooleanValue (false));
   propagationLossModel->SetAttribute ("Environment", EnumValue (UMaEnvironment));
+
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();

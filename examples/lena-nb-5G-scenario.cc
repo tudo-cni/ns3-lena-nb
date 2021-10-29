@@ -92,23 +92,15 @@ main (int argc, char *argv[])
 
   // parse again so you can override default values from the command line
 
-  //Ptr<OkumuraHataPropagationLossModel> propagationLossModel = CreateObject<OkumuraHataPropagationLossModel> ();
-  //propagationLossModel->SetAttribute ("Frequency", DoubleValue (869e6));
-  //propagationLossModel->SetAttribute ("Environment", EnumValue (UrbanEnvironment));
-  //propagationLossModel->SetAttribute ("CitySize", EnumValue (LargeCity));
-
-  Ptr<WinnerPlusPropagationLossModel> propagationLossModel = CreateObject<WinnerPlusPropagationLossModel> ();
-  propagationLossModel->SetFrequency(869e6);
-  propagationLossModel->SetAttribute ("LineOfSight", BooleanValue (false));
-  propagationLossModel->SetAttribute ("Environment", EnumValue (UMaEnvironment));
-  propagationLossModel->SetAttribute ("HeightBasestation", DoubleValue (20.0));
-
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
   lteHelper->SetUeAntennaModelType ("ns3::IsotropicAntennaModel");
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::WinnerPlusPropagationLossModel"));
+  lteHelper->SetPathlossModelAttribute ("HeightBasestation", DoubleValue (50));
+  lteHelper->SetPathlossModelAttribute ("Environment", EnumValue (UMaEnvironment));
+  lteHelper->SetPathlossModelAttribute ("LineOfSight", BooleanValue (false));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
@@ -164,7 +156,7 @@ main (int argc, char *argv[])
   enbNodes.Create (1);
   // Install Mobility Model
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-  positionAlloc->Add (Vector (2500, 2500, 25));
+  positionAlloc->Add (Vector (cellsize/2, cellsize/2, 25));
 
   MobilityHelper mobilityEnb;
   mobilityEnb.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -183,39 +175,39 @@ main (int argc, char *argv[])
     pos_a.SetTypeId ("ns3::UniformDiscPositionAllocator");
     pos_a.Set ("X", StringValue (std::to_string(cellsize/2)));
     pos_a.Set ("Y", StringValue (std::to_string(cellsize/2)));
-    pos_a.Set ("Z", StringValue ("1.5"));
+    pos_a.Set ("Z", DoubleValue (1.5));
     pos_a.Set ("rho", DoubleValue (cellsize/2));
     Ptr<PositionAllocator> m_position = pos_a.Create ()->GetObject<PositionAllocator> ();
     for (uint32_t i = 0; i < num_ues_app_a; ++i){
       Vector position = m_position->GetNext ();
       positionAllocUe->Add (position);
-      //std::cout << "a," << position.x << "," << position.y << "," << position.z << std::endl;
+      std::cout << "a," << position.x << "," << position.y << "," << position.z << std::endl;
     }
     // Install Mobility Model for Application B
     ObjectFactory pos_b;
     pos_b.SetTypeId ("ns3::UniformDiscPositionAllocator");
     pos_b.Set ("X", StringValue (std::to_string(cellsize/2)));
     pos_b.Set ("Y", StringValue (std::to_string(cellsize/2)));
-    pos_b.Set ("Z", StringValue ("0.0"));
+    pos_b.Set ("Z", DoubleValue (0.0));
     pos_b.Set ("rho", DoubleValue (cellsize/2));    
     m_position = pos_b.Create ()->GetObject<PositionAllocator> ();
     for (uint32_t i = 0; i < num_ues_app_b; ++i){
       Vector position = m_position->GetNext ();
       positionAllocUe->Add (position);
-      //std::cout << "b," << position.x << "," << position.y << "," << position.z << std::endl;
+      std::cout << "b," << position.x << "," << position.y << "," << position.z << std::endl;
     }
     // Install Mobility Model for Application C
     ObjectFactory pos_c;
     pos_c.SetTypeId ("ns3::UniformDiscPositionAllocator");
     pos_c.Set ("X", StringValue (std::to_string(cellsize/2)));
     pos_c.Set ("Y", StringValue (std::to_string(cellsize/2)));
-    pos_c.Set ("Z", StringValue ("-1.5"));
+    pos_c.Set ("Z", DoubleValue (-1.5));
     pos_c.Set ("rho", DoubleValue (cellsize/2));    
     m_position = pos_c.Create ()->GetObject<PositionAllocator> ();
     for (uint32_t i = 0; i < num_ues_app_c; ++i){
       Vector position = m_position->GetNext ();
       positionAllocUe->Add (position);
-      //std::cout << "c," << position.x << "," << position.y << "," << position.z << std::endl;
+      std::cout << "c," << position.x << "," << position.y << "," << position.z << std::endl;
     }
   }
   
