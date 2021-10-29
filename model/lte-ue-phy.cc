@@ -1293,7 +1293,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
                       dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
 
                       report->SetDlCqi (dlcqi);
-                      std::cout << DoGetRSRP() << std::endl;
+                      //std::cout << DoGetRSRP() << std::endl;
                       report->rsrp = DoGetRSRP();
                       DoSendLteControlMessage (report);
                       //Simulator::Schedule() QueueSubChannelsForTransmission (std::vector<int>{0});

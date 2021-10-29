@@ -469,7 +469,7 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
                       if (rar->ceLevel ==
                           NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two)
                         {
-                          couplingloss = 159;
+                          couplingloss = 159; // PASCAL: Woher diese Zahlen?
                         }
                       else if (rar->ceLevel ==
                                NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one)

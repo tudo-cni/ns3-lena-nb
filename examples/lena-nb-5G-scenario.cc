@@ -52,7 +52,7 @@ NS_LOG_COMPONENT_DEFINE ("LenaNb5G");
 int
 main (int argc, char *argv[])
 {
-  Time simTime = Minutes(5);
+  Time simTime = Minutes(6);
   //double distance = 50000.0;
   uint64_t ues_to_consider = 0;
 
@@ -61,11 +61,11 @@ main (int argc, char *argv[])
   int seed = 1;
   std::string path = "scenarios/release_13_and_ciot/5.0.csv";
   std::string simName = "test";
-  //double cellsize = 0;
+  double cellsize = 2500; // in meters
   //std::vector<std::vector<std::string>> ue_configs;
-  int num_ues_app_a = 3;
-  int num_ues_app_b = 4;
-  int num_ues_app_c = 5;
+  int num_ues_app_a = 1;
+  int num_ues_app_b = 2;
+  int num_ues_app_c = 3;
   int packetsize_app_a = 20;
   int packetsize_app_b = 50;
   int packetsize_app_c = 100;
@@ -82,14 +82,15 @@ main (int argc, char *argv[])
   cmd.AddValue ("scenario", "1 if should use scenario csv", scenario);
   cmd.AddValue ("worker", "worker id when using multithreading to not confuse logging", worker);
   cmd.AddValue ("randomSeed", "randomSeed",seed);
+  cmd.AddValue ("numUeAppA", "Number of UEs for Application A",num_ues_app_a);
+  cmd.AddValue ("numUeAppB", "Number of UEs for Application B",num_ues_app_b);
+  cmd.AddValue ("numUeAppC", "Number of UEs for Application C",num_ues_app_c);
   cmd.Parse (argc, argv);
-  //std::cout << path;
+  std::cout << "Number of UEs of Application A: " << num_ues_app_a << std::endl;
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
   // parse again so you can override default values from the command line
-  cmd.Parse(argc, argv);
-  //std::cout << simTime << std::endl;
 
   //Ptr<OkumuraHataPropagationLossModel> propagationLossModel = CreateObject<OkumuraHataPropagationLossModel> ();
   //propagationLossModel->SetAttribute ("Frequency", DoubleValue (869e6));
@@ -97,9 +98,10 @@ main (int argc, char *argv[])
   //propagationLossModel->SetAttribute ("CitySize", EnumValue (LargeCity));
 
   Ptr<WinnerPlusPropagationLossModel> propagationLossModel = CreateObject<WinnerPlusPropagationLossModel> ();
-  propagationLossModel->SetAttribute ("Frequency", DoubleValue (869e6));
+  propagationLossModel->SetFrequency(869e6);
   propagationLossModel->SetAttribute ("LineOfSight", BooleanValue (false));
   propagationLossModel->SetAttribute ("Environment", EnumValue (UMaEnvironment));
+  propagationLossModel->SetAttribute ("HeightBasestation", DoubleValue (20.0));
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
@@ -173,13 +175,57 @@ main (int argc, char *argv[])
   if(scenario){
     ueNodes.Create (ues_to_consider*3); // Pre-Run, Run, Post-Run
   }
+  Ptr<ListPositionAllocator> positionAllocUe = CreateObject<ListPositionAllocator> ();
 
+  for (uint32_t j = 0; j<3; j++){
+    // Install Mobility Model for Application A
+    ObjectFactory pos_a;
+    pos_a.SetTypeId ("ns3::UniformDiscPositionAllocator");
+    pos_a.Set ("X", StringValue (std::to_string(cellsize/2)));
+    pos_a.Set ("Y", StringValue (std::to_string(cellsize/2)));
+    pos_a.Set ("Z", StringValue ("1.5"));
+    pos_a.Set ("rho", DoubleValue (cellsize/2));
+    Ptr<PositionAllocator> m_position = pos_a.Create ()->GetObject<PositionAllocator> ();
+    for (uint32_t i = 0; i < num_ues_app_a; ++i){
+      Vector position = m_position->GetNext ();
+      positionAllocUe->Add (position);
+      //std::cout << "a," << position.x << "," << position.y << "," << position.z << std::endl;
+    }
+    // Install Mobility Model for Application B
+    ObjectFactory pos_b;
+    pos_b.SetTypeId ("ns3::UniformDiscPositionAllocator");
+    pos_b.Set ("X", StringValue (std::to_string(cellsize/2)));
+    pos_b.Set ("Y", StringValue (std::to_string(cellsize/2)));
+    pos_b.Set ("Z", StringValue ("0.0"));
+    pos_b.Set ("rho", DoubleValue (cellsize/2));    
+    m_position = pos_b.Create ()->GetObject<PositionAllocator> ();
+    for (uint32_t i = 0; i < num_ues_app_b; ++i){
+      Vector position = m_position->GetNext ();
+      positionAllocUe->Add (position);
+      //std::cout << "b," << position.x << "," << position.y << "," << position.z << std::endl;
+    }
+    // Install Mobility Model for Application C
+    ObjectFactory pos_c;
+    pos_c.SetTypeId ("ns3::UniformDiscPositionAllocator");
+    pos_c.Set ("X", StringValue (std::to_string(cellsize/2)));
+    pos_c.Set ("Y", StringValue (std::to_string(cellsize/2)));
+    pos_c.Set ("Z", StringValue ("-1.5"));
+    pos_c.Set ("rho", DoubleValue (cellsize/2));    
+    m_position = pos_c.Create ()->GetObject<PositionAllocator> ();
+    for (uint32_t i = 0; i < num_ues_app_c; ++i){
+      Vector position = m_position->GetNext ();
+      positionAllocUe->Add (position);
+      //std::cout << "c," << position.x << "," << position.y << "," << position.z << std::endl;
+    }
+  }
+  
   MobilityHelper mobilityUe;
-  mobilityUe.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-                                 "X", StringValue ("2500.0"),
-                                 "Y", StringValue ("2500.0"),
-                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=1000]"));
+  //mobilityUe.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+  //                               "X", StringValue (std::to_string(cellsize/2)),
+  //                               "Y", StringValue (std::to_string(cellsize/2)),
+  //                               "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=" + std::to_string(cellsize) + "]"));
   mobilityUe.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobilityUe.SetPositionAllocator(positionAllocUe);
   mobilityUe.Install (ueNodes);
 
 

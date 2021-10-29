@@ -279,12 +279,12 @@ LteUeRrc::GetTypeId (void)
                    UintegerValue (2), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
                    MakeUintegerAccessor (&LteUeRrc::m_n311),
                    MakeUintegerChecker<uint8_t> (1, 10))
-    .AddAttribute ("eDRX",
+    .AddAttribute ("eDRX", 
                    "This specifies the maximum number of in-sync indications. "
                    "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
                    BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
                    MakeBooleanAccessor(&LteUeRrc::m_enableEDRX),
-                   MakeBooleanChecker())
+                   MakeBooleanChecker()) // PASCAL: Beschreibung der Attribute falsch
     .AddAttribute ("PSM",
                    "This specifies the maximum number of in-sync indications. "
                    "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",

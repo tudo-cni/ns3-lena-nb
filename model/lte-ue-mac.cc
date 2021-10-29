@@ -408,7 +408,7 @@ LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
   //DoSetTransmissionScheduled(false);
   if(m_msg5Buffer > 0){
     // We are just about to send MSG3, add DPR Element for MSG5 (potentially CIoT-Opt)
-    std::cout << " set payload" << std::endl;
+    //std::cout << " set payload" << std::endl;
     uint8_t dataVolumeIndex = DataVolumeDPR::BufferSize2DVId(m_msg5Buffer);
     m_msg5Buffer = 0;
     m_nextIsMsg5 = true;
@@ -864,11 +864,11 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
   double rsrp = m_uePhySapProvider->GetRSRP ();
   NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm"
                             << std::endl);
-  // TODO Grenzfälle
+  // TODO Grenzfälle // PASCAL: Was genau fehlt hier?
 
-  NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled
+  NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled // Pascal: Hier Rel14, unten Rel15?
 
-  if (rsrp < m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
+  if (rsrp <= m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
     {
       // CE2
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb2;
