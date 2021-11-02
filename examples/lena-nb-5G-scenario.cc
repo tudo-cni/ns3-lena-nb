@@ -66,9 +66,9 @@ main (int argc, char *argv[])
   int num_ues_app_a = 1;
   int num_ues_app_b = 2;
   int num_ues_app_c = 3;
-  int packetsize_app_a = 20;
-  int packetsize_app_b = 50;
-  int packetsize_app_c = 100;
+  int packetsize_app_a = 49; // 32 Bytes 5G mMTC payload + 4 Bytes CoAP Header + 13 Bytes DTLS Header // UDP Header and IP Header  are added by NS-3
+  int packetsize_app_b = 49;
+  int packetsize_app_c = 49;
   Time packetinterval_app_a = Days(1);
   Time packetinterval_app_b = Days(1);
   Time packetinterval_app_c = Days(1);
@@ -181,7 +181,7 @@ main (int argc, char *argv[])
     for (uint32_t i = 0; i < num_ues_app_a; ++i){
       Vector position = m_position->GetNext ();
       positionAllocUe->Add (position);
-      std::cout << "a," << position.x << "," << position.y << "," << position.z << std::endl;
+      //std::cout << "a," << position.x << "," << position.y << "," << position.z << std::endl;
     }
     // Install Mobility Model for Application B
     ObjectFactory pos_b;
@@ -194,7 +194,7 @@ main (int argc, char *argv[])
     for (uint32_t i = 0; i < num_ues_app_b; ++i){
       Vector position = m_position->GetNext ();
       positionAllocUe->Add (position);
-      std::cout << "b," << position.x << "," << position.y << "," << position.z << std::endl;
+      //std::cout << "b," << position.x << "," << position.y << "," << position.z << std::endl;
     }
     // Install Mobility Model for Application C
     ObjectFactory pos_c;
@@ -207,7 +207,7 @@ main (int argc, char *argv[])
     for (uint32_t i = 0; i < num_ues_app_c; ++i){
       Vector position = m_position->GetNext ();
       positionAllocUe->Add (position);
-      std::cout << "c," << position.x << "," << position.y << "," << position.z << std::endl;
+      //std::cout << "c," << position.x << "," << position.y << "," << position.z << std::endl;
     }
   }
   
