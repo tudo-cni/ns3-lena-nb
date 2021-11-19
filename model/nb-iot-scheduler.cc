@@ -497,7 +497,9 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
                           for (size_t i = 0; i < ulgrant.second.second.size (); i++)
                             {
                               m_uplink[ulgrant.second.first][ulgrant.second.second[i]] =
-                                  m_currenthyperindex;
+                                  message.rnti;
+                                  //m_currenthyperindex;
+                                  
                               NS_BUILD_DEBUG (std::cout << ulgrant.second.second[i] << " ");
                             }
                           NS_BUILD_DEBUG (std::cout << std::endl);
@@ -526,7 +528,8 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
                       for (size_t i = 0; i < npuschharqsubframes[0].second.size (); i++)
                         {
                           m_uplink[npuschharqsubframes[0].first][npuschharqsubframes[0].second[i]] =
-                              m_currenthyperindex;
+                              message.rnti;
+                              //m_currenthyperindex;
                           NS_BUILD_DEBUG (std::cout << npuschharqsubframes[0].second[i] << " ");
                         }
                       NS_BUILD_DEBUG (std::cout << std::endl);
@@ -542,7 +545,7 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
 
                   for (size_t j = 0; j < test.size (); ++j)
                     {
-                      m_downlink[test[j]] = m_currenthyperindex;
+                      m_downlink[test[j]] = message.rnti;//m_currenthyperindex;
                       NS_BUILD_DEBUG (std::cout << test[j] << " ");
                     }
 
@@ -551,7 +554,7 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
 
                   for (size_t j = 0; j < npdschsubframes.size (); ++j)
                     {
-                      m_downlink[npdschsubframes[j]] = m_currenthyperindex;
+                      m_downlink[npdschsubframes[j]] = message.rnti;//m_currenthyperindex;
                       NS_BUILD_DEBUG (std::cout << npdschsubframes[j] << " ");
                     }
 
@@ -584,7 +587,7 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
 
               for (size_t j = 0; j < test.size (); ++j)
                 {
-                  m_downlink[test[j]] = m_currenthyperindex;
+                  m_downlink[test[j]] = message.rnti;//m_currenthyperindex;
                   NS_BUILD_DEBUG (std::cout << test[j] << " ");
                 }
 
@@ -594,7 +597,8 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
               for (size_t i = 0; i < npuschsubframes[0].second.size (); i++)
                 {
                   m_uplink[npuschsubframes[0].first][npuschsubframes[0].second[i]] =
-                      m_currenthyperindex;
+                      message.rnti;
+                      //m_currenthyperindex;
                   NS_BUILD_DEBUG (std::cout << npuschsubframes[0].second[i] << " ");
                 }
               NS_BUILD_DEBUG (std::cout << std::endl);
@@ -908,7 +912,7 @@ NbiotScheduler::CheckforNContiniousSubframesDl (std::vector<uint64_t> Subframes,
 
   for (size_t i = 0; i < N; i++)
     {
-      if (m_downlink[Subframes[startSubframeIndex + i]] == m_currenthyperindex)
+      if (m_downlink[Subframes[startSubframeIndex + i]] > 0) // if > 0, then subframes are already used by user specific data
         {
           return std::vector<uint64_t> ();
         }
@@ -941,7 +945,7 @@ NbiotScheduler::CheckforNContiniousSubframesUl (std::vector<uint64_t> Subframes,
 
   for (size_t i = 0; i < N; i++)
     {
-      if (m_uplink[carrier][Subframes[startSubframeIndex + i]] == m_currenthyperindex)
+      if (m_uplink[carrier][Subframes[startSubframeIndex + i]] > 0) // if > 0, then subframes are already used by user specific data
         {
           return std::vector<uint64_t> ();
         }
@@ -1199,14 +1203,22 @@ NbiotScheduler::LogUplinkGrid ()
   std::string logfile_path = m_logdir+"Spectral_Uplink.log";
   std::ofstream logfile;
   logfile.open (logfile_path, std::ios_base::app);
-  for (size_t i = 0; i < m_uplink.size (); i++)
-    {
-      for (int64_t j = 0; j < Simulator::Now ().GetMilliSeconds (); j++)
-        {
-          logfile << m_uplink[i][j] << ",";
-        }
+  // for (size_t i = 0; i < m_uplink.size (); i++)
+  //   {
+  //     for (int64_t j = 0; j < Simulator::Now ().GetMilliSeconds (); j++)
+  //       {
+  //         logfile << m_uplink[i][j] << ",";
+  //       }
+  //     logfile << "\n";
+  //   }
+    for (int64_t j = 0; j < Simulator::Now ().GetMilliSeconds (); j++){
+      for (size_t i = 0; i < m_uplink.size (); i++){
+        logfile << m_uplink[i][j] << ",";
+      }
       logfile << "\n";
     }
+
+    
   logfile.close ();
 }
 

@@ -3299,6 +3299,7 @@ LteEnbRrc::AddUe (UeManager::State state, uint8_t componentCarrierId)
     }
 
   NS_ASSERT_MSG (found, "no more RNTIs available (do you have more than 65535 UEs in a cell?)");
+  std::cout << rnti << std::endl; // TODO DEBUG PASCAL
   m_lastAllocatedRnti = rnti;
   Ptr<UeManager> ueManager = CreateObject<UeManager> (this, rnti, state, componentCarrierId);
   m_ccmRrcSapProvider-> AddUe (rnti, (uint8_t)state);
