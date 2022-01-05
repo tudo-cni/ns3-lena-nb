@@ -164,6 +164,14 @@ public:
    */
   void SwitchToResumeNb();
 
+  /** 
+   * Set the directory for txt file logging
+   * 
+   * \param logfile The log file name
+   * 
+   */
+  void SetLogDir(std::string logfile);
+
   /**
    * Process Initial context setup request message from the MME.
    * It triggers RRC connection reconfiguration.
@@ -682,6 +690,7 @@ private:
   bool m_dataReceived;
   bool m_enablePSM;
   std::list<EventId> id_suspend;
+  std::string m_logdir;
 }; // end of `class UeManager`
 
 

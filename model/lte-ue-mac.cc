@@ -321,6 +321,7 @@ LteUeMac::LteUeMac ()
   m_raPreambleUniformVariable = CreateObject<UniformRandomVariable> ();
   m_componentCarrierId = 0;
   m_nextIsMsg5 = false;
+  m_mac_logging = false;
 }
 
 LteUeMac::~LteUeMac ()
@@ -607,6 +608,15 @@ LteUeMac::SendRaPreambleNb (bool contention)
   NS_LOG_INFO (this << " sent preamble id " << (uint32_t) m_raPreambleId << ", RA-RNTI "
                     << (uint32_t) m_raRnti);
 
+  if (m_mac_logging)
+  {
+    std::string logfile_path = m_logdir+"MAC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  m_imsi << ",SendRaPreambleNb," << Simulator::Now().GetMilliSeconds() <<"\n";
+    logfile.close();
+  }
+
   // 3GPP 36.321 5.1.4
   Time raWindowBegin;
   Time raWindowEnd;
@@ -703,6 +713,16 @@ LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
   m_noRaResponseReceivedEvent.Cancel ();
   NS_LOG_INFO ("got RAR for RAPID " << (uint32_t) m_raPreambleId
                                     << ", setting T-C-RNTI = " << raResponse.cellRnti);
+                                    
+  if (m_mac_logging)
+  {
+    std::string logfile_path = m_logdir+"MAC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  m_imsi << ",RecvRaResponseNb," << Simulator::Now().GetMilliSeconds() << ",cellRNTI," << raResponse.cellRnti << "\n";
+    logfile.close();
+  }
+
   m_rnti = raResponse.cellRnti;
   m_cmacSapUser->SetTemporaryCellRnti (m_rnti);
   // in principle we should wait for contention resolution,
@@ -911,6 +931,16 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
 
   }
   m_backoffParameter = 0;
+
+  if (m_mac_logging)
+  {
+    std::string logfile_path = m_logdir+"MAC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  m_imsi << ",StartRandomAccessProcedureNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
   RandomlySelectAndSendRaPreambleNb ();
 }
 void
@@ -1806,6 +1836,11 @@ LteUeMac::DoGetCoverageEnhancementLevel(){
 
 void LteUeMac::DoSetMsg5Buffer(uint32_t buffersize){
   m_msg5Buffer = buffersize;
+}
+
+void LteUeMac::SetLogDir(std::string dirname){
+  m_logdir = dirname;
+  m_mac_logging = true;
 }
 
 } // namespace ns3

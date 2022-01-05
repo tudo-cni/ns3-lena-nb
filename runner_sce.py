@@ -17,7 +17,7 @@ sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-
 
 
 class SimulationParameters:
-    def __init__(self, simulation, simTime, randomSeed, path, num_ues_app_a, num_ues_app_b, num_ues_app_c):
+    def __init__(self, simulation, simTime, randomSeed, path, num_ues_app_a, num_ues_app_b, num_ues_app_c,ciot,edt):
         self.simulation = simulation # .cc file to execute
         self.simTime = simTime # in MilliSeconds
         self.randomSeed = randomSeed
@@ -25,6 +25,8 @@ class SimulationParameters:
         self.num_ues_app_a = num_ues_app_a
         self.num_ues_app_b = num_ues_app_b
         self.num_ues_app_c = num_ues_app_c
+        self.ciot = ciot
+        self.edt = edt
 
 
     def generateExecutableCall(self):
@@ -37,6 +39,8 @@ class SimulationParameters:
         call += f" --numUeAppA={self.num_ues_app_a}"
         call += f" --numUeAppB={self.num_ues_app_b}"
         call += f" --numUeAppC={self.num_ues_app_c}"
+        call += f" --ciot={self.ciot}"
+        call += f" --edt={self.edt}"
         return call
 
 class TaskQueue(queue.Queue):
@@ -80,7 +84,7 @@ class TaskQueue(queue.Queue):
 
 start_time = time.time()
 simTime =300
-simu_queue = TaskQueue(40)
+simu_queue = TaskQueue(15)
 seed =2
 #num_ues_app_a = 10 # Outdoor
 #num_ues_app_b = 10 # Indoor
@@ -93,19 +97,55 @@ for i in range(1,seed):
         #filepath.replace("/","\/")
         #filepath = "\'"+filepath+"\'"
         #print(filepath)
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1, num_ues_app_b=1, num_ues_app_c=1))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2, num_ues_app_b=2, num_ues_app_c=2))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=10, num_ues_app_b=10, num_ues_app_c=10))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=20, num_ues_app_b=20, num_ues_app_c=20))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=50, num_ues_app_b=50, num_ues_app_c=50))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=100, num_ues_app_b=100, num_ues_app_c=100))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=200, num_ues_app_b=200, num_ues_app_c=200))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=500, num_ues_app_b=500, num_ues_app_c=500))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1000, num_ues_app_b=1000, num_ues_app_c=1000))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2000, num_ues_app_b=2000, num_ues_app_c=2000))
-        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=5000, num_ues_app_b=5000, num_ues_app_c=5000))
-        simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=7281, num_ues_app_b=7281, num_ues_app_c=7281))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1, num_ues_app_b=1, num_ues_app_c=1, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2, num_ues_app_b=2, num_ues_app_c=2, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=10, num_ues_app_b=10, num_ues_app_c=10, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=20, num_ues_app_b=20, num_ues_app_c=20, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=50, num_ues_app_b=50, num_ues_app_c=50, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=100, num_ues_app_b=100, num_ues_app_c=100, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=200, num_ues_app_b=200, num_ues_app_c=200, ciot=False, edt=False))
+
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1, num_ues_app_b=1, num_ues_app_c=1, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2, num_ues_app_b=2, num_ues_app_c=2, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=10, num_ues_app_b=10, num_ues_app_c=10, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=20, num_ues_app_b=20, num_ues_app_c=20, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=50, num_ues_app_b=50, num_ues_app_c=50, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=100, num_ues_app_b=100, num_ues_app_c=100, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=200, num_ues_app_b=200, num_ues_app_c=200, ciot=True, edt=False))
+
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1, num_ues_app_b=1, num_ues_app_c=1, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2, num_ues_app_b=2, num_ues_app_c=2, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=10, num_ues_app_b=10, num_ues_app_c=10, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=20, num_ues_app_b=20, num_ues_app_c=20, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=50, num_ues_app_b=50, num_ues_app_c=50, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=100, num_ues_app_b=100, num_ues_app_c=100, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=200, num_ues_app_b=200, num_ues_app_c=200, ciot=True, edt=True))
+
+
+        
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=500, num_ues_app_b=500, num_ues_app_c=500, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1000, num_ues_app_b=1000, num_ues_app_c=1000, ciot=False, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2000, num_ues_app_b=2000, num_ues_app_c=2000, ciot=False, edt=False))
+
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=500, num_ues_app_b=500, num_ues_app_c=500, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1000, num_ues_app_b=1000, num_ues_app_c=1000, ciot=True, edt=False))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2000, num_ues_app_b=2000, num_ues_app_c=2000, ciot=True, edt=False))
+
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=500, num_ues_app_b=500, num_ues_app_c=500, ciot=True, edt=True))
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=1000, num_ues_app_b=1000, num_ues_app_c=1000, ciot=True, edt=True))
+        simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=1,path=to_simulate[6:]+"/"+filename, num_ues_app_a=2000, num_ues_app_b=2000, num_ues_app_c=2000, ciot=True, edt=True))
+        
+
+
+
+
+
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=5000, num_ues_app_b=5000, num_ues_app_c=5000, ciot=True, edt=True))
+        
+        #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i,path=to_simulate[6:]+"/"+filename, num_ues_app_a=7281, num_ues_app_b=7281, num_ues_app_c=7281, ciot=True, edt=True))
 simu_queue.start_workers()
 
 simu_queue.join()

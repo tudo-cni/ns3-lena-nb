@@ -270,6 +270,10 @@ LteUeRrcProtocolIdeal::SetEnbRrcSapProvider ()
   enbRrcProtocolIdeal->SetUeRrcSapProvider (m_rnti, m_ueRrcSapProvider);
 }
 
+void LteUeRrcProtocolIdeal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
+}
+
 
 NS_OBJECT_ENSURE_REGISTERED (LteEnbRrcProtocolIdeal);
 
@@ -793,6 +797,10 @@ LteEnbRrcProtocolIdeal::DoDecodeHandoverCommand (Ptr<Packet> p)
   LteRrcSap::RrcConnectionReconfiguration msg = it->second;
   g_handoverCommandMsgMap.erase (it);
   return msg;
+}
+
+void LteEnbRrcProtocolIdeal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
 }
 
 

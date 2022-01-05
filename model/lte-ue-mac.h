@@ -127,6 +127,8 @@ public:
   */
   int64_t AssignStreams (int64_t stream);
 
+  void SetLogDir(std::string dirname);
+
 private:
   // forwarded from MAC SAP
  /**
@@ -281,6 +283,8 @@ private:
   void DoNotifyPsm();
   void DoSetMsg5Buffer(uint32_t buffersize);
 
+  
+
   NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel DoGetCoverageEnhancementLevel();
   /// component carrier Id --> used to address sap
   uint8_t m_componentCarrierId;
@@ -348,6 +352,8 @@ private:
   NbIotRrcSap::EdtTbsNb DoGetEdtTbsInfo(); // return EdtTbsInfo based on RSRP (Coverage level)
   uint32_t m_subframesInSearchSpace;
   std::vector<uint32_t> m_logging;
+  bool m_mac_logging;
+  std::string m_logdir;
   uint32_t m_msg5Buffer;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.

@@ -1698,4 +1698,15 @@ LteHelper::GetPdcpStats (void)
   return m_pdcpStats;
 }
 
+void 
+LteHelper::EnableRrcLogging(){
+  m_rrc_logging = true;
+}
+
+void 
+LteHelper::SetLogDir(std::string dirname){
+  m_logdir = dirname;
+  //rrc->GetUeRrc->SetLogDir(m_logdir)
+}
+
 } // namespace ns3

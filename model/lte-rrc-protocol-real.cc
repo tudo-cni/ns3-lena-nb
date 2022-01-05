@@ -33,6 +33,12 @@
 #include "lte-enb-net-device.h"
 #include "lte-ue-net-device.h"
 
+#include <chrono>
+#include <iomanip>
+#include <stdlib.h>
+#include <ctime>    
+#include <fstream>
+
 
 namespace ns3 {
 
@@ -47,6 +53,7 @@ LteUeRrcProtocolReal::LteUeRrcProtocolReal ()
   :  m_ueRrcSapProvider (0),
     m_enbRrcSapProvider (0)
 {
+  m_logging = false;
   m_ueRrcSapUser = new MemberLteUeRrcSapUser<LteUeRrcProtocolReal> (this);
   m_completeSetupParameters.srb0SapUser = new LteRlcSpecificLteRlcSapUser<LteUeRrcProtocolReal> (this);
   m_completeSetupParameters.srb1SapUser = new LtePdcpSpecificLtePdcpSapUser<LteUeRrcProtocolReal> (this);    
@@ -125,6 +132,16 @@ LteUeRrcProtocolReal::DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionReques
   transmitPdcpPduParameters.rnti = m_rnti;
   transmitPdcpPduParameters.lcid = 0;
 
+  uint64_t imsi = msg.ueIdentity; // TODO PASCAL: Check if this is really the imsi
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionRequest," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
   m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
 }
 
@@ -147,6 +164,16 @@ LteUeRrcProtocolReal::DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnec
   transmitPdcpPduParameters.pdcpPdu = packet;
   transmitPdcpPduParameters.rnti = m_rnti;
   transmitPdcpPduParameters.lcid = 0;
+
+  uint64_t imsi = msg.resumeIdentity; // TODO PASCAL: Check if this is really the imsi
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionResumeRequestNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
 
   m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
 }
@@ -195,6 +222,15 @@ LteUeRrcProtocolReal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConn
 
   if (m_setupParameters.srb1SapProvider)
     {
+      uint64_t imsi = msg.rrcTransactionIdentifier; // TODO PASCAL: Check if this is really the imsi
+      if (m_logging)
+      {
+        std::string logfile_path = m_logdir+"RRC.log";
+        std::ofstream logfile;
+        logfile.open(logfile_path, std::ios_base::app);
+        logfile <<  imsi << ",DoSendRrcConnectionResumeCompletedNb," << Simulator::Now().GetMilliSeconds() << "\n";
+        logfile.close();
+      }
       m_setupParameters.srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
     }
 }
@@ -220,6 +256,16 @@ LteUeRrcProtocolReal::DoSendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequ
   transmitPdcpPduParameters.pdcpPdu = packet;
   transmitPdcpPduParameters.rnti = m_rnti;
   transmitPdcpPduParameters.lcid = 0;
+
+  uint64_t imsi = msg.sTmsiNb.mTmsi;
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  m_rnti << ",DoSendRrcEarlyDataRequestNb," << Simulator::Now().GetMilliSeconds() << ",imsi: " << imsi << "\n";
+    logfile.close();
+  }
 
   m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
 }
@@ -474,12 +520,18 @@ LteUeRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters
     }
 }
 
+void LteUeRrcProtocolReal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
+  m_logging = true;
+}
+
 NS_OBJECT_ENSURE_REGISTERED (LteEnbRrcProtocolReal);
 
 LteEnbRrcProtocolReal::LteEnbRrcProtocolReal ()
   :  m_enbRrcSapProvider (0)
 {
   NS_LOG_FUNCTION (this);
+  m_logging = true;
   m_enbRrcSapUser = new MemberLteEnbRrcSapUser<LteEnbRrcProtocolReal> (this);
 }
 
@@ -757,6 +809,16 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::
   transmitPdcpSduParameters.rnti = rnti;
   transmitPdcpSduParameters.lcid = 1;
 
+  uint64_t imsi = msg.rrcTransactionIdentifier; // TODO PASCAL: Check if this is really the imsi
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionResumeNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
   m_setupUeParametersMap[rnti].srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
 }
 
@@ -864,6 +926,16 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap:
   transmitPdcpSduParameters.rnti = rnti;
   transmitPdcpSduParameters.lcid = 1;
 
+  uint64_t imsi = msg.rrcTransactionIdentifier; // TODO PASCAL: Check if this is really the imsi
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionReleaseNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
   m_setupUeParametersMap[rnti].srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
 }
 
@@ -879,6 +951,14 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
   RrcConnectionRequestHeader rrcConnectionRequestHeader;
   RrcConnectionResumeRequestNbHeader rrcConnectionResumeRequestNbHeader;
   RrcEarlyDataRequestNbHeader rrcEarlyDataRequestNbHeader;
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  rnti << ",DoReceivePdcpPdu," << Simulator::Now().GetMilliSeconds() << ",MessageType," << rrcUlCcchMessage.GetMessageType () << "\n";
+    logfile.close();
+  }
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcUlCcchMessage.GetMessageType () )
@@ -929,6 +1009,15 @@ LteEnbRrcProtocolReal::DoSendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap:
   transmitPdcpPduParameters.pdcpPdu = packet;
   transmitPdcpPduParameters.rnti = rnti;
   transmitPdcpPduParameters.lcid = 0;
+
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  rnti << ",DoSendRrcEarlyDataCompleteNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
 
   m_setupUeParametersMap[rnti].srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
 }
@@ -1021,6 +1110,11 @@ LteEnbRrcProtocolReal::DoDecodeHandoverCommand (Ptr<Packet> p)
   p->RemoveHeader (h);
   LteRrcSap::RrcConnectionReconfiguration msg = h.GetMessage ();
   return msg;
+}
+
+void LteEnbRrcProtocolReal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
+  m_logging = true;
 }
 
 //////////////////////////////////////////////////////

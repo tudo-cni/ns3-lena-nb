@@ -281,11 +281,14 @@ LteNetDevice::Receive (Ptr<Packet> p)
 
   Ipv4Header ipv4Header;
   Ipv6Header ipv6Header;
+  
+  std::cout << "LteNetDevice::Receive,Entering " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
 
   if (p->PeekHeader (ipv4Header) != 0)
     {
       NS_LOG_LOGIC ("IPv4 stack...");
       m_rxCallback (this, p, Ipv4L3Protocol::PROT_NUMBER, Address ());
+      std::cout << "LteNetDevice::Receive,Callback_Done " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
     }
   else if  (p->PeekHeader (ipv6Header) != 0)
     {

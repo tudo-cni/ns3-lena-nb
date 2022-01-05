@@ -162,6 +162,15 @@ private:
   /// Set ENB RRC SAP provider
   void SetEnbRrcSapProvider ();
 
+  /**
+   * TODO
+   *
+   * \param logDir the logging directory
+   */
+  void DoSetLogDir (std::string logDir);
+
+  bool m_logging;
+  std::string m_logdir;
   Ptr<LteUeRrc> m_rrc; ///< the RRC
   uint16_t m_rnti; ///< the RNTI
   LteUeRrcSapProvider* m_ueRrcSapProvider; ///< the UE RRC SAP provider
@@ -380,7 +389,16 @@ private:
    */
   LteRrcSap::RrcConnectionReconfiguration DoDecodeHandoverCommand (Ptr<Packet> p);
 
+  /**
+   * TODO
+   *
+   * \param logDir the logging directory
+   */
+  void DoSetLogDir (std::string logDir);
 
+
+  bool m_logging;
+  std::string m_logdir;
   uint16_t m_rnti; ///< the RNTI
   uint16_t m_cellId; ///< the cell ID
   LteEnbRrcSapProvider* m_enbRrcSapProvider; ///< the ENB RRC SAP provider

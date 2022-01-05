@@ -692,12 +692,25 @@ public:
    */
   Ptr<SpectrumChannel> GetDownlinkSpectrumChannel (void) const;
 
+  /**
+   * Enable RRC Logging
+   */
+  void EnableRrcLogging();
+
+  /**
+   * Ste the directory for logging Messages
+   */
+  void SetLogDir(std::string dirname);
+
 
 protected:
   // inherited from Object
   virtual void DoInitialize (void);
 
 private:
+
+  bool m_rrc_logging;
+  std::string m_logdir;
 
   /**
    * Configure the component carriers

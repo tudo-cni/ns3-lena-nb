@@ -1177,6 +1177,8 @@ UeManager::RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
                 msg.dedicatedInfoNas->AddPacketTag (tag);
 
                 m_rrc->LogDataReception(m_imsi);
+                //std::cout << m_imsi << ",UeManager::RecvRrcEarlyDataRequestNb," << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
+
                 m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
               }
 
@@ -1278,6 +1280,7 @@ UeManager::RecvRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeC
             tag.SetRnti (m_rnti);
             tag.SetBid (Lcid2Bid (3));
             msg.dedicatedInfoNas->AddPacketTag (tag);
+            //std::cout << m_imsi << ",UeManager::RecvRrcConnectionResumeCompletedNb," << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
             m_rrc->LogDataReception(m_imsi);
             m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
           }
@@ -1510,6 +1513,7 @@ UeManager::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params)
       tag.SetRnti (params.rnti);
       tag.SetBid (Lcid2Bid (params.lcid));
       params.pdcpSdu->AddPacketTag (tag);
+      //std::cout << m_imsi << ",UeManager::DoReceivePdcpSdu," << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
       m_rrc->LogDataReception(m_imsi);
       m_rrc->m_forwardUpCallback (params.pdcpSdu);
     }
@@ -1920,6 +1924,10 @@ void UeManager::SwitchToResumeNb(){
   m_rrc->m_rrcSapUser->SendRrcConnectionReleaseNb(m_rnti, msg);
   SwitchToState(IDLE_SUSPEND_EDRX);
   Simulator::Schedule(MilliSeconds(50000), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti, m_resumeId);
+}
+
+void UeManager::SetLogDir(std::string logdir){
+  m_logdir = logdir;
 }
 
 ///////////////////////////////////////////
@@ -2708,11 +2716,13 @@ LteEnbRrc::SendData (Ptr<Packet> packet)
 
   if(m_ueActiveMap.find(tag.GetRnti()) != m_ueActiveMap.end()){
     // Ue is in Connected State, just send Packet 
+    std::cout << "LteEnbRrc::SendData,RNTI found, sending data via ueManager, " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
     Ptr<UeManager> ueManager = GetUeManagerbyRnti (tag.GetRnti ());
     ueManager->SendData (tag.GetBid (), packet);
   }
   else{
     // Device is in eDRX or PSM -> Store Packet for Imsi
+    std::cout << "LteEnbRrc::SendData, Device is in eDRX or PSM -> Store Packet for Imsi, " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
     m_imsiSavedPacketsMap[tag.GetImsi()].push_back(std::pair<uint8_t, Ptr<Packet>>(tag.GetBid (), packet));
   }
 
@@ -3786,8 +3796,8 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   // Values from Vodafone Cell / temporary
   NbIotRrcSap::NprachParametersNb ce0;
   ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
-  ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
-  ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms160;
+  ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
   ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n36;
   ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
   ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
@@ -3798,8 +3808,8 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
   NbIotRrcSap::NprachParametersNb ce1;
   ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
-  ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-  ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
+  ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
   ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n24;
   ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
   ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
@@ -3812,8 +3822,8 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
 
   NbIotRrcSap::NprachParametersNb ce2;
   ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
-  ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms2560;
-  ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms256;
+  ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms1280;
+  ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
   ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
   ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
   ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::twoThird;
@@ -3921,6 +3931,7 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
 void LteEnbRrc::SetLogDir(std::string logdir){
   m_logdir = logdir;
   m_cmacSapProvider.at(0)->SetLogDir(m_logdir);
+  m_rrcSapUser->SetLogDir(logdir);
 }
 
 void LteEnbRrc::LogDataReception(uint32_t imsi){

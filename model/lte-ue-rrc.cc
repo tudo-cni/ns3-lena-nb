@@ -662,7 +662,9 @@ void LteUeRrc::LogEnergyRemaining(){
 
 void LteUeRrc::SetLogDir(std::string dirname){
   m_logdir = dirname;
+  m_rrcSapUser->SetLogDir(dirname);
 }
+
 void
 LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
 {

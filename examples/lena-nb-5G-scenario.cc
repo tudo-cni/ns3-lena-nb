@@ -85,8 +85,10 @@ main (int argc, char *argv[])
   cmd.AddValue ("numUeAppA", "Number of UEs for Application A",num_ues_app_a);
   cmd.AddValue ("numUeAppB", "Number of UEs for Application B",num_ues_app_b);
   cmd.AddValue ("numUeAppC", "Number of UEs for Application C",num_ues_app_c);
+  cmd.AddValue ("ciot", "Cellular IoT Optimization",ciot);
+  cmd.AddValue ("edt", "Early Data Transmission",edt);
   cmd.Parse (argc, argv);
-  std::cout << "Number of UEs of Application A: " << num_ues_app_a << std::endl;
+  std::cout << "ciot opt: " << ciot << std::endl;
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
@@ -95,6 +97,7 @@ main (int argc, char *argv[])
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
+  lteHelper->EnableRrcLogging ();
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
   lteHelper->SetUeAntennaModelType ("ns3::IsotropicAntennaModel");
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::WinnerPlusPropagationLossModel"));
@@ -262,14 +265,14 @@ main (int argc, char *argv[])
       Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
       Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
       if(ciot == true){
-        std::cout << "ciot" << std::endl;
+        //std::cout << "ciot" << std::endl;
         ueRrc->SetAttribute("CIoT-Opt", BooleanValue(true));
       }
       else{
         ueRrc->SetAttribute("CIoT-Opt", BooleanValue(false));
       }
       if(edt == true){
-        std::cout << "EDT" << std::endl;
+        //std::cout << "EDT" << std::endl;
         ueRrc->SetAttribute("EDT", BooleanValue(true));
       }
       else{
@@ -329,14 +332,14 @@ main (int argc, char *argv[])
       Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
       ueRrc->EnableLogging();
       if(ciot == true){
-        std::cout << "ciot" << std::endl;
+        //std::cout << "ciot" << std::endl;
         ueRrc->SetAttribute("CIoT-Opt", BooleanValue(true));
       }
       else{
         ueRrc->SetAttribute("CIoT-Opt", BooleanValue(false));
       }
       if(edt == true){
-        std::cout << "EDT" << std::endl;
+        //std::cout << "EDT" << std::endl;
         ueRrc->SetAttribute("EDT", BooleanValue(true));
       }
       else{
@@ -397,14 +400,14 @@ main (int argc, char *argv[])
       Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
       Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
       if(ciot == true){
-        std::cout << "ciot" << std::endl;
+        //std::cout << "ciot" << std::endl;
         ueRrc->SetAttribute("CIoT-Opt", BooleanValue(true));
       }
       else{
         ueRrc->SetAttribute("CIoT-Opt", BooleanValue(false));
       }
       if(edt == true){
-        std::cout << "EDT" << std::endl;
+        //std::cout << "EDT" << std::endl;
         ueRrc->SetAttribute("EDT", BooleanValue(true));
       }
       else{
@@ -477,6 +480,10 @@ main (int argc, char *argv[])
   logdir += std::to_string(ueNodes.GetN());
   logdir += "_";
   logdir += std::to_string(simTime.GetInteger());
+  logdir += "_";
+  logdir += std::to_string(ciot);
+  logdir += "_";
+  logdir += std::to_string(edt);
   
   std::string top_dirmakedir = makedir+logdir; 
   int a = std::system(top_dirmakedir.c_str());
@@ -491,17 +498,28 @@ main (int argc, char *argv[])
   logdir += "_";
   logdir += std::to_string(worker);
   logdir += "_";
+  logdir += std::to_string(seed);
+  logdir += "_";
   //std::cout << logfile << "\n";
+  
 
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
 
     Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
     Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+    Ptr<LteUeMac> ueMac = ueLteDevice->GetMac();
     ueRrc->SetLogDir(logdir); // Will be changed to real ns3 traces later on
-  }
+    ueMac->SetLogDir(logdir);
+    
+
+    //Ptr<LteUeRrcSapProvider> ueRrcSapProvider = ueRrc->GetLteUeRrcSapProvider() ;
+    //ueRrcSapProvider->
+
+      }
   Ptr<LteEnbNetDevice> enbLteDevice = enbLteDevs.Get(0)->GetObject<LteEnbNetDevice>();
   Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
   enbRrc->SetLogDir(logdir);
+  
   
   //lteHelper->EnableTraces ();
   // Uncomment to enable PCAP tracing

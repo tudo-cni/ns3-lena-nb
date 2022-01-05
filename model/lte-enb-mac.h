@@ -559,8 +559,9 @@ private:
   std::map<uint16_t, uint8_t> m_ueStoredBSR;
   std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
   std::map<uint16_t, EventId> m_noDataIndicators;
-  std::string m_logdir;
   bool m_edt;
+  bool m_mac_logging;
+  std::string m_logdir;
   };
 
 } // end namespace ns3

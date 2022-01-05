@@ -45,6 +45,7 @@
 #include "lte-rlc-am-header.h"
 
 #include <algorithm>
+#include <fstream>
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteEnbMac");
@@ -426,6 +427,7 @@ LteEnbMac::LteEnbMac () : m_ccmMacSapUser (0)
 LteEnbMac::~LteEnbMac ()
 {
   NS_LOG_FUNCTION (this);
+  m_mac_logging = false;
 }
 
 void
@@ -742,6 +744,16 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
               rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
               rar.rapId = subcarrierOffset + iter->first;
               rar.rarPayload.cellRnti = rar.cellRnti;
+
+              if (m_mac_logging)
+              {
+                std::string logfile_path = m_logdir+"MAC.log";
+                std::ofstream logfile;
+                logfile.open(logfile_path, std::ios_base::app);
+                logfile <<  rar.cellRnti << ",PreambleReceived," << Simulator::Now().GetMilliSeconds() << "\n";
+                logfile.close();
+              }
+
               m_rarQueue.push_back (
                   std::make_pair (m_rapIdRantiMap[subcarrierOffset + iter->first], rar));
               m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
@@ -756,6 +768,16 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
               NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
               NS_BUILD_DEBUG (std::cout << "Collision" << std::endl);
               NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
+
+              if (m_mac_logging)
+              {
+                std::string logfile_path = m_logdir+"MAC.log";
+                std::ofstream logfile;
+                logfile.open(logfile_path, std::ios_base::app);
+                logfile  << ",PreambleCollision," << Simulator::Now().GetMilliSeconds() << "\n";
+                logfile.close();
+              }
+
               if (m_dropPreambleCollision)
                 {
                   m_receivedNprachPreambleCount[subcarrierOffset].erase (iter->first);
@@ -1542,6 +1564,7 @@ void LteEnbMac::DoRemoveUeFromScheduler(uint16_t rnti){
 }
 void LteEnbMac::DoSetLogDir(std::string logdir){
   m_logdir = logdir;
+  m_mac_logging = true;
 }
 void
 LteEnbMac::DoRemoveUe (uint16_t rnti)

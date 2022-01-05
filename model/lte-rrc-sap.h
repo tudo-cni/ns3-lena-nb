@@ -1009,6 +1009,17 @@ public:
    */
    virtual void SendIdealUeContextRemoveRequest (uint16_t rnti) = 0;
 
+   /**
+   * \brief TODO
+   *
+   * Request eNodeB to remove UE context once radio link failure or
+   * random access failure is detected. It is needed since no RLF
+   * detection mechanism at eNodeB is implemented.
+   *
+   * \param logDir The log directory for debug logging
+   */
+   virtual void SetLogDir (std::string logDir) = 0;
+
 };
 
 
@@ -1288,6 +1299,17 @@ public:
    */
   virtual RrcConnectionReconfiguration DecodeHandoverCommand (Ptr<Packet> p) = 0;
 
+  /**
+   * \brief TODO
+   *
+   * Request eNodeB to remove UE context once radio link failure or
+   * random access failure is detected. It is needed since no RLF
+   * detection mechanism at eNodeB is implemented.
+   *
+   * \param logDir The log directory for debug logging
+   */
+   virtual void SetLogDir (std::string logDir) = 0;
+
 };
 
 
@@ -1452,6 +1474,7 @@ public:
   virtual void SendRrcConnectionReestablishmentComplete (RrcConnectionReestablishmentComplete msg);
   virtual void SendMeasurementReport (MeasurementReport msg);
   virtual void SendIdealUeContextRemoveRequest (uint16_t rnti);
+  virtual void SetLogDir (std::string logDir);
 
 private:
   MemberLteUeRrcSapUser ();
@@ -1544,6 +1567,13 @@ void
 MemberLteUeRrcSapUser<C>::SendIdealUeContextRemoveRequest (uint16_t rnti)
 {
   m_owner->DoSendIdealUeContextRemoveRequest (rnti);
+}
+
+template <class C>
+void
+MemberLteUeRrcSapUser<C>::SetLogDir (std::string logDir)
+{
+  m_owner->DoSetLogDir (logDir);
 }
 
 /**
@@ -1716,6 +1746,7 @@ public:
   virtual HandoverPreparationInfo DecodeHandoverPreparationInformation (Ptr<Packet> p);
   virtual Ptr<Packet> EncodeHandoverCommand (RrcConnectionReconfiguration msg);
   virtual RrcConnectionReconfiguration DecodeHandoverCommand (Ptr<Packet> p);
+  virtual void SetLogDir (std::string logDir);
 
 private:
   MemberLteEnbRrcSapUser ();
@@ -1867,6 +1898,13 @@ LteRrcSap::RrcConnectionReconfiguration
 MemberLteEnbRrcSapUser<C>::DecodeHandoverCommand (Ptr<Packet> p)
 {
   return m_owner->DoDecodeHandoverCommand (p);
+}
+
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::SetLogDir (std::string logDir)
+{
+  m_owner->DoSetLogDir (logDir);
 }
 
 /**
