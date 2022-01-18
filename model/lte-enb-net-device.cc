@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,6 +20,8 @@
  * Author: Marco Miozzo <mmiozzo@cttc.es> : Update to FF API Architecture
  * Author: Nicola Baldo <nbaldo@cttc.es>  : Integrated with new RRC and MAC architecture
  * Author: Danilo Abrignani <danilo.abrignani@unibo.it> : Integrated with new architecture - GSoC 2015 - Carrier Aggregation
+ * Modified by:	
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/llc-snap-header.h>
@@ -391,7 +394,6 @@ LteEnbNetDevice::Send (Ptr<Packet> packet, const Address& dest, uint16_t protoco
   NS_ABORT_MSG_IF (protocolNumber != Ipv4L3Protocol::PROT_NUMBER
                    && protocolNumber != Ipv6L3Protocol::PROT_NUMBER,
                    "unsupported protocol " << protocolNumber << ", only IPv4 and IPv6 are supported");
-  std::cout << "LteEnbNetDevice::Send, " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal                   
   return m_rrc->SendData (packet);
 }
 

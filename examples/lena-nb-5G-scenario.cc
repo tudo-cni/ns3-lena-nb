@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011-2018 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC), 2021 TU Dortmund University
+ * Copyright (c) 2011-2018 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC), 
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,7 +18,7 @@
  *
  * Authors: Jaume Nin <jaume.nin@cttc.cat>
  *          Manuel Requena <manuel.requena@cttc.es>
- *          Tim Gebauer <tim.gebauer@tu-dortmund.de>
+ *          Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  *          Pascal Jörke <pascal.joerke@tu-dortmund.de>
  */
 
@@ -56,10 +57,8 @@ main (int argc, char *argv[])
   //double distance = 50000.0;
   uint64_t ues_to_consider = 0;
 
-  bool scenario = true;
   uint8_t worker = 0;
   int seed = 1;
-  std::string path = "scenarios/release_13_and_ciot/5.0.csv";
   std::string simName = "test";
   double cellsize = 2500; // in meters
   //std::vector<std::vector<std::string>> ue_configs;
@@ -77,9 +76,7 @@ main (int argc, char *argv[])
   // Command line arguments
   CommandLine cmd (__FILE__);
   cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
-  cmd.AddValue ("path", "Total duration of the simulation", path);
   cmd.AddValue ("simName", "Total duration of the simulation", simName);
-  cmd.AddValue ("scenario", "1 if should use scenario csv", scenario);
   cmd.AddValue ("worker", "worker id when using multithreading to not confuse logging", worker);
   cmd.AddValue ("randomSeed", "randomSeed",seed);
   cmd.AddValue ("numUeAppA", "Number of UEs for Application A",num_ues_app_a);
@@ -88,7 +85,6 @@ main (int argc, char *argv[])
   cmd.AddValue ("ciot", "Cellular IoT Optimization",ciot);
   cmd.AddValue ("edt", "Early Data Transmission",edt);
   cmd.Parse (argc, argv);
-  std::cout << "ciot opt: " << ciot << std::endl;
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
@@ -108,24 +104,6 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
 
-  // if(scenario){
-  //   std::ifstream scenario(path);
-  //   std::string row;
-  //   std::getline (scenario, row);
-  //   while (!scenario.eof ())
-  //     {
-  //       std::getline (scenario, row);
-  //       if (scenario.bad () || scenario.fail ())
-  //         {
-  //           break;
-  //         }
-  //       ue_configs.push_back(readCSVRow(row));
-  //       std::vector<std::string> it= ue_configs.back();
-
-  //       //stod(fields[3])*1000.0
-  //     }
-
-  // }
 
   // Calculate UES to consider
   ues_to_consider = num_ues_app_a + num_ues_app_b + num_ues_app_c;
@@ -167,9 +145,7 @@ main (int argc, char *argv[])
   mobilityEnb.Install(enbNodes);
 
   NodeContainer ueNodes;
-  if(scenario){
-    ueNodes.Create (ues_to_consider*3); // Pre-Run, Run, Post-Run
-  }
+  ueNodes.Create (ues_to_consider*3); // Pre-Run, Run, Post-Run
   Ptr<ListPositionAllocator> positionAllocUe = CreateObject<ListPositionAllocator> ();
 
   for (uint32_t j = 0; j<3; j++){

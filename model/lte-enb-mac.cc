@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,6 +21,7 @@
  * Modified by:
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/log.h>
@@ -1146,140 +1148,6 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
         }
     }
     scheduled.clear();
-
-  // PASCAL: Was ist das hier unten genau?
-  //// CE0 Type2
-  //// --- DOWNLINK ---
-  //// Send Dl-CQI info to the scheduler
-  //if (m_dlCqiReceived.size () > 0)
-  //  {
-  //    FfMacSchedSapProvider::SchedDlCqiInfoReqParameters dlcqiInfoReq;
-  //    dlcqiInfoReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
-  //    dlcqiInfoReq.m_cqiList.insert (dlcqiInfoReq.m_cqiList.begin (), m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
-  //    m_dlCqiReceived.erase (m_dlCqiReceived.begin (), m_dlCqiReceived.end ());
-  //    m_schedSapProvider->SchedDlCqiInfoReq (dlcqiInfoReq);
-  //  }
-
-  //if (!m_receivedRachPreambleCount.empty ())
-  //  {
-  //    // process received RACH preambles and notify the scheduler
-  //    FfMacSchedSapProvider::SchedDlRachInfoReqParameters rachInfoReqParams;
-  //    NS_ASSERT (subframeNo > 0 && subframeNo <= 10); // subframe in 1..10
-  //    for (std::map<uint8_t, uint32_t>::const_iterator it = m_receivedRachPreambleCount.begin ();
-  //         it != m_receivedRachPreambleCount.end ();
-  //         ++it)
-  //      {
-  //        NS_LOG_INFO (this << " preambleId " << (uint32_t) it->first << ": " << it->second << " received");
-  //        NS_ASSERT (it->second != 0);
-  //        if (it->second > 1)
-  //          {
-  //            NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": collision");
-  //            // in case of collision we assume that no preamble is
-  //            // successfully received, hence no RAR is sent
-  //          }
-  //        else
-  //          {
-  //            uint16_t rnti;
-  //            std::map<uint8_t, NcRaPreambleInfo>::iterator jt = m_allocatedNcRaPreambleMap.find (it->first);
-  //            if (jt != m_allocatedNcRaPreambleMap.end ())
-  //              {
-  //                rnti = jt->second.rnti;
-  //                NS_LOG_INFO ("preambleId previously allocated for NC based RA, RNTI =" << (uint32_t) rnti << ", sending RAR");
-  //
-  //              }
-  //            else
-  //              {
-  //                rnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
-  //                NS_LOG_INFO ("preambleId " << (uint32_t) it->first << ": allocated T-C-RNTI " << (uint32_t) rnti << ", sending RAR");
-  //              }
-
-  //            RachListElement_s rachLe;
-  //            rachLe.m_rnti = rnti;
-  //            rachLe.m_estimatedSize = 144; // to be confirmed
-  //            rachInfoReqParams.m_rachList.push_back (rachLe);
-  //            m_rapIdRntiMap.insert (std::pair <uint16_t, uint32_t> (rnti, it->first));
-  //          }
-  //      }
-  //    m_schedSapProvider->SchedDlRachInfoReq (rachInfoReqParams);
-  //    m_receivedRachPreambleCount.clear ();
-  //  }
-  //// Get downlink transmission opportunities
-  //uint32_t dlSchedFrameNo = m_frameNo;
-  //uint32_t dlSchedSubframeNo = m_subframeNo;
-  ////   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
-  //if (dlSchedSubframeNo + m_macChTtiDelay > 10)
-  //  {
-  //    dlSchedFrameNo++;
-  //    dlSchedSubframeNo = (dlSchedSubframeNo + m_macChTtiDelay) % 10;
-  //  }
-  //else
-  //  {
-  //    dlSchedSubframeNo = dlSchedSubframeNo + m_macChTtiDelay;
-  //  }
-  //FfMacSchedSapProvider::SchedDlTriggerReqParameters dlparams;
-  //dlparams.m_sfnSf = ((0x3FF & dlSchedFrameNo) << 4) | (0xF & dlSchedSubframeNo);
-
-  //// Forward DL HARQ feebacks collected during last TTI
-  //if (m_dlInfoListReceived.size () > 0)
-  //  {
-  //    dlparams.m_dlInfoList = m_dlInfoListReceived;
-  //    // empty local buffer
-  //    m_dlInfoListReceived.clear ();
-  //  }
-
-  //m_schedSapProvider->SchedDlTriggerReq (dlparams);
-
-  //// --- UPLINK ---
-  //// Send UL-CQI info to the scheduler
-  //for (uint16_t i = 0; i < m_ulCqiReceived.size (); i++)
-  //  {
-  //    if (subframeNo > 1)
-  //      {
-  //        m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & (subframeNo - 1));
-  //      }
-  //    else
-  //      {
-  //        m_ulCqiReceived.at (i).m_sfnSf = ((0x3FF & (frameNo - 1)) << 4) | (0xF & 10);
-  //      }
-  //    m_schedSapProvider->SchedUlCqiInfoReq (m_ulCqiReceived.at (i));
-  //  }
-  //  m_ulCqiReceived.clear ();
-
-  //// Send BSR reports to the scheduler
-  //if (m_ulCeReceived.size () > 0)
-  //  {
-  //    FfMacSchedSapProvider::SchedUlMacCtrlInfoReqParameters ulMacReq;
-  //    ulMacReq.m_sfnSf = ((0x3FF & frameNo) << 4) | (0xF & subframeNo);
-  //    ulMacReq.m_macCeList.insert (ulMacReq.m_macCeList.begin (), m_ulCeReceived.begin (), m_ulCeReceived.end ());
-  //    m_ulCeReceived.erase (m_ulCeReceived.begin (), m_ulCeReceived.end ());
-  //    m_schedSapProvider->SchedUlMacCtrlInfoReq (ulMacReq);
-  //  }
-
-  //// Get uplink transmission opportunities
-  //uint32_t ulSchedFrameNo = m_frameNo;
-  //uint32_t ulSchedSubframeNo = m_subframeNo;
-  ////   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
-  //if (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY) > 10)
-  //  {
-  //    ulSchedFrameNo++;
-  //    ulSchedSubframeNo = (ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY)) % 10;
-  //  }
-  //else
-  //  {
-  //    ulSchedSubframeNo = ulSchedSubframeNo + (m_macChTtiDelay + UL_PUSCH_TTIS_DELAY);
-  //  }
-  //FfMacSchedSapProvider::SchedUlTriggerReqParameters ulparams;
-  //ulparams.m_sfnSf = ((0x3FF & ulSchedFrameNo) << 4) | (0xF & ulSchedSubframeNo);
-
-  //// Forward DL HARQ feebacks collected during last TTI
-  //if (m_ulInfoListReceived.size () > 0)
-  //  {
-  //   ulparams.m_ulInfoList = m_ulInfoListReceived;
-  //    // empty local buffer
-  //    m_ulInfoListReceived.clear ();
-  //  }
-
-  //m_schedSapProvider->SchedUlTriggerReq (ulparams);
 }
 
 void

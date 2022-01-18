@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
  * Copyright (c) 2018 Fraunhofer ESK : RLF extensions
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,6 +22,7 @@
  *         Nicola Baldo <nbaldo@cttc.es>
  * Modified by:
  *          Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/object-factory.h>
@@ -876,7 +878,8 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
   dlcqi.m_rnti = m_rnti;
   dlcqi.m_ri = 1; // not yet used
   dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
-  //NB-Iot has no CqiTransfer, also hugh performance gain
+
+  //NB-Iot has no CqiTransfer, also huge performance gain
   //std::vector<int> cqi;
   //if (Simulator::Now () > m_p10CqiLast + m_p10CqiPeriodicity)
   //  {

@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  * Copyright (c) 2018 Fraunhofer ESK : RLF extensions
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -22,6 +23,7 @@
  * Modified by:  Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015),
  *               Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
  *               Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+ * 				 Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include "lte-enb-rrc.h"
@@ -1016,7 +1018,6 @@ UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
             m_imsi = msg.ueIdentity;
 
             // send RRC CONNECTION SETUP to UE
-            //commented out for RA testing
             LteRrcSap::RrcConnectionSetup msg2;
             msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
             msg2.radioResourceConfigDedicated = BuildRadioResourceConfigDedicated ();
@@ -1177,7 +1178,6 @@ UeManager::RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
                 msg.dedicatedInfoNas->AddPacketTag (tag);
 
                 m_rrc->LogDataReception(m_imsi);
-                //std::cout << m_imsi << ",UeManager::RecvRrcEarlyDataRequestNb," << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
 
                 m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
               }
@@ -1280,7 +1280,6 @@ UeManager::RecvRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeC
             tag.SetRnti (m_rnti);
             tag.SetBid (Lcid2Bid (3));
             msg.dedicatedInfoNas->AddPacketTag (tag);
-            //std::cout << m_imsi << ",UeManager::RecvRrcConnectionResumeCompletedNb," << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
             m_rrc->LogDataReception(m_imsi);
             m_rrc->m_forwardUpCallback (msg.dedicatedInfoNas);
           }
@@ -1513,7 +1512,6 @@ UeManager::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params)
       tag.SetRnti (params.rnti);
       tag.SetBid (Lcid2Bid (params.lcid));
       params.pdcpSdu->AddPacketTag (tag);
-      //std::cout << m_imsi << ",UeManager::DoReceivePdcpSdu," << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
       m_rrc->LogDataReception(m_imsi);
       m_rrc->m_forwardUpCallback (params.pdcpSdu);
     }
@@ -2716,13 +2714,11 @@ LteEnbRrc::SendData (Ptr<Packet> packet)
 
   if(m_ueActiveMap.find(tag.GetRnti()) != m_ueActiveMap.end()){
     // Ue is in Connected State, just send Packet 
-    std::cout << "LteEnbRrc::SendData,RNTI found, sending data via ueManager, " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
     Ptr<UeManager> ueManager = GetUeManagerbyRnti (tag.GetRnti ());
     ueManager->SendData (tag.GetBid (), packet);
   }
   else{
     // Device is in eDRX or PSM -> Store Packet for Imsi
-    std::cout << "LteEnbRrc::SendData, Device is in eDRX or PSM -> Store Packet for Imsi, " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
     m_imsiSavedPacketsMap[tag.GetImsi()].push_back(std::pair<uint8_t, Ptr<Packet>>(tag.GetBid (), packet));
   }
 
@@ -3309,7 +3305,6 @@ LteEnbRrc::AddUe (UeManager::State state, uint8_t componentCarrierId)
     }
 
   NS_ASSERT_MSG (found, "no more RNTIs available (do you have more than 65535 UEs in a cell?)");
-  std::cout << rnti << std::endl; // TODO DEBUG PASCAL
   m_lastAllocatedRnti = rnti;
   Ptr<UeManager> ueManager = CreateObject<UeManager> (this, rnti, state, componentCarrierId);
   m_ccmRrcSapProvider-> AddUe (rnti, (uint8_t)state);
@@ -3806,6 +3801,7 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r8;
   ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v2;
   ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
+  
   NbIotRrcSap::NprachParametersNb ce1;
   ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
   ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms320;
@@ -3819,7 +3815,6 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v1dot5;
   ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
 
-
   NbIotRrcSap::NprachParametersNb ce2;
   ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
   ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms1280;
@@ -3832,48 +3827,6 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r512;
   ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
   ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-  //CMW
-
-  //NbIotRrcSap::NprachParametersNb ce0;
-  //ce0.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::zero;
-  //ce0.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-  //ce0.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms16;
-  //ce0.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
-  //ce0.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-  //ce0.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::oneThird;
-  //ce0.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n6;
-  //ce0.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n1;
-  //ce0.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r16;
-  //ce0.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
-  //ce0.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-  //NbIotRrcSap::NprachParametersNb ce1;
-  //ce1.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::one;
-  //ce1.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-  //ce1.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms64;
-  //ce1.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
-  //ce1.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-  //ce1.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::oneThird;
-  //ce1.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n6;
-  //ce1.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n4;
-  //ce1.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r16;
-  //ce1.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
-  //ce1.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
-  //NbIotRrcSap::NprachParametersNb ce2;
-  //ce2.coverageEnhancementLevel = NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel::two;
-  //ce2.nprachPeriodicity = NbIotRrcSap::NprachParametersNb::NprachPeriodicity::ms640;
-  //ce2.nprachStartTime = NbIotRrcSap::NprachParametersNb::NprachStartTime::ms128;
-  //ce2.nprachSubcarrierOffset = NbIotRrcSap::NprachParametersNb::NprachSubcarrierOffset::n12;
-  //ce2.nprachNumSubcarriers = NbIotRrcSap::NprachParametersNb::NprachNumSubcarriers::n12;
-  //ce2.nprachSubcarrierMsg3RangeStart = NbIotRrcSap::NprachParametersNb::NprachSubcarrierMsg3RangeStart::oneThird;
-  //ce2.maxNumPreambleAttemptCE = NbIotRrcSap::NprachParametersNb::MaxNumPreambleAttemptCE::n6;
-  //ce2.numRepetitionsPerPreambleAttempt = NbIotRrcSap::NprachParametersNb::NumRepetitionsPerPreambleAttempt::n8;
-  //ce2.npdcchNumRepetitionsRA = NbIotRrcSap::NprachParametersNb::NpdcchNumRepetitionsRA::r16;
-  //ce2.npdcchStartSfCssRa = NbIotRrcSap::NprachParametersNb::NpdcchStartSfCssRa::v4;
-  //ce2.npdcchOffsetRa= NbIotRrcSap::NprachParametersNb::NpdcchOffsetRa::zero;
-
 
 
   NbIotRrcSap::NprachParametersNbR14 ce0v14;

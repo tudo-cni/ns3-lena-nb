@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,9 @@
  *
  * Authors: Nicola Baldo <nbaldo@cttc.es>
  *          Lluis Parcerisa <lparcerisa@cttc.cat>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT)
+ *			Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/fatal-error.h>
@@ -132,7 +136,7 @@ LteUeRrcProtocolReal::DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionReques
   transmitPdcpPduParameters.rnti = m_rnti;
   transmitPdcpPduParameters.lcid = 0;
 
-  uint64_t imsi = msg.ueIdentity; // TODO PASCAL: Check if this is really the imsi
+  uint64_t imsi = msg.ueIdentity; 
   if (m_logging)
   {
     std::string logfile_path = m_logdir+"RRC.log";
@@ -165,7 +169,7 @@ LteUeRrcProtocolReal::DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnec
   transmitPdcpPduParameters.rnti = m_rnti;
   transmitPdcpPduParameters.lcid = 0;
 
-  uint64_t imsi = msg.resumeIdentity; // TODO PASCAL: Check if this is really the imsi
+  uint64_t imsi = msg.resumeIdentity; 
   if (m_logging)
   {
     std::string logfile_path = m_logdir+"RRC.log";
@@ -222,7 +226,7 @@ LteUeRrcProtocolReal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConn
 
   if (m_setupParameters.srb1SapProvider)
     {
-      uint64_t imsi = msg.rrcTransactionIdentifier; // TODO PASCAL: Check if this is really the imsi
+      uint64_t imsi = msg.rrcTransactionIdentifier; 
       if (m_logging)
       {
         std::string logfile_path = m_logdir+"RRC.log";
@@ -809,7 +813,7 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::
   transmitPdcpSduParameters.rnti = rnti;
   transmitPdcpSduParameters.lcid = 1;
 
-  uint64_t imsi = msg.rrcTransactionIdentifier; // TODO PASCAL: Check if this is really the imsi
+  uint64_t imsi = msg.rrcTransactionIdentifier; 
   if (m_logging)
   {
     std::string logfile_path = m_logdir+"RRC.log";
@@ -926,7 +930,7 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap:
   transmitPdcpSduParameters.rnti = rnti;
   transmitPdcpSduParameters.lcid = 1;
 
-  uint64_t imsi = msg.rrcTransactionIdentifier; // TODO PASCAL: Check if this is really the imsi
+  uint64_t imsi = msg.rrcTransactionIdentifier;
   if (m_logging)
   {
     std::string logfile_path = m_logdir+"RRC.log";

@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Nicola Baldo  <nbaldo@cttc.es>
  * Author: Marco Miozzo <mmiozzo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/log.h>
@@ -759,7 +762,6 @@ LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
       LteMacSapUser::TxOpportunityParameters txOpParams;
 
 
-      // Check if we 
 
       txOpParams.bytes = raResponse.ulGrant.tbs_size/8;
       txOpParams.layer = 0;
@@ -884,9 +886,8 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
   double rsrp = m_uePhySapProvider->GetRSRP ();
   NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm"
                             << std::endl);
-  // TODO Grenzfälle // PASCAL: Was genau fehlt hier?
 
-  NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled // Pascal: Hier Rel14, unten Rel15?
+  NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled
 
   if (rsrp <= m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
     {
@@ -1043,7 +1044,7 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
           rxPduParams.rnti = m_rnti;
           rxPduParams.lcid = tag.GetLcid ();
           it->second.macSapUser->ReceivePdu (rxPduParams);
-          // NB-IOT Specific Send HARQ at advertised Subframe
+          // NB-IoT Specific: Send HARQ at advertised Subframe
           if (m_nextPossibleHarqOpportunity.size () > 0)
             {
               uint32_t currentsubframe = 10 * (m_frameNo - 1) + (m_subframeNo - 1);

@@ -68,15 +68,6 @@ def build(bld):
     obj = bld.create_ns3_program('lena-radio-link-failure',
                                  ['lte'])
     obj.source = 'lena-radio-link-failure.cc'
-    obj = bld.create_ns3_program('lena-nb-connection-setup',
-                                 ['lte'])
-    obj.source = 'lena-nb-connection-setup.cc'
-    obj = bld.create_ns3_program('lena-nb-udp-data-transfer',
-                                 ['lte'])
-    obj.source = 'lena-nb-udp-data-transfer.cc'
-    obj = bld.create_ns3_program('lena-nb-csv-based-scenario',
-                                 ['lte'])
-    obj.source = 'lena-nb-csv-based-scenario.cc'
     obj = bld.create_ns3_program('lena-nb-5G-scenario',
                                  ['lte'])
     obj.source = 'lena-nb-5G-scenario.cc'

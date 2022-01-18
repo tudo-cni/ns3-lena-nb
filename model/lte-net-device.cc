@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Giuseppe Piro  <g.piro@poliba.it>
  *         Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include "ns3/llc-snap-header.h"
@@ -282,13 +285,11 @@ LteNetDevice::Receive (Ptr<Packet> p)
   Ipv4Header ipv4Header;
   Ipv6Header ipv6Header;
   
-  std::cout << "LteNetDevice::Receive,Entering " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
 
   if (p->PeekHeader (ipv4Header) != 0)
     {
       NS_LOG_LOGIC ("IPv4 stack...");
       m_rxCallback (this, p, Ipv4L3Protocol::PROT_NUMBER, Address ());
-      std::cout << "LteNetDevice::Receive,Callback_Done " << Simulator::Now().GetMilliSeconds() << std::endl; //TODO Pascal
     }
   else if  (p->PeekHeader (ipv6Header) != 0)
     {
