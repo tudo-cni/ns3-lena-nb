@@ -3344,25 +3344,6 @@ LteEnbRrc::MoveUeToResumed(uint16_t rnti, uint64_t resumeId){
   m_s1SapProvider->MoveUeToResume(rnti, resumeId);
   m_cmacSapProvider.at(0)->RemoveUeFromScheduler(rnti);
   RemoveUeNb(rnti, true);
-  //// Delete Ue
-  //std::map <uint16_t, Ptr<UeManager> >::iterator it = m_ueActiveMap.find (rnti);
-  //uint16_t srsCi = (*it).second->GetSrsConfigurationIndex ();  
-  //m_cmacSapProvider.at (0)->RemoveUe (rnti);
-  //m_cphySapProvider.at (0)->RemoveUe (rnti);
-  //m_ccmRrcSapProvider->RemoveUe(rnti);
-  //m_rrcSapUser->RemoveUe(rnti);
-  //m_ueActiveMap.erase(rnti);
-  //if (srsCi != 0)// need to do this after UeManager has been deleted
-  //  {
-  //    RemoveSrsConfigurationIndex (srsCi);
-  //  }
-  //if (m_s1SapProvider != 0)
-  //  {
-  //    m_s1SapProvider->UeContextRelease (rnti);
-  //  }
-  /// HERE WEITER MACHEN 
-  /////
-  ///////////////////////////////////////////
 }
 
 void 
@@ -3385,9 +3366,6 @@ LteEnbRrc::ResumeUe(uint16_t rnti, uint64_t resumeId){
   m_s1SapProvider->ResumeUe(rnti, resumeId);
 
   m_ueResumedMap.erase(resumeId);
-  /// HERE WEITER MACHEN 
-  /////
-  ///////////////////////////////////////////
 }
 void
 LteEnbRrc::RemoveUe (uint16_t rnti)
