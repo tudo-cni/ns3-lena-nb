@@ -19,7 +19,8 @@
  * Author: Nicola Baldo  <nbaldo@cttc.es>
  * Author: Marco Miozzo <mmiozzo@cttc.es>
  * Modified by: 
- * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *          Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *          Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/log.h>

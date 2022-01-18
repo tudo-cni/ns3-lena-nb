@@ -16,6 +16,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Tim Gebauer <tim.gebauer@tu-dortmund.de>
+ * Modified by: 
+ *      Pascal Jörke <pascal.joerke@tu-dortmund.de>
  */
 
 

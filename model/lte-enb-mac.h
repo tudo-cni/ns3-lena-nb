@@ -21,7 +21,8 @@
  * Modified by:
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
- * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *          Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *          Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_ENB_MAC_H
