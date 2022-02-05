@@ -559,7 +559,7 @@ private:
   std::map<uint16_t, bool> m_connectionSuccessful;
   std::map<uint16_t, double> m_ulRsrpReceivedNb;
   std::vector<std::vector<double>> m_ulCqiReceivedNb;
-  std::map<uint16_t, uint8_t> m_ueStoredBSR;
+  std::map<uint16_t, uint16_t> m_ueStoredBSR;
   std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
   std::map<uint16_t, EventId> m_noDataIndicators;
   bool m_edt;
