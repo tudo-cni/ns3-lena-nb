@@ -1280,7 +1280,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
                   else
                     {
 
-                      NS_BUILD_DEBUG(std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
+                      //NS_BUILD_DEBUG(std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
                       NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
                       // set the uplink bandwidth according to the UL grant
                       //std::vector <int> ulRb;
@@ -1317,7 +1317,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           Ptr<UlDciN0NbiotControlMessage> dci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
           if (dci->GetRnti() == m_rnti)
             {
-              NS_BUILD_DEBUG(std::cout << "Received My NPUSCH Schedule at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
+              //NS_BUILD_DEBUG(std::cout << "Received My NPUSCH Schedule at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
               NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
               // set the uplink bandwidth according to the UL grant
               //std::vector <int> ulRb;

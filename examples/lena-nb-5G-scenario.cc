@@ -54,14 +54,12 @@ int
 main (int argc, char *argv[])
 {
   Time simTime = Minutes(6);
-  //double distance = 50000.0;
   uint64_t ues_to_consider = 0;
 
   uint8_t worker = 0;
   int seed = 1;
   std::string simName = "test";
   double cellsize = 2500; // in meters
-  //std::vector<std::vector<std::string>> ue_configs;
   int num_ues_app_a = 1;
   int num_ues_app_b = 2;
   int num_ues_app_c = 3;
@@ -96,7 +94,7 @@ main (int argc, char *argv[])
   lteHelper->EnableRrcLogging ();
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
   lteHelper->SetUeAntennaModelType ("ns3::IsotropicAntennaModel");
-  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::WinnerPlusPropagationLossModel"));
+  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::WinnerPlusPropagationLossModel")); // Note that the Winner+ pathloss model isn't available in the current release of ns3. It can be downloaded at https://github.com/tudo-cni/ns3-propagation-winner-plus
   lteHelper->SetPathlossModelAttribute ("HeightBasestation", DoubleValue (50));
   lteHelper->SetPathlossModelAttribute ("Environment", EnumValue (UMaEnvironment));
   lteHelper->SetPathlossModelAttribute ("LineOfSight", BooleanValue (false));
@@ -107,7 +105,7 @@ main (int argc, char *argv[])
 
   // Calculate UES to consider
   ues_to_consider = num_ues_app_a + num_ues_app_b + num_ues_app_c;
-  std::cout << "ues_to_consider: " << ues_to_consider<< std::endl;
+  //std::cout << "UEs to consider: " << ues_to_consider<< std::endl;
 
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
    // Create a single RemoteHost
@@ -137,18 +135,28 @@ main (int argc, char *argv[])
   enbNodes.Create (1);
   // Install Mobility Model
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-  positionAlloc->Add (Vector (cellsize/2, cellsize/2, 25));
+  positionAlloc->Add (Vector (cellsize/2, cellsize/2, 25)); // Place our single eNb right in the center of the cell
 
   MobilityHelper mobilityEnb;
   mobilityEnb.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   mobilityEnb.SetPositionAllocator(positionAlloc);
   mobilityEnb.Install(enbNodes);
 
+
+
+  /*
+  For all scenarios, 3*X minutes of simulation time are simulated, but only the intermediate X minutes are evaluated.
+  The first X minutes produce no significant results since devices at the beginning are scheduled in an empty cell and experience
+  very good transmission conditions. After X minutes, new devices will find ongoing transmissions of previous devices, which enables
+  a more realistic situation and produces significant results. Since devices that have started transmissions within the intermediate X
+  minutes of the simulation may not complete their transmissions in this intermediate time slot, additional X minutes are simulated
+  with more new transmissions to keep the channels busy and let the intermediate devices complete their transmissions.
+  */
   NodeContainer ueNodes;
-  ueNodes.Create (ues_to_consider*3); // Pre-Run, Run, Post-Run
+  ueNodes.Create (ues_to_consider*3); // Pre-Run, Run, Post-Run.
   Ptr<ListPositionAllocator> positionAllocUe = CreateObject<ListPositionAllocator> ();
 
-  for (uint32_t j = 0; j<3; j++){
+  for (uint32_t j = 0; j<3; j++){ // Pre-Run, Run, Post-Run.
     // Install Mobility Model for Application A
     ObjectFactory pos_a;
     pos_a.SetTypeId ("ns3::UniformDiscPositionAllocator");
@@ -167,7 +175,7 @@ main (int argc, char *argv[])
     pos_b.SetTypeId ("ns3::UniformDiscPositionAllocator");
     pos_b.Set ("X", StringValue (std::to_string(cellsize/2)));
     pos_b.Set ("Y", StringValue (std::to_string(cellsize/2)));
-    pos_b.Set ("Z", DoubleValue (0.0));
+    pos_b.Set ("Z", DoubleValue (0.0)); // For devices with height 0.0, Winner+ will add a predefined additional indoor attenation
     pos_b.Set ("rho", DoubleValue (cellsize/2));    
     m_position = pos_b.Create ()->GetObject<PositionAllocator> ();
     for (uint32_t i = 0; i < num_ues_app_b; ++i){
@@ -180,7 +188,7 @@ main (int argc, char *argv[])
     pos_c.SetTypeId ("ns3::UniformDiscPositionAllocator");
     pos_c.Set ("X", StringValue (std::to_string(cellsize/2)));
     pos_c.Set ("Y", StringValue (std::to_string(cellsize/2)));
-    pos_c.Set ("Z", DoubleValue (-1.5));
+    pos_c.Set ("Z", DoubleValue (-1.5)); // For devices with height < 0.0, Winner+ will add a predefined additional deep indoor attenation
     pos_c.Set ("rho", DoubleValue (cellsize/2));    
     m_position = pos_c.Create ()->GetObject<PositionAllocator> ();
     for (uint32_t i = 0; i < num_ues_app_c; ++i){
@@ -191,10 +199,6 @@ main (int argc, char *argv[])
   }
   
   MobilityHelper mobilityUe;
-  //mobilityUe.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-  //                               "X", StringValue (std::to_string(cellsize/2)),
-  //                               "Y", StringValue (std::to_string(cellsize/2)),
-  //                               "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=" + std::to_string(cellsize) + "]"));
   mobilityUe.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobilityUe.SetPositionAllocator(positionAllocUe);
   mobilityUe.Install (ueNodes);
@@ -217,13 +221,8 @@ main (int argc, char *argv[])
       Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ueNode->GetObject<Ipv4> ());
       ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
     }
-  // Attach one UE per eNodeB
-  RngSeedManager::SetSeed (seed);  // Changes seed from default of 1 to 3
+  RngSeedManager::SetSeed (seed);
   Ptr<UniformRandomVariable> RaUeUniformVariable = CreateObject<UniformRandomVariable> ();
-
-
-
-
 
 
   // Install and start applications on UEs and remote host
@@ -232,7 +231,7 @@ main (int argc, char *argv[])
   ApplicationContainer serverApps;
   
   
-  // Pre-Run
+  // Set up the data transmission for the Pre-Run
   for (uint16_t i = 0; i < ues_to_consider; i++)
     {
       int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds());
@@ -298,7 +297,7 @@ main (int argc, char *argv[])
     }
 
 
-  // UEs to be considered 
+  // Set up the data transmission for the UEs to be considered in the results
   for (uint16_t i = ues_to_consider; i < ues_to_consider*2; i++)
     {
       int access = RaUeUniformVariable->GetInteger (simTime.GetMilliSeconds(), 2*simTime.GetMilliSeconds());
@@ -367,7 +366,7 @@ main (int argc, char *argv[])
   
 
 
-  // Post-Run
+  // Set up the data transmission for the Post-Run
   for (uint16_t i = ues_to_consider*2; i < ues_to_consider*3; i++)
     {
       int access = RaUeUniformVariable->GetInteger (simTime.GetMilliSeconds()*2, simTime.GetMilliSeconds()*3);
@@ -440,7 +439,6 @@ main (int argc, char *argv[])
   std::cout << "started computation at " << std::ctime(&start_time);
      std::string logdir = "logs/";
   std::string makedir = "mkdir -p ";
-  //auto start = std::chrono::system_clock::now();
   std::string techdir = makedir;
 
   techdir += logdir;
@@ -466,7 +464,6 @@ main (int argc, char *argv[])
   std::cout << a << std::endl;
   logdir += "/";
   
-
   auto tm = *std::localtime(&start_time);
   std::stringstream ss;
   ss << std::put_time(&tm, "%d_%m_%Y_%H_%M_%S");
@@ -475,21 +472,15 @@ main (int argc, char *argv[])
   logdir += std::to_string(worker);
   logdir += "_";
   logdir += std::to_string(seed);
-  logdir += "_";
-  //std::cout << logfile << "\n";
-  
+  logdir += "_";  
 
   for (uint16_t i = 0; i < ueNodes.GetN(); i++){
 
     Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
     Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
     Ptr<LteUeMac> ueMac = ueLteDevice->GetMac();
-    ueRrc->SetLogDir(logdir); // Will be changed to real ns3 traces later on
-    ueMac->SetLogDir(logdir);
-    
-
-    //Ptr<LteUeRrcSapProvider> ueRrcSapProvider = ueRrc->GetLteUeRrcSapProvider() ;
-    //ueRrcSapProvider->
+    ueRrc->SetLogDir(logdir); // Will be changed to real ns3 traces later on. For now this logging is easier
+    ueMac->SetLogDir(logdir); // Will be changed to real ns3 traces later on. For now this logging is easier
 
       }
   Ptr<LteEnbNetDevice> enbLteDevice = enbLteDevs.Get(0)->GetObject<LteEnbNetDevice>();
@@ -501,13 +492,11 @@ main (int argc, char *argv[])
   // Uncomment to enable PCAP tracing
   //p2ph.EnablePcapAll("lena-simple-epc");
 
-  Simulator::Stop (3*simTime);
+  Simulator::Stop (3*simTime); // Pre-Run, Run, Post-Run
   Simulator::Run ();
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
   std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-  /*GtkConfigStore config;
-  config.ConfigureAttributes();*/
   std::cout << "finished computation at " << std::ctime(&end_time)
               << "elapsed time: " << elapsed_seconds.count() << "s\n";
   Simulator::Destroy ();

@@ -1006,7 +1006,7 @@ void
 UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
 {
   NS_LOG_FUNCTION (this);
-  NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
+  //NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
   switch (m_state)
     {
     case INITIAL_RANDOM_ACCESS:
@@ -1086,7 +1086,7 @@ void
 UeManager::RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
 {
   NS_LOG_FUNCTION (this);
-  NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
+  //NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
   switch (m_state)
     {
     case IDLE_SUSPEND_PSM:
@@ -1157,7 +1157,7 @@ void
 UeManager::RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
 {
   NS_LOG_FUNCTION (this);
-  NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
+  //NS_BUILD_DEBUG(std::cout << "\n"<< m_rnti << "GOT THROUGH" << std::endl);
   switch (m_state)
     {
     case INITIAL_RANDOM_ACCESS:
@@ -1759,7 +1759,7 @@ UeManager::SwitchToState (State newState)
   NS_LOG_INFO (this << " IMSI " << m_imsi << " RNTI " << m_rnti << " UeManager "
                     << ToString (oldState) << " --> " << ToString (newState));
   m_stateTransitionTrace (m_imsi, m_rrc->ComponentCarrierToCellId (m_componentCarrierId), m_rnti, oldState, newState);
-  NS_BUILD_DEBUG(std::cout  << int(newState) << ToString(newState) << std::endl);
+  //NS_BUILD_DEBUG(std::cout  << int(newState) << ToString(newState) << std::endl);
   switch (newState)
     {
     case INITIAL_RANDOM_ACCESS:

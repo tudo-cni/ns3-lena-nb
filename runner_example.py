@@ -13,7 +13,8 @@ simulation_command = "cd ../../ && ./waf --run \"lena-nb-5G-scenario"
 
 callgrind_command = "cd ../../ && ./waf --command-template\"valgrind --tool=callgrind  \%\s\" --run \"lena-nb-udp-data-transfer"
 
-sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-optimized"
+#sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-optimized"
+sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-debug"
 
 
 class SimulationParameters:
@@ -81,7 +82,7 @@ class TaskQueue(queue.Queue):
 
 start_time = time.time()
 simTime = 300 # Simulation time in seconds
-simu_queue = TaskQueue(3) # 10 is the number of parallel workers. This number should be below your number of CPU cores. Note that more parallel workers sonsume more RAM
+simu_queue = TaskQueue(3) # This is the number of parallel workers. This number should be below your number of CPU cores. Note that more parallel workers consume more RAM
 seed = 1 # Number of runs. 5 means that simulations with seeds 1,2,3,4,5 will be started
 for i in range(1,seed+1):
     # Place here your different scenario setups. In this example 15 devices are simulated using standard transmission, C-IoT Opt. or EDT

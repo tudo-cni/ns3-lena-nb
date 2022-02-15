@@ -740,9 +740,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
           if (iter->second == 1)
             { // sanity check. Actually should be always equal
 
-              NS_BUILD_DEBUG (std::cout << "Preamble received of offset " << int (subcarrierOffset)
-                                        << " at Subframe "
-                                        << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << std::endl);
+              //NS_BUILD_DEBUG (std::cout << "Preamble received of offset " << int (subcarrierOffset) << " at Subframe " << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << std::endl);
               NbIotRrcSap::Rar rar;
               rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
               rar.rapId = subcarrierOffset + iter->first;
@@ -768,9 +766,9 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
               // 2 possible actions:
               // a) Preambles interfere with each other, so all UEs lose
               // b) eNB does cotention resolution magic and one UE surives
-              NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
-              NS_BUILD_DEBUG (std::cout << "Collision" << std::endl);
-              NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
+              //NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
+              //NS_BUILD_DEBUG (std::cout << "Collision" << std::endl);
+              //NS_BUILD_DEBUG(std::cout << "==================================================" <<  std::endl);
 
               if (m_mac_logging)
               {
@@ -789,9 +787,7 @@ LteEnbMac::CheckIfPreambleWasReceived (NbIotRrcSap::NprachParametersNb ce, bool 
               else
                 {
                   m_rapIdCollisionMap[subcarrierOffset + iter->first] = true;
-                  NS_BUILD_DEBUG (std::cout << "Preamble received of offset "
-                                            << int (subcarrierOffset) << " at Subframe "
-                                            << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << std::endl);
+                  //NS_BUILD_DEBUG (std::cout << "Preamble received of offset " << int (subcarrierOffset) << " at Subframe " << (10 * (m_frameNo - 1) + (m_subframeNo - 1)) << std::endl);
                   NbIotRrcSap::Rar rar;
                   rar.cellRnti = m_cmacSapUser->AllocateTemporaryCellRnti ();
                   rar.rapId = subcarrierOffset + iter->first;
@@ -1078,7 +1074,7 @@ LteEnbMac::DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo)
                             if ((bsr->second.retxQueueSize > 0) ||
                                 (bsr->second.txQueueSize > 0))
                               {
-                                NS_BUILD_DEBUG(std::cout << "Not enough space" << std::endl);
+                                //NS_BUILD_DEBUG(std::cout << "Not enough space" << std::endl);
                               }
                           }
                   }
@@ -1226,12 +1222,12 @@ LteEnbMac::DoUlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulc
 void
 LteEnbMac::DoUlCqiReportNb (std::vector<double> cqi)
 {
-  NS_BUILD_DEBUG (std::cout << "Received CQI: ");
+  //NS_BUILD_DEBUG (std::cout << "Received CQI: ");
   for (std::vector<double>::iterator it = cqi.begin (); it != cqi.end (); ++it)
     {
-      NS_BUILD_DEBUG (std::cout << *it << " ");
+      //NS_BUILD_DEBUG (std::cout << *it << " ");
     }
-  NS_BUILD_DEBUG (std::cout << std::endl);
+  //NS_BUILD_DEBUG (std::cout << std::endl);
   m_ulCqiReceivedNb.push_back (cqi);
 }
 
@@ -1317,9 +1313,9 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
   }else if (p->RemovePacketTag(bsrTag)){
   buffersize = BufferSizeLevelBsr::BsrId2BufferSize(bsrTag.GetBufferStatusReportIndex());
   buffersize += 4; // Compensate RLC Header etc
-  NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
-  NS_BUILD_DEBUG(std::cout << "Buffersize: " << buffersize << std::endl);
-  NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
+  //NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
+  //NS_BUILD_DEBUG(std::cout << "Buffersize: " << buffersize << std::endl);
+  //NS_BUILD_DEBUG(std::cout << "-------------------------" << std::endl);
   m_schedulerNb->ScheduleUlRlcBufferReq(rnti,buffersize);
   
   }

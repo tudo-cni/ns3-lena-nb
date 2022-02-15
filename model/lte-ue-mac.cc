@@ -548,9 +548,9 @@ LteUeMac::RandomlySelectAndSendRaPreambleNb ()
       }
 
       //uint16_t frames_to_wait = (NbIotRrcSap::ConvertNprachPeriodicity2int (m_CeLevel) - window_condition*10) + (10-(m_subframeNo-1))%10;
-      NS_BUILD_DEBUG(std::cout << m_frameNo*10+m_subframeNo << std::endl);
+      //NS_BUILD_DEBUG(std::cout << m_frameNo*10+m_subframeNo << std::endl);
       m_logging.push_back(currentsubframe+subframesToWait);
-      NS_BUILD_DEBUG(std::cout  << "Frames to wait:" << subframesToWait << std::endl);
+      //NS_BUILD_DEBUG(std::cout  << "Frames to wait:" << subframesToWait << std::endl);
       Simulator::Schedule (MilliSeconds (subframesToWait), &LteUeMac::SendRaPreambleNb, this,
                            contention);
     }
@@ -630,24 +630,20 @@ LteUeMac::SendRaPreambleNb (bool contention)
   if (NbIotRrcSap::ConvertNumRepetitionsPerPreambleAttempt2int (m_CeLevel) >= 64)
     {
       raWindowBegin = MilliSeconds (41);
-      NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 41 +
-                       NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod
-                << std::endl);
+      //NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 41 + NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod << std::endl);
       raWindowEnd = MilliSeconds (
           time + 41 + NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod);
     }
   else
     {
       raWindowBegin = MilliSeconds (4);
-      NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 4 +
-                       NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod
-                << std::endl);
+      //NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time + 4 + NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod << std::endl);
       raWindowEnd = MilliSeconds (
           time + 4 + NbIotRrcSap::ConvertRaResponseWindowSize2int (m_rachConfigCe) * npdcchPeriod);
     }
   //Time raWindowEnd = MilliSeconds (4 + 8*10240);
   //Time raWindowEnd = MilliSeconds (4 + m_rachConfig.raResponseWindowSize);
-  NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time << std::endl);
+  //NS_BUILD_DEBUG(std::cout << (m_frameNo - 1) * 10 + (m_subframeNo - 1) + time << std::endl);
   Simulator::Schedule (raWindowBegin, &LteUeMac::StartWaitingForRaResponse, this);
   m_listenToSearchSpaces = true;
   m_noRaResponseReceivedEvent =
@@ -822,7 +818,7 @@ LteUeMac::RaResponseTimeoutNb (bool contention)
 {
   NS_LOG_FUNCTION (this << contention);
   m_waitingForRaResponse = false;
-  NS_BUILD_DEBUG(std::cout << "Window End" << std::endl);
+  //NS_BUILD_DEBUG(std::cout << "Window End" << std::endl);
   // 3GPP 36.321 5.1.4
   ++m_preambleTransmissionCounter;
   //fire RA response timeout trace
@@ -885,8 +881,7 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
   m_preambleTransmissionCounterCe = 0;
   // Check CE Level
   double rsrp = m_uePhySapProvider->GetRSRP ();
-  NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm"
-                            << std::endl);
+  //NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm" << std::endl);
 
   NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled
 
@@ -1051,8 +1046,7 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
               uint32_t currentsubframe = 10 * (m_frameNo - 1) + (m_subframeNo - 1);
               uint32_t subframestillHarqF2 = m_nextPossibleHarqOpportunity[0].second.front()- currentsubframe;
               uint32_t subframestowait = m_nextPossibleHarqOpportunity[0].second.back() - currentsubframe;
-              NS_BUILD_DEBUG (std::cout << "Sending HARQ Response at "
-                                        << currentsubframe + subframestowait << std::endl);
+              //NS_BUILD_DEBUG (std::cout << "Sending HARQ Response at " << currentsubframe + subframestowait << std::endl);
 
               Simulator::Schedule (MilliSeconds (subframestowait),
                                    &LteUePhySapProvider::SendHarqAckResponse, m_uePhySapProvider,
@@ -1060,7 +1054,7 @@ LteUeMac::DoReceivePhyPdu (Ptr<Packet> p)
               Simulator::Schedule(MilliSeconds(subframestillHarqF2),&LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_SENDING_NPUSCH_F2);
               Simulator::Schedule(MilliSeconds(subframestowait+1),&LteUeCmacSapUser::NotifyEnergyState, m_cmacSapUser, NbiotEnergyModel::PowerState::RRC_CONNECTED_IDLE);
               m_nextPossibleHarqOpportunity.clear();
-              NS_BUILD_DEBUG (std::cout << m_rnti << " Got to MSG4-HARQ \n");
+              //NS_BUILD_DEBUG (std::cout << m_rnti << " Got to MSG4-HARQ \n");
             }
         }
       else
@@ -1509,7 +1503,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                     if ((bsr->second.retxQueueSize > 0) ||
                         (bsr->second.txQueueSize > 0))
                       {
-                        NS_BUILD_DEBUG(std::cout << "Not enough space" << std::endl);
+                        //NS_BUILD_DEBUG(std::cout << "Not enough space" << std::endl);
                       }
                   }
           }

@@ -1354,7 +1354,7 @@ LteUeRrc::DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg)
         m_rrcSapUser->SendRrcConnectionSetupCompleted (msg2);
         m_asSapUser->NotifyConnectionSuccessful ();
         m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
-        NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
+        //NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
 
         //m_asSapUser->NotifyMessage4();
         //SwitchToState(IDLE_START);
@@ -1437,7 +1437,7 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
         m_rrcSapUser->SendRrcConnectionResumeCompletedNb (msg2);
         m_asSapUser->NotifyConnectionSuccessful ();
         m_cmacSapProvider.at (0)->NotifyConnectionSuccessful ();
-        NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
+        //NS_BUILD_DEBUG(std::cout << "CONNECTION COMPLETE" << std::endl);
 
         //m_asSapUser->NotifyMessage4();
         //SwitchToState(IDLE_START);

@@ -514,18 +514,17 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
                           rar->rarPayload.ulGrant = ulgrant.first;
                           rar->rarPayload.ulGrant.subframes = ulgrant.second;
                           rar->rarPayload.ulGrant.tbs_size = size_mac_pdu;
-                          NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
-                          NS_BUILD_DEBUG (std::cout << " Subcarrier " << ulgrant.second.first
-                                                    << " ");
+                          //NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
+                          //NS_BUILD_DEBUG (std::cout << " Subcarrier " << ulgrant.second.first << " ");
                           for (size_t i = 0; i < ulgrant.second.second.size (); i++)
                             {
                               m_uplink[ulgrant.second.first][ulgrant.second.second[i]] =
                                   message.rnti;
                                   //m_currenthyperindex;
                                   
-                              NS_BUILD_DEBUG (std::cout << ulgrant.second.second[i] << " ");
+                              //NS_BUILD_DEBUG (std::cout << ulgrant.second.second[i] << " ");
                             }
-                          NS_BUILD_DEBUG (std::cout << std::endl);
+                          //NS_BUILD_DEBUG (std::cout << std::endl);
                           ++rar;
                           m_rntiUeConfigMap[rar->cellRnti].lastUl = ulgrant.second.second.back ();
                         }
@@ -546,16 +545,16 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
                                                        subframesNpuschHarq, true);
                   if (npuschharqsubframes.size () > 0)
                     {
-                      NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH HARQ at ");
+                      //NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH HARQ at ");
                       scheduleSuccessful = true;
                       for (size_t i = 0; i < npuschharqsubframes[0].second.size (); i++)
                         {
                           m_uplink[npuschharqsubframes[0].first][npuschharqsubframes[0].second[i]] =
                               message.rnti;
                               //m_currenthyperindex;
-                          NS_BUILD_DEBUG (std::cout << npuschharqsubframes[0].second[i] << " ");
+                          //NS_BUILD_DEBUG (std::cout << npuschharqsubframes[0].second[i] << " ");
                         }
-                      NS_BUILD_DEBUG (std::cout << std::endl);
+                      //NS_BUILD_DEBUG (std::cout << std::endl);
                       message.dciN1.npuschOpportunity = npuschharqsubframes;
 
                       m_rntiUeConfigMap[message.rnti].lastUl =
@@ -564,27 +563,27 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
                 }
               if (scheduleSuccessful)
                 {
-                  NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
+                  //NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
 
                   for (size_t j = 0; j < test.size (); ++j)
                     {
                       m_downlink[test[j]] = message.rnti;//m_currenthyperindex;
-                      NS_BUILD_DEBUG (std::cout << test[j] << " ");
+                      //NS_BUILD_DEBUG (std::cout << test[j] << " ");
                     }
 
-                  NS_BUILD_DEBUG (std::cout << std::endl);
-                  NS_BUILD_DEBUG (std::cout << "Scheduling NPDSCH at ");
+                  //NS_BUILD_DEBUG (std::cout << std::endl);
+                  //NS_BUILD_DEBUG (std::cout << "Scheduling NPDSCH at ");
 
                   for (size_t j = 0; j < npdschsubframes.size (); ++j)
                     {
                       m_downlink[npdschsubframes[j]] = message.rnti;//m_currenthyperindex;
-                      NS_BUILD_DEBUG (std::cout << npdschsubframes[j] << " ");
+                      //NS_BUILD_DEBUG (std::cout << npdschsubframes[j] << " ");
                     }
 
                   message.dciRepetitionsubframes = test;
                   message.dciN1.npdschOpportunity = npdschsubframes;
                   message.dciN1.dciSubframes = test;
-                  NS_BUILD_DEBUG (std::cout << std::endl);
+                  //NS_BUILD_DEBUG (std::cout << std::endl);
                   return true;
                 }
             }
@@ -606,31 +605,31 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
 
           if (npuschsubframes.size () > 0)
             {
-              NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
+              //NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
 
               for (size_t j = 0; j < test.size (); ++j)
                 {
                   m_downlink[test[j]] = message.rnti;//m_currenthyperindex;
-                  NS_BUILD_DEBUG (std::cout << test[j] << " ");
+                  //NS_BUILD_DEBUG (std::cout << test[j] << " ");
                 }
 
-              NS_BUILD_DEBUG (std::cout << std::endl);
-              NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
+              //NS_BUILD_DEBUG (std::cout << std::endl);
+              //NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
               scheduleSuccessful = true;
               for (size_t i = 0; i < npuschsubframes[0].second.size (); i++)
                 {
                   m_uplink[npuschsubframes[0].first][npuschsubframes[0].second[i]] =
                       message.rnti;
                       //m_currenthyperindex;
-                  NS_BUILD_DEBUG (std::cout << npuschsubframes[0].second[i] << " ");
+                  //NS_BUILD_DEBUG (std::cout << npuschsubframes[0].second[i] << " ");
                 }
-              NS_BUILD_DEBUG (std::cout << std::endl);
+              //NS_BUILD_DEBUG (std::cout << std::endl);
 
               message.dciRepetitionsubframes = test;
               message.dciN0.npuschOpportunity = npuschsubframes;
               message.dciN0.dciSubframes = test;
               m_rntiUeConfigMap[message.rnti].lastUl = npuschsubframes[0].second.back ();
-              NS_BUILD_DEBUG (std::cout << std::endl);
+              //NS_BUILD_DEBUG (std::cout << std::endl);
               return true;
             }
         }
@@ -1014,8 +1013,7 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
           1.0 /
           12.0); // correctionfactor applied to rsrp because it's for earch subcarrier and tx power is for full spectrum
 
-  NS_BUILD_DEBUG (std::cout << "MCL of " << rnti << " is "
-                            << m_rntiRsrpMap[rnti] - 43.0 - correction_factor << std::endl);
+  //NS_BUILD_DEBUG (std::cout << "MCL of " << rnti << " is " << m_rntiRsrpMap[rnti] - 43.0 - correction_factor << std::endl);
 
   NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel ceLevel;
   NbIotRrcSap::DciN1::DciRepetitions dciN1Repetitions;
