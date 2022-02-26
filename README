@@ -49,3 +49,10 @@ For an automated execution of multiple simulations with different seeds and conf
 generates the required lena-nb-5G-scenario.cc calls including all parameters. All simulations are queued using a class called taskQueue, which executes the simulations 
 one-by-one and automatically restarts a simulation if an error occured. The parameter num_workers is used for parallel simulations. If the simulations are used by 
 servers with e.g. 50 cores, the up to 50 workers can be set for up to 50 parallel simulations. Note that multiple parallel simulations consume much memory. 
+
+
+
+### References###
+
+[1] MathWorks. 2021. NB-IoT NPDSCH Block Error Rate Simulation. Retrieved December 11, 2021 from https://www.mathworks.com/help/lte/ug/nb-iot-npdsch-block-error-rate-simulation.html
+[2] MathWorks. 2021. NB-IoT NPUSCH Block Error Rate Simulation. Retrieved December 11, 2021 from https://www.mathworks.com/help/lte/ug/nb-iot-npusch-block-error-rate-simulation.html
