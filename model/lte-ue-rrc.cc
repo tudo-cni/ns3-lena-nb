@@ -282,28 +282,34 @@ LteUeRrc::GetTypeId (void)
                    MakeUintegerAccessor (&LteUeRrc::m_n311),
                    MakeUintegerChecker<uint8_t> (1, 10))
     .AddAttribute ("eDRX", 
-                   "This specifies the maximum number of in-sync indications. "
-                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
-                   BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   "This specifies if eDRX is used. "
+                   "Standard values: true, false",
+                   BooleanValue(true), 
                    MakeBooleanAccessor(&LteUeRrc::m_enableEDRX),
-                   MakeBooleanChecker()) // PASCAL: Beschreibung der Attribute falsch
+                   MakeBooleanChecker()) 
     .AddAttribute ("PSM",
-                   "This specifies the maximum number of in-sync indications. "
-                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
-                   BooleanValue(true), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   "This specifies if PSM is used. "
+                   "Standard values: true, false",
+                   BooleanValue(true), 
                    MakeBooleanAccessor(&LteUeRrc::m_enablePSM),
                    MakeBooleanChecker())
     .AddAttribute ("CIoT-Opt",
-                   "This specifies the maximum number of in-sync indications. "
-                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
-                   BooleanValue(false), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   "This specifies if Cellular IoT C-Plane Optimization is used. "
+                   "Standard values: true, false",
+                   BooleanValue(false),
                    MakeBooleanAccessor(&LteUeRrc::m_cIotOpt),
                    MakeBooleanChecker())
     .AddAttribute ("EDT",
-                   "This specifies the maximum number of in-sync indications. "
-                   "Standard values: 1, 2, 3, 4, 5, 6, 8, 10",
-                   BooleanValue(false), //see 3GPP 36.331 UE-TimersAndConstants & RLF-TimersAndConstants
+                   "This specifies if Early Data Transmission is used. This feature is available with 3GPP Rel. 15. "
+                   "Standard values: true, false",
+                   BooleanValue(false),
                    MakeBooleanAccessor(&LteUeRrc::m_edt),
+                   MakeBooleanChecker())
+    .AddAttribute ("PUR",
+                   "This specifies if Preconfigured Uplink Resources are used. This feature is available with 3GPP Rel. 16. "
+                   "Standard values: true, false",
+                   BooleanValue(false),
+                   MakeBooleanAccessor(&LteUeRrc::m_pur),
                    MakeBooleanChecker())
     .AddTraceSource ("MibReceived",
                      "trace fired upon reception of Master Information Block",
@@ -3937,6 +3943,10 @@ void LteUeRrc::AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dl
   m_hasReceivedSib2Nb = true;
   SwitchToState(IDLE_SUSPEND_PSM);
   m_asSapUser->NotifyConnectionSuspended();
+}
+
+void LteUeRrc::setUpPur(Time packetinterval, int packetsize){
+  
 }
 
 bool LteUeRrc::DoGetEdtEnabled(){

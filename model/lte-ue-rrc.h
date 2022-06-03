@@ -1416,6 +1416,7 @@ private:
   Time m_t3324;
   bool m_cIotOpt;
   bool m_edt;
+  bool m_pur;
   bool m_logging;
   std::vector<Ptr<Packet>> m_packetStored;
   NbIotRrcSap::RadioResourceConfigCommonNb m_rc;
@@ -1425,6 +1426,7 @@ public:
    */
   void EnableLogging();
   void AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si);
+  void setUpPur(Time packetinterval, int packetsize);
   void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
   bool DoGetEdtEnabled();
 

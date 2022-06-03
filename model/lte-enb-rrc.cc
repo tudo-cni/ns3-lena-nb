@@ -3713,6 +3713,7 @@ uint64_t LteEnbRrc::AttachSuspendedUeNb(uint32_t imsi){
   return GetUeManagerbyRnti(rnti)->AttachSuspendedNb(imsi);
 }
 
+
 NbIotRrcSap::SystemInformationBlockType1Nb LteEnbRrc::GetSib1Nb(){
   return m_sib1Nb.back();
 }

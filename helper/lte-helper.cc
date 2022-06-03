@@ -1122,6 +1122,22 @@ void LteHelper::AttachSuspend(Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice,
 
 }
 
+void
+LteHelper::SetPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
+{
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+  if (ueLteDevice == 0)
+    {
+      NS_FATAL_ERROR ("The passed NetDevice must be an LteUeNetDevice");
+    }
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
+  Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+  Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
+
+
+}
+
 void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){
   Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
   Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas();

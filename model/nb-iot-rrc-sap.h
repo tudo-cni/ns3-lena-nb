@@ -548,6 +548,59 @@ class NbIotRrcSap{
             EdtTbsInfoList edtTbsInfoList;
             NprachParametersListEdt nprachParameterListEdt;
         };
+        struct purSetupRequest{
+            enum class RequestedNumOccasionsR16{
+                one,
+                infinite
+            } requestedNumOccasionsR16;
+            enum class RequestedPeriodicityR16{
+                Periodicity8,
+                Periodicity16,
+                Periodicity32,
+                Periodicity64,
+                Periodicity128,
+                Periodicity256,
+                Periodicity512,
+                Periodicity1024,
+                Periodicity2048,
+                Periodicity4096,
+                Periodicity8192
+            } requestedPeriodicityR16;
+            enum class RequestedTbsR16{
+                b328,
+                b376,
+                b424,
+                b472,
+                b504,
+                b552,
+                b584,
+                b616,
+                b680,
+                b744,
+                b776,
+                b808,
+                b872,
+                b904,
+                b936,
+                b968,
+                b1000,
+                b1032,
+                b1096,
+                b1128,
+                b1192,
+                b1224,
+                b1256,
+                b1352,
+                b1384,
+                b1544,
+                b1608,
+                b1736,
+                b1800,
+                b2024,
+                b2280,
+                b2536
+            } requestedTbsR16;
+        };
         struct RadioResourceConfigCommonNb{
             RachConfigCommon rachConfigCommon;
             BcchConfig bcchConfig;

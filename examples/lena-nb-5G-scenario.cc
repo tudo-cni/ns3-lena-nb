@@ -71,6 +71,8 @@ main (int argc, char *argv[])
   Time packetinterval_app_c = Days(1);
   bool ciot = false;
   bool edt = false;
+  bool pur = false;
+
   // Command line arguments
   CommandLine cmd (__FILE__);
   cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
@@ -82,9 +84,38 @@ main (int argc, char *argv[])
   cmd.AddValue ("numUeAppC", "Number of UEs for Application C",num_ues_app_c);
   cmd.AddValue ("ciot", "Cellular IoT Optimization",ciot);
   cmd.AddValue ("edt", "Early Data Transmission",edt);
+  cmd.AddValue ("pur", "Preconfigured Uplink Resources",pur);
   cmd.Parse (argc, argv);
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
+
+  if (pur){
+    // Convert packet intervals into PUR periodicities
+    if (packetinterval_app_a <= Seconds(10.24) * 8){
+      TimeValue (Seconds(10.24 * 8));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 16){
+      TimeValue (Seconds(10.24 * 16));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 32){
+      TimeValue (Seconds(10.24 * 32));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 64){
+      TimeValue (Seconds(10.24 * 64));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 128){
+      TimeValue (Seconds(10.24 * 128));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 256){
+      TimeValue (Seconds(10.24 * 256));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 512){
+      TimeValue (Seconds(10.24 * 512));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 1024){
+      TimeValue (Seconds(10.24 * 1024));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 2048){
+      TimeValue (Seconds(10.24 * 2048));
+    } else if (packetinterval_app_a <= Seconds(10.24) * 4096){
+      TimeValue (Seconds(10.24 * 4096));
+    } else{
+      TimeValue (Seconds(10.24 * 8192));
+    }
+  }
+
 
   // parse again so you can override default values from the command line
 
@@ -253,6 +284,13 @@ main (int argc, char *argv[])
       else{
         ueRrc->SetAttribute("EDT", BooleanValue(false));
       }
+      if(pur == true){
+        //std::cout << "PUR" << std::endl;
+        ueRrc->SetAttribute("PUR", BooleanValue(true));
+      }
+      else{
+        ueRrc->SetAttribute("PUR", BooleanValue(false));
+      }
 
       ++ulPort;
       UdpEchoServerHelper server (ulPort);
@@ -319,6 +357,13 @@ main (int argc, char *argv[])
       }
       else{
         ueRrc->SetAttribute("EDT", BooleanValue(false));
+      }
+      if(pur == true){
+        //std::cout << "PUR" << std::endl;
+        ueRrc->SetAttribute("PUR", BooleanValue(true));
+      }
+      else{
+        ueRrc->SetAttribute("PUR", BooleanValue(false));
       }
 
       ++ulPort;
@@ -387,6 +432,13 @@ main (int argc, char *argv[])
       }
       else{
         ueRrc->SetAttribute("EDT", BooleanValue(false));
+      }
+      if(pur == true){
+        //std::cout << "PUR" << std::endl;
+        ueRrc->SetAttribute("PUR", BooleanValue(true));
+      }
+      else{
+        ueRrc->SetAttribute("PUR", BooleanValue(false));
       }
 
       ++ulPort;
@@ -458,6 +510,8 @@ main (int argc, char *argv[])
   logdir += std::to_string(ciot);
   logdir += "_";
   logdir += std::to_string(edt);
+  logdir += "_";
+  logdir += std::to_string(pur);
   
   std::string top_dirmakedir = makedir+logdir; 
   int a = std::system(top_dirmakedir.c_str());

@@ -18,7 +18,7 @@ sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-
 
 
 class SimulationParameters:
-    def __init__(self, simulation, simTime, randomSeed, num_ues_app_a, num_ues_app_b, num_ues_app_c,ciot,edt):
+    def __init__(self, simulation, simTime, randomSeed, num_ues_app_a, num_ues_app_b, num_ues_app_c,ciot,edt,pur):
         self.simulation = simulation # .cc file to execute
         self.simTime = simTime # in MilliSeconds
         self.randomSeed = randomSeed # For Random Number Generator
@@ -27,6 +27,7 @@ class SimulationParameters:
         self.num_ues_app_c = num_ues_app_c # Number of UEs for the third application / use cases
         self.ciot = ciot # If Cellular IoT Optimization should be used
         self.edt = edt # If Early Data Transmission should be used
+        self.pur = pur # If Preconfigured Uplink Resources should be used
 
 
     def generateExecutableCall(self):
@@ -38,6 +39,7 @@ class SimulationParameters:
         call += f" --numUeAppC={self.num_ues_app_c}"
         call += f" --ciot={self.ciot}"
         call += f" --edt={self.edt}"
+        call += f" --pur={self.pur}"
         return call
 
 class TaskQueue(queue.Queue):
@@ -86,9 +88,9 @@ simu_queue = TaskQueue(3) # This is the number of parallel workers. This number 
 seed = 1 # Number of runs. 5 means that simulations with seeds 1,2,3,4,5 will be started
 for i in range(1,seed+1):
     # Place here your different scenario setups. In this example 15 devices are simulated using standard transmission, C-IoT Opt. or EDT
-    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=False, edt=False))
-    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=False))
-    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=True))
+    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=False, edt=False, pur=True))
+    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=False, pur=True))
+    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=True, pur=True))
 simu_queue.start_workers()
 
 simu_queue.join()
