@@ -548,7 +548,7 @@ class NbIotRrcSap{
             EdtTbsInfoList edtTbsInfoList;
             NprachParametersListEdt nprachParameterListEdt;
         };
-        struct purSetupRequest{
+        struct PurSetupRequest{
             enum class RequestedNumOccasionsR16{
                 one,
                 infinite
@@ -566,6 +566,7 @@ class NbIotRrcSap{
                 Periodicity4096,
                 Periodicity8192
             } requestedPeriodicityR16;
+            int16_t requestedOffsetR16;
             enum class RequestedTbsR16{
                 b328,
                 b376,

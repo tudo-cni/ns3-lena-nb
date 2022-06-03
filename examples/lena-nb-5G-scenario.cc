@@ -89,34 +89,6 @@ main (int argc, char *argv[])
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
-  if (pur){
-    // Convert packet intervals into PUR periodicities
-    if (packetinterval_app_a <= Seconds(10.24) * 8){
-      TimeValue (Seconds(10.24 * 8));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 16){
-      TimeValue (Seconds(10.24 * 16));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 32){
-      TimeValue (Seconds(10.24 * 32));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 64){
-      TimeValue (Seconds(10.24 * 64));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 128){
-      TimeValue (Seconds(10.24 * 128));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 256){
-      TimeValue (Seconds(10.24 * 256));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 512){
-      TimeValue (Seconds(10.24 * 512));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 1024){
-      TimeValue (Seconds(10.24 * 1024));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 2048){
-      TimeValue (Seconds(10.24 * 2048));
-    } else if (packetinterval_app_a <= Seconds(10.24) * 4096){
-      TimeValue (Seconds(10.24 * 4096));
-    } else{
-      TimeValue (Seconds(10.24 * 8192));
-    }
-  }
-
-
   // parse again so you can override default values from the command line
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
@@ -287,6 +259,7 @@ main (int argc, char *argv[])
       if(pur == true){
         //std::cout << "PUR" << std::endl;
         ueRrc->SetAttribute("PUR", BooleanValue(true));
+        lteHelper->SetUpPurNb(ueLteDevs.Get(i), enbLteDevs.Get(0), packetinterval_app_a, packetsize_app_a, access);
       }
       else{
         ueRrc->SetAttribute("PUR", BooleanValue(false));

@@ -1426,7 +1426,7 @@ public:
    */
   void EnableLogging();
   void AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si);
-  void setUpPur(Time packetinterval, int packetsize);
+  void SetUpPurConfigurationRequestNb(Time packetinterval, int packetsize, int nextaccess);
   void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
   bool DoGetEdtEnabled();
 

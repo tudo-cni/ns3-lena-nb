@@ -444,7 +444,9 @@ public:
    * \brief Manual attachment of a PUR UE device to the network via a given eNodeB.
    * \param ueDevice the UE device to be attached
    * \param enbDevice the destination eNodeB device
-   *
+   * \param packetinterval the interval of transmitted packets, required to define the periodicity
+   * \param packertsize payload size for TBS definition
+   * \param nextaccess the timestamp for the next PUR transmission, since the 
    * In addition, the function also instructs the UE to immediately enter
    * CONNECTED mode and activates the default EPS bearer.
    *
@@ -452,7 +454,7 @@ public:
    * Note that this function will disable Idle mode initial cell selection
    * procedure.
    */
-  void SetPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
+  void SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time packetinterval, int packetsize, int nextaccess);
 
 
   /** 

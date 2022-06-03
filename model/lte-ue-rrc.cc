@@ -3945,8 +3945,95 @@ void LteUeRrc::AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dl
   m_asSapUser->NotifyConnectionSuspended();
 }
 
-void LteUeRrc::setUpPur(Time packetinterval, int packetsize){
-  
+void LteUeRrc::SetUpPurConfigurationRequestNb(Time packetinterval, int packetsize, int nextaccess){
+  // Based on the application information a valid PUR config has to be derived
+  NbIotRrcSap::PurSetupRequest pur;
+
+  // Convert packet intervals into the next larger PUR periodicities
+  pur.requestedOffsetR16 = nextaccess/10240;
+  if (packetinterval <= Seconds(10.24) * 8){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity8;
+    if (pur.requestedOffsetR16 > 7){
+      pur.requestedOffsetR16 = 7;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 16){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity16;
+    if (pur.requestedOffsetR16 > 15){
+      pur.requestedOffsetR16 = 15;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 32){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity32;
+    if (pur.requestedOffsetR16 > 31){
+      pur.requestedOffsetR16 = 31;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 64){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity64;
+    if (pur.requestedOffsetR16 > 63){
+      pur.requestedOffsetR16 = 63;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 128){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity128;
+    if (pur.requestedOffsetR16 > 127){
+      pur.requestedOffsetR16 = 127;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 256){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity256;
+    if (pur.requestedOffsetR16 > 255){
+      pur.requestedOffsetR16 = 255;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 512){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity512;
+    if (pur.requestedOffsetR16 > 511){
+      pur.requestedOffsetR16 = 511;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 1024){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity1024;
+    if (pur.requestedOffsetR16 > 1023){
+      pur.requestedOffsetR16 = 1023;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 2048){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity2048;
+    if (pur.requestedOffsetR16 > 2047){
+      pur.requestedOffsetR16 = 2047;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else if (packetinterval <= Seconds(10.24) * 4096){
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity4096;
+    if (pur.requestedOffsetR16 > 4095){
+      pur.requestedOffsetR16 = 4095;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  } else{
+    pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity8192;
+    if (pur.requestedOffsetR16 > 8191){
+      pur.requestedOffsetR16 = 8191;
+      NS_FATAL_ERROR ("The PUR offset is not allowed to be larger than the PUR periodicity.");
+    }
+  }
+
+  // Next, the requested TBS has to be defined. Therefore, all headers need to be added on top of the application payload
+  uint16_t ip_payload = 8*8 + 20*8 + packetsize*8;                             // 8 Bytes UDP header, 20 Bytes IPv4 header, in Bits
+  uint8_t size_NAS_protocol_discriminator = 4;                                 // Ref. ETSI TS 124 301 V15.08.0 sec. 8.2.32.1 Note, that Length is in Octet. Therefore Length=1/2 means 4 bits
+  uint8_t size_NAS_security_header_type = 4;                                   // Ref. ETSI TS 124 301 V15.08.0 sec. 8.2.32.1 Note, that Length is in Octet. Therefore Length=1/2 means 4 bits
+  uint8_t size_NAS_msg_id = 8;                                                 // Ref. ETSI TS 124 301 V15.08.0 sec. 8.2.32.1 Note, that Length is in Octet. Therefore Length=1/2 means 4 bits
+  uint8_t size_NAS_container_msg_type = 8;                                     // Ref. ETSI TS 124 301 V15.08.0 sec. 8.2.32.1 Note, that Length is in Octet. Therefore Length=1/2 means 4 bits
+  uint8_t size_NAS_msg_container_IEI = 8;                                      // Ref. ETSI TS 124 301 V15.08.0 sec. 8.2.32.1 Note, that Length is in Octet. Therefore Length=1/2 means 4 bits
+  uint8_t size_NAS_msg_container_len = 16;                                     // Ref. ETSI TS 124 301 V15.08.0 sec. 8.2.32.1 Note, that Length is in Octet. Therefore Length=1/2 means 4 bits
+  uint16_t size_NAS_msg_container = size_NAS_msg_container_IEI + size_NAS_msg_container_len + ip_payload;    // Ref. ETSI TS 124 301 V15.08.0 Fig. 9.9.3.43
+  uint16_t size_dedicatedInfoNAS = size_NAS_protocol_discriminator + size_NAS_security_header_type + size_NAS_msg_id + size_NAS_container_msg_type + size_NAS_msg_container; // Ref. ETSI TS 124 301 V15.08.0 sec. 8.2.32.1 Note, that Length is in Octet. Therefore Length=1/2 means 4 bits
+  uint16_t size_rrc_ED_req = 40 + 2 + size_dedicatedInfoNAS;                   // 40 bits S-TMSI (8 Bits MMEC + 32 bits m-TSMI) + 2 bits est-cause + NAS, ref. ETSI TS 136 331 V15.10.0 p.791 RRCEarlyDataRequest-NB
+  uint16_t size_rlc_pdu = size_rrc_ED_req;
+  uint16_t size_mac_pdu = 8 + 16 + 8 + size_rlc_pdu;                           // MAC_SUBHEADER_CE__R_F2_E_LCID + MAC_SUBHEADER_SDU__R_F2_E_LCID_F_7L + MAC_CE_sBSR + RLC PDU
+  std::cout << "PUR MAC PDU size: " << size_mac_pdu << " bits\n";
+  pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1000;
 }
 
 bool LteUeRrc::DoGetEdtEnabled(){

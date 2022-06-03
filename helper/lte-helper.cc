@@ -1123,7 +1123,7 @@ void LteHelper::AttachSuspend(Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice,
 }
 
 void
-LteHelper::SetPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
+LteHelper::SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time packetinterval, int packetsize, int nextaccess)
 {
   Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
   Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
@@ -1134,7 +1134,8 @@ LteHelper::SetPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
   Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
   Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
   Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
-
+  Ptr<LteEnbMac> enbMac = enbLteDevice->GetMac();
+  ueRrc->SetUpPurConfigurationRequestNb(packetinterval, packetsize, nextaccess);
 
 }
 
