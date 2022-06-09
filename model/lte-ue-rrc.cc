@@ -3945,7 +3945,7 @@ void LteUeRrc::AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dl
   m_asSapUser->NotifyConnectionSuspended();
 }
 
-void LteUeRrc::SetUpPurConfigurationRequestNb(Time packetinterval, int packetsize, int nextaccess){
+NbIotRrcSap::PurSetupRequest LteUeRrc::SetUpPurConfigurationRequestNb(Time packetinterval, int packetsize, int nextaccess){
   // Based on the application information a valid PUR config has to be derived
   NbIotRrcSap::PurSetupRequest pur;
 
@@ -4032,8 +4032,78 @@ void LteUeRrc::SetUpPurConfigurationRequestNb(Time packetinterval, int packetsiz
   uint16_t size_rrc_ED_req = 40 + 2 + size_dedicatedInfoNAS;                   // 40 bits S-TMSI (8 Bits MMEC + 32 bits m-TSMI) + 2 bits est-cause + NAS, ref. ETSI TS 136 331 V15.10.0 p.791 RRCEarlyDataRequest-NB
   uint16_t size_rlc_pdu = size_rrc_ED_req;
   uint16_t size_mac_pdu = 8 + 16 + 8 + size_rlc_pdu;                           // MAC_SUBHEADER_CE__R_F2_E_LCID + MAC_SUBHEADER_SDU__R_F2_E_LCID_F_7L + MAC_CE_sBSR + RLC PDU
-  std::cout << "PUR MAC PDU size: " << size_mac_pdu << " bits\n";
-  pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1000;
+  //std::cout << "PUR MAC PDU size: " << size_mac_pdu << " bits\n";
+  if (size_mac_pdu <= 328)
+  {
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b328;
+  }else if (size_mac_pdu <= 376){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b376;
+  }else if (size_mac_pdu <= 424){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b424;
+  }else if (size_mac_pdu <= 472){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b472;
+  }else if (size_mac_pdu <= 504){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b504;
+  }else if (size_mac_pdu <= 552){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b552;
+  }else if (size_mac_pdu <= 584){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b584;
+  }else if (size_mac_pdu <= 616){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b616;
+  }else if (size_mac_pdu <= 680){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b680;
+  }else if (size_mac_pdu <= 744){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b744;
+  }else if (size_mac_pdu <= 776){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b776;
+  }else if (size_mac_pdu <= 808){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b808;
+  }else if (size_mac_pdu <= 872){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b872;
+  }else if (size_mac_pdu <= 904){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b904;
+  }else if (size_mac_pdu <= 936){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b936;
+  }else if (size_mac_pdu <= 968){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b968;
+  }else if (size_mac_pdu <= 1000){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1000;
+  }else if (size_mac_pdu <= 1032){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1032;
+  }else if (size_mac_pdu <= 1096){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1096;
+  }else if (size_mac_pdu <= 1128){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1128;
+  }else if (size_mac_pdu <= 1192){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1192;
+  }else if (size_mac_pdu <= 1224){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1224;
+  }else if (size_mac_pdu <= 1256){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1256;
+  }else if (size_mac_pdu <= 1352){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1352;
+  }else if (size_mac_pdu <= 1384){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1384;
+  }else if (size_mac_pdu <= 1544){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1544;
+  }else if (size_mac_pdu <= 1608){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1608;
+  }else if (size_mac_pdu <= 1736){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1736;
+  }else if (size_mac_pdu <= 1800){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b1800;
+  }else if (size_mac_pdu <= 2024){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b2024;
+  }else if (size_mac_pdu <= 2280){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b2280;
+  }else if (size_mac_pdu <= 2536){
+    pur.requestedTbsR16 = NbIotRrcSap::PurSetupRequest::RequestedTbsR16::b2536;
+  }else{
+    // Message size is too large for a single TBS and can't be transmitted using PUR
+    // TODO: Use maximum TBS to transmit as much data as possible, then all remaining data are transmitted in a usual manner
+    NS_FATAL_ERROR ("The PUR message size is too large to be transmitted.");
+  }
+  return pur;
 }
 
 bool LteUeRrc::DoGetEdtEnabled(){

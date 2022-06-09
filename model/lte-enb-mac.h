@@ -529,6 +529,8 @@ private:
   
   
   void DoRemoveUeFromScheduler(uint16_t rnti);
+
+  void DoSetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest);
   
   void DoSetLogDir(std::string logdir);
   

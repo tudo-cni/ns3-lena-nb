@@ -85,7 +85,9 @@ public:
   virtual RachConfigNb GetRachConfigNb ();
   virtual void NotifyConnectionSuccessful(uint16_t rnti);
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti);
+  virtual void SetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest);
   virtual void SetLogDir(std::string logdir);
+  
 
 private:
   LteEnbMac *m_mac; ///< the MAC
@@ -172,6 +174,12 @@ LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue
 EnbMacMemberLteEnbCmacSapProvider::AllocateNcRaPreamble (uint16_t rnti)
 {
   return m_mac->DoAllocateNcRaPreamble (rnti);
+}
+
+void 
+EnbMacMemberLteEnbCmacSapProvider::SetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest)
+{
+  m_mac->DoSetUpPurNb(purSetupRequest);
 }
 
 void
@@ -1427,6 +1435,12 @@ LteEnbMac::DoResumeUe(uint16_t rnti, uint64_t resumeId){
 void LteEnbMac::DoRemoveUeFromScheduler(uint16_t rnti){
   m_schedulerNb->RemoveUe(rnti);
 }
+
+void LteEnbMac::DoSetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest){
+  // Based on the given PUR setup parameters, a corresponding transmission slot for PUR needs to be identified and reserved
+  m_schedulerNb->SchedulePurNb(purSetupRequest);
+}
+
 void LteEnbMac::DoSetLogDir(std::string logdir){
   m_logdir = logdir;
   m_mac_logging = true;

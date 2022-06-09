@@ -1908,6 +1908,8 @@ public:
   NbIotRrcSap::SystemInformationBlockType1Nb GetSib1Nb();
   NbIotRrcSap::SystemInformationNb GetSiNb();
 
+  void SetUpPurConfigurationNb(NbIotRrcSap::PurSetupRequest purSetupRequest);
+
 }; // end of `class LteEnbRrc`
 
 

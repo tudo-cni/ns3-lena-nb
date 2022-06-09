@@ -3860,6 +3860,10 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   }
 }
 
+void LteEnbRrc::SetUpPurConfigurationNb(NbIotRrcSap::PurSetupRequest purSetupRequest){
+  m_cmacSapProvider.at(0)->SetUpPurNb(purSetupRequest);
+}
+
 void LteEnbRrc::SetLogDir(std::string logdir){
   m_logdir = logdir;
   m_cmacSapProvider.at(0)->SetLogDir(m_logdir);

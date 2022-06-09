@@ -1135,8 +1135,8 @@ LteHelper::SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time p
   Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
   Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
   Ptr<LteEnbMac> enbMac = enbLteDevice->GetMac();
-  ueRrc->SetUpPurConfigurationRequestNb(packetinterval, packetsize, nextaccess);
-
+  NbIotRrcSap::PurSetupRequest purRequest = ueRrc->SetUpPurConfigurationRequestNb(packetinterval, packetsize, nextaccess);
+  enbRrc->SetUpPurConfigurationNb(purRequest);
 }
 
 void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){

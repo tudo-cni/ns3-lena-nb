@@ -548,60 +548,6 @@ class NbIotRrcSap{
             EdtTbsInfoList edtTbsInfoList;
             NprachParametersListEdt nprachParameterListEdt;
         };
-        struct PurSetupRequest{
-            enum class RequestedNumOccasionsR16{
-                one,
-                infinite
-            } requestedNumOccasionsR16;
-            enum class RequestedPeriodicityR16{
-                Periodicity8,
-                Periodicity16,
-                Periodicity32,
-                Periodicity64,
-                Periodicity128,
-                Periodicity256,
-                Periodicity512,
-                Periodicity1024,
-                Periodicity2048,
-                Periodicity4096,
-                Periodicity8192
-            } requestedPeriodicityR16;
-            int16_t requestedOffsetR16;
-            enum class RequestedTbsR16{
-                b328,
-                b376,
-                b424,
-                b472,
-                b504,
-                b552,
-                b584,
-                b616,
-                b680,
-                b744,
-                b776,
-                b808,
-                b872,
-                b904,
-                b936,
-                b968,
-                b1000,
-                b1032,
-                b1096,
-                b1128,
-                b1192,
-                b1224,
-                b1256,
-                b1352,
-                b1384,
-                b1544,
-                b1608,
-                b1736,
-                b1800,
-                b2024,
-                b2280,
-                b2536
-            } requestedTbsR16;
-        };
         struct RadioResourceConfigCommonNb{
             RachConfigCommon rachConfigCommon;
             BcchConfig bcchConfig;
@@ -1049,8 +995,187 @@ class NbIotRrcSap{
                 spare1
             } releaseCauseNb;
             uint64_t resumeIdentity;
-
         };
+
+        struct PurSetupRequest{
+            enum class RequestedNumOccasionsR16{
+                one,
+                infinite
+            } requestedNumOccasionsR16;
+            enum class RequestedPeriodicityR16{
+                Periodicity8,
+                Periodicity16,
+                Periodicity32,
+                Periodicity64,
+                Periodicity128,
+                Periodicity256,
+                Periodicity512,
+                Periodicity1024,
+                Periodicity2048,
+                Periodicity4096,
+                Periodicity8192
+            } requestedPeriodicityR16;
+            int16_t requestedOffsetR16;
+            enum class RequestedTbsR16{
+                b328,
+                b376,
+                b424,
+                b472,
+                b504,
+                b552,
+                b584,
+                b616,
+                b680,
+                b744,
+                b776,
+                b808,
+                b872,
+                b904,
+                b936,
+                b968,
+                b1000,
+                b1032,
+                b1096,
+                b1128,
+                b1192,
+                b1224,
+                b1256,
+                b1352,
+                b1384,
+                b1544,
+                b1608,
+                b1736,
+                b1800,
+                b2024,
+                b2280,
+                b2536
+            } requestedTbsR16;
+        };
+
+        struct PurNrsrpChangeThresholdR16{
+            enum class IncreaseThreshR16{
+                dB4, 
+                dB6, 
+                dB8, 
+                dB10, 
+                dB14, 
+                dB18, 
+                dB22, 
+                dB26, 
+                dB30, 
+                dB34
+            } increaseThreshR16;
+            enum class DecreaseThreshR16{
+                dB4, 
+                dB6, 
+                dB8, 
+                dB10, 
+                dB14, 
+                dB18, 
+                dB22, 
+                dB26, 
+                dB30, 
+                dB34
+            } DecreaseThreshR16;
+        };
+
+        struct PurStartTimeparametersR16{
+            enum class PurPeriodicityNbR16{
+                Periodicity8,
+                Periodicity16,
+                Periodicity32,
+                Periodicity64,
+                Periodicity128,
+                Periodicity256,
+                Periodicity512,
+                Periodicity1024,
+                Periodicity2048,
+                Periodicity4096,
+                Periodicity8192
+            } purPeriodicityNbR16;
+            uint16_t purOffsetNbR16;
+            uint16_t startSfnR16;
+            uint8_t startSubframeR16;
+            uint8_t hsfnLsbInfoR16;
+        };
+
+        struct DlCarrierConfigDedicatedNbR13{ //TODO: Implement correct IEs when necessary
+            uint64_t dlCarrierFreqR13;
+            uint8_t downlinkBitmapNonAnchorR13;
+            uint8_t dlGarNonAnchorR13;
+            uint8_t inbandCarrierInfoR13;
+        };
+
+        struct UlCarrierConfigDedicatedNbR13{ //TODO: Implement correct IEs when necessary
+            uint64_t ulCarrierFreqR13;
+        };
+
+        struct CarrierConfigDedicatedNbR13{
+            DlCarrierConfigDedicatedNbR13 dlCarrierConfigR13;
+            UlCarrierConfigDedicatedNbR13 ulCarrierConfigR13;
+        };
+
+        struct PurPhysicalConfigR16{
+            CarrierConfigDedicatedNbR13 carrierConfigR16;
+            uint8_t npuschNumRusIndexR16;
+            uint8_t npuschNumRepetitionsIndexR16;
+            uint8_t npuschSubCarrierSetIndexR16;
+            uint8_t npuschMcsR16;
+            int8_t p0UeNpuschR16;
+            enum class AlphaR16{
+                al0, 
+                al04, 
+                al05, 
+                al06, 
+                al07, 
+                al08, 
+                al09, 
+                al1
+            } alphaR16;
+            enum class NpuschCyclicShiftR16{
+                n0,
+                n6
+            } npuschCyclicShift;
+            NpdcchConfigDedicatedNb npdcchConfigDedicatedNb;
+            enum class AckNackNumRepetitionsNbR13{
+                r1, 
+                r2, 
+                r4, 
+                r8, 
+                r16, 
+                r32, 
+                r64, 
+                r128
+            } ackNackNumRepetitionsNbR13;
+        };
+
+        struct PurConfigNbR16{
+            uint32_t purConfigIdNbR16;
+            uint8_t purTimeAlignmentTimerR16;
+            PurNrsrpChangeThresholdR16 purNrsrpChangeThresholdR16;
+            enum class PURImplicitReleaseAfterR16{
+                n2, 
+                n4, 
+                n8
+            } purImplicitReleaseAfterR16;
+            uint16_t purRNTIR16;
+            enum class PurResponseWindowTimerR16{
+                pp1, 
+                pp2, 
+                pp3, 
+                pp4, 
+                pp8, 
+                pp16, 
+                pp32, 
+                pp64
+            } purResponseWindowTimerR16;
+            PurStartTimeparametersR16 purStartTimeparametersR16;
+            enum class PurNumOccasionsR16{
+                one,
+                infinite
+            } purNumOccasionsR16;
+        };
+
         static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)
         {
             double res = 0;
@@ -2021,6 +2146,46 @@ class NbIotRrcSap{
                     break;
              }
             return res;
+        }
+
+        static uint32_t ConvertPurPeriodicity2int(NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16 p){
+            uint32_t periodicity = 0; // PUR periodicity in ms
+            switch (p){
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity8: 
+                    periodicity = 10240*8;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity16: 
+                    periodicity = 10240*16;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity32: 
+                    periodicity = 10240*32;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity64: 
+                    periodicity = 10240*64;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity128: 
+                    periodicity = 10240*128;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity256: 
+                    periodicity = 10240*256;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity512: 
+                    periodicity = 10240*512;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity1024: 
+                    periodicity = 10240*1024;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity2048: 
+                    periodicity = 10240*2048;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity4096: 
+                    periodicity = 10240*4096;
+                    break;
+                case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity8192: 
+                    periodicity = 10240*8192;
+                    break;
+            }
+            return periodicity;
         }
 
 };

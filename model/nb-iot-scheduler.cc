@@ -1111,6 +1111,14 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
   return msg;
 }
 
+
+
+void 
+SchedulePurNb(NbIotRrcSap::PurSetupRequest purSetupRequest)
+{
+  uint16_t nextaccess = purSetupRequest.requestedOffsetR16; // in HSF (10.24s)
+}
+
 //void
 //NbiotScheduler::ScheduleMsg5Req (uint64_t rnti)
 //{

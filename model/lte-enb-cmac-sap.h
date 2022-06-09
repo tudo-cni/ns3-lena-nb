@@ -202,6 +202,7 @@ public:
    */
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti) = 0;
 
+  virtual void SetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest) = 0;
 
   virtual void SetLogDir(std::string logdir) = 0;
 
