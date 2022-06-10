@@ -114,7 +114,7 @@ std::vector<NbIotRrcSap::NpdcchMessage> ScheduleSearchSpace(SearchSpaceConfig ss
 std::vector<std::pair<uint64_t, std::vector<uint64_t>>> GetNextAvailableNpuschCandidate(uint64_t endSubframeNpdsch, uint64_t minSchedulingDelay, uint64_t numSubframes, bool isHarq);
 std::pair<NbIotRrcSap::UlGrant, std::pair<uint64_t,std::vector<uint64_t>>> GetNextAvailableMsg3UlGrantCandidate(uint64_t endSubframeMsg2, uint64_t numSubframes);
 NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::DciType dci_type);
-void SchedulePurNb(NbIotRrcSap::PurSetupRequest purSetupRequest);
+void SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
 
 void SetLogDir(std::string logdir);
 void RoundRobinScheduling(SearchSpaceConfig ssc);

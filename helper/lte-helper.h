@@ -436,7 +436,7 @@ public:
    * Note that this function will disable Idle mode initial cell selection
    * procedure.
    */
-  void AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
+  uint16_t AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
   void AttachSuspend (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, uint64_t resumeId);
 
 
@@ -454,8 +454,8 @@ public:
    * Note that this function will disable Idle mode initial cell selection
    * procedure.
    */
-  void SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time packetinterval, int packetsize, int nextaccess);
-
+  void SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time packetinterval, int packetsize, int nextaccess, uint16_t rnti);
+  void SetUpPur (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, NbIotRrcSap::PurSetupRequest purRequest, uint16_t rnti);
 
   /** 
    * \brief Manual attachment of a set of UE devices to the network via the

@@ -3946,6 +3946,7 @@ void LteUeRrc::AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dl
 }
 
 NbIotRrcSap::PurSetupRequest LteUeRrc::SetUpPurConfigurationRequestNb(Time packetinterval, int packetsize, int nextaccess){
+  //std::cout << "Beep3" << std::endl;
   // Based on the application information a valid PUR config has to be derived
   NbIotRrcSap::PurSetupRequest pur;
 

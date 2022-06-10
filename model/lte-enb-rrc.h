@@ -1901,14 +1901,14 @@ private:
   bool m_edt;
   std::string m_logdir;
 public:
-  uint64_t AttachSuspendedUeNb(uint32_t imsi);
+  std::pair<uint64_t, uint16_t> AttachSuspendedUeNb(uint32_t imsi);
   void SetLogDir(std::string logfile);
   void LogDataReception(uint32_t imsi);
 
   NbIotRrcSap::SystemInformationBlockType1Nb GetSib1Nb();
   NbIotRrcSap::SystemInformationNb GetSiNb();
 
-  void SetUpPurConfigurationNb(NbIotRrcSap::PurSetupRequest purSetupRequest);
+  void SetUpPurConfigurationNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
 
 }; // end of `class LteEnbRrc`
 

@@ -1114,9 +1114,32 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
 
 
 void 
-SchedulePurNb(NbIotRrcSap::PurSetupRequest purSetupRequest)
+NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
 {
-  uint16_t nextaccess = purSetupRequest.requestedOffsetR16; // in HSF (10.24s)
+  NbIotRrcSap::PurSetupRequest purSetupRequest = infoPurRequest.purSetupRequest;
+  uint16_t rnti = infoPurRequest.rnti;
+  double rsrp = infoPurRequest.rsrp;
+  double correction_factor =
+      10 *
+      log10 (
+          1.0 /
+          12.0); // correctionfactor applied to rsrp because it's for earch subcarrier and tx power is for full spectrum
+
+  //std::cout << "Beep5" << std::endl;
+  uint32_t periodicity = NbIotRrcSap::ConvertPurPeriodicity2int(purSetupRequest.requestedPeriodicityR16); // in ms
+  uint16_t nextaccess = purSetupRequest.requestedOffsetR16 * 10240; // purSetupRequest.requestedOffsetR16 in HSF (10.24s)
+  bool infiniteOccasions = false;
+  if (purSetupRequest.requestedNumOccasionsR16 == NbIotRrcSap::PurSetupRequest::RequestedNumOccasionsR16::infinite){
+    infiniteOccasions = true;
+  } else{
+    infiniteOccasions = false;
+  }
+  std::cout << "SchedulePurNb: " << periodicity << ", " << nextaccess << ", " << infiniteOccasions << "\n";
+
+  uint64_t size_mac_pdu = NbIotRrcSap::ConvertRequestedTbs2int(purSetupRequest.requestedTbsR16);
+  std::cout << "SchedulePurNb: RNTI: "<< rnti<< "\n";
+  int couplingloss = m_rntiRsrpMap[rnti] - 43.0 - correction_factor;
+  std::cout << "SchedulePurNb: Couplingloss: " << couplingloss<< "\n";
 }
 
 //void

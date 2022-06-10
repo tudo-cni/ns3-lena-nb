@@ -3708,9 +3708,9 @@ LteEnbRrc::IsRandomAccessCompleted (uint16_t rnti)
     }
 }
 
-uint64_t LteEnbRrc::AttachSuspendedUeNb(uint32_t imsi){
+std::pair<uint64_t, uint16_t> LteEnbRrc::AttachSuspendedUeNb(uint32_t imsi){
   uint16_t rnti = AddUe(UeManager::INITIAL_RANDOM_ACCESS,0);
-  return GetUeManagerbyRnti(rnti)->AttachSuspendedNb(imsi);
+  return std::make_pair(GetUeManagerbyRnti(rnti)->AttachSuspendedNb(imsi), rnti);
 }
 
 
@@ -3860,8 +3860,9 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   }
 }
 
-void LteEnbRrc::SetUpPurConfigurationNb(NbIotRrcSap::PurSetupRequest purSetupRequest){
-  m_cmacSapProvider.at(0)->SetUpPurNb(purSetupRequest);
+void LteEnbRrc::SetUpPurConfigurationNb(NbIotRrcSap::InfoPurRequest infoPurRequest){
+  //std::cout << "Beep3" << std::endl;
+  m_cmacSapProvider.at(0)->SetUpPurNb(infoPurRequest);
 }
 
 void LteEnbRrc::SetLogDir(std::string logdir){

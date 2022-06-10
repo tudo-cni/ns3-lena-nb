@@ -530,7 +530,7 @@ private:
   
   void DoRemoveUeFromScheduler(uint16_t rnti);
 
-  void DoSetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest);
+  void DoSetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
   
   void DoSetLogDir(std::string logdir);
   

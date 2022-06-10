@@ -133,6 +133,9 @@ public:
 
   void SetLogDir(std::string dirname);
 
+  double GetRsrp();
+
+
 private:
   // forwarded from MAC SAP
  /**

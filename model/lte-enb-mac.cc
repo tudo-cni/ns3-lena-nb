@@ -85,7 +85,7 @@ public:
   virtual RachConfigNb GetRachConfigNb ();
   virtual void NotifyConnectionSuccessful(uint16_t rnti);
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti);
-  virtual void SetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest);
+  virtual void SetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
   virtual void SetLogDir(std::string logdir);
   
 
@@ -177,9 +177,9 @@ EnbMacMemberLteEnbCmacSapProvider::AllocateNcRaPreamble (uint16_t rnti)
 }
 
 void 
-EnbMacMemberLteEnbCmacSapProvider::SetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest)
+EnbMacMemberLteEnbCmacSapProvider::SetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
 {
-  m_mac->DoSetUpPurNb(purSetupRequest);
+  m_mac->DoSetUpPurNb(infoPurRequest);
 }
 
 void
@@ -1436,9 +1436,10 @@ void LteEnbMac::DoRemoveUeFromScheduler(uint16_t rnti){
   m_schedulerNb->RemoveUe(rnti);
 }
 
-void LteEnbMac::DoSetUpPurNb(NbIotRrcSap::PurSetupRequest purSetupRequest){
+void LteEnbMac::DoSetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest){
   // Based on the given PUR setup parameters, a corresponding transmission slot for PUR needs to be identified and reserved
-  m_schedulerNb->SchedulePurNb(purSetupRequest);
+  //std::cout << "Beep4" << std::endl;
+  m_schedulerNb->SchedulePurNb(infoPurRequest);
 }
 
 void LteEnbMac::DoSetLogDir(std::string logdir){

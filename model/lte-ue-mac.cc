@@ -1839,4 +1839,8 @@ void LteUeMac::SetLogDir(std::string dirname){
   m_mac_logging = true;
 }
 
+double LteUeMac::GetRsrp(){
+  return m_uePhySapProvider->GetRSRP ();
+}
+
 } // namespace ns3

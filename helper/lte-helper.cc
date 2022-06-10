@@ -1076,7 +1076,7 @@ LteHelper::Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
     }
 }
 
-void
+uint16_t
 LteHelper::AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
 {
   NS_LOG_FUNCTION (this);
@@ -1102,8 +1102,11 @@ LteHelper::AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
   Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
   Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
 
-  uint64_t resumeId = enbRrc->AttachSuspendedUeNb(ueRrc->GetImsi());
+  std::pair<uint64_t, uint16_t> res = enbRrc->AttachSuspendedUeNb(ueRrc->GetImsi());
+  uint64_t resumeId = res.first;
+  uint16_t rnti = res.second;
   Simulator::Schedule(MilliSeconds(20), &LteHelper::AttachSuspend, this, ueDevice, enbDevice, resumeId);
+  return rnti;
 }
 
 void LteHelper::AttachSuspend(Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, uint64_t resumeId){
@@ -1123,7 +1126,7 @@ void LteHelper::AttachSuspend(Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice,
 }
 
 void
-LteHelper::SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time packetinterval, int packetsize, int nextaccess)
+LteHelper::SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time packetinterval, int packetsize, int nextaccess, uint16_t rnti)
 {
   Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
   Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
@@ -1133,10 +1136,36 @@ LteHelper::SetUpPurNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, Time p
     }
   Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
   Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+  Ptr<LteUeMac> ueMac = ueLteDevice->GetMac();
   Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
   Ptr<LteEnbMac> enbMac = enbLteDevice->GetMac();
   NbIotRrcSap::PurSetupRequest purRequest = ueRrc->SetUpPurConfigurationRequestNb(packetinterval, packetsize, nextaccess);
-  enbRrc->SetUpPurConfigurationNb(purRequest);
+  Simulator::Schedule(MilliSeconds(30), &LteHelper::SetUpPur, this, ueDevice, enbDevice, purRequest, rnti);
+}
+
+void
+LteHelper::SetUpPur (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, NbIotRrcSap::PurSetupRequest purRequest, uint16_t rnti)
+{
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+  if (ueLteDevice == 0)
+    {
+      NS_FATAL_ERROR ("The passed NetDevice must be an LteUeNetDevice");
+    }
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
+  Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+  Ptr<LteUeMac> ueMac = ueLteDevice->GetMac();
+  Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
+  Ptr<LteEnbMac> enbMac = enbLteDevice->GetMac();
+  double rsrp = ueMac->GetRsrp();
+  std::cout << "RSRP: " << rsrp << std::endl;
+
+  NbIotRrcSap::InfoPurRequest infoPurRequest;
+  infoPurRequest.purSetupRequest = purRequest;
+  infoPurRequest.rnti = rnti;
+  infoPurRequest.rsrp = rsrp;
+
+  enbRrc->SetUpPurConfigurationNb(infoPurRequest);
 }
 
 void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){

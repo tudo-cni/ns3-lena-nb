@@ -238,7 +238,7 @@ main (int argc, char *argv[])
   for (uint16_t i = 0; i < ues_to_consider; i++)
     {
       int access = RaUeUniformVariable->GetInteger (50, simTime.GetMilliSeconds());
-      lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
+      uint16_t rnti = lteHelper->AttachSuspendedNb(ueLteDevs.Get(i), enbLteDevs.Get(0));
 
       Ptr<LteUeNetDevice> ueLteDevice = ueLteDevs.Get(i)->GetObject<LteUeNetDevice> ();
       Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
@@ -257,9 +257,9 @@ main (int argc, char *argv[])
         ueRrc->SetAttribute("EDT", BooleanValue(false));
       }
       if(pur == true){
-        //std::cout << "PUR" << std::endl;
+        //std::cout << "Beep1" << std::endl;
         ueRrc->SetAttribute("PUR", BooleanValue(true));
-        lteHelper->SetUpPurNb(ueLteDevs.Get(i), enbLteDevs.Get(0), packetinterval_app_a, packetsize_app_a, access);
+        lteHelper->SetUpPurNb(ueLteDevs.Get(i), enbLteDevs.Get(0), packetinterval_app_a, packetsize_app_a, access, rnti);
       }
       else{
         ueRrc->SetAttribute("PUR", BooleanValue(false));

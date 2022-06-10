@@ -1176,6 +1176,12 @@ class NbIotRrcSap{
             } purNumOccasionsR16;
         };
 
+        struct InfoPurRequest{
+            PurSetupRequest purSetupRequest;
+            uint16_t rnti;
+            double rsrp;
+        };
+
         static double ConvertNprachCpLenght2double (NprachConfig nprachconfig)
         {
             double res = 0;
@@ -2149,7 +2155,7 @@ class NbIotRrcSap{
         }
 
         static uint32_t ConvertPurPeriodicity2int(NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16 p){
-            uint32_t periodicity = 0; // PUR periodicity in ms
+            uint32_t periodicity = 1; // PUR periodicity in ms
             switch (p){
                 case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity8: 
                     periodicity = 10240*8;
@@ -2184,8 +2190,113 @@ class NbIotRrcSap{
                 case NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity8192: 
                     periodicity = 10240*8192;
                     break;
+                default: 
+                    NS_FATAL_ERROR ("NbIotRrcSap->ConvertPurPeriodicity2int: Requested Periodicity has to be of type NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16!");
+
             }
             return periodicity;
+        }
+
+        static uint16_t ConvertRequestedTbs2int(PurSetupRequest::RequestedTbsR16 purTbs){
+            uint16_t res = 0;
+            switch(purTbs){
+                case PurSetupRequest::RequestedTbsR16::b328:
+                    res = 328;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b376:
+                    res = 376;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b424:
+                    res = 424;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b472:
+                    res = 472;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b504:
+                    res = 504;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b552:
+                    res = 552;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b584:
+                    res = 584;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b616:
+                    res = 616;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b680:
+                    res = 680;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b744:
+                    res = 744;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b776:
+                    res = 776;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b808:
+                    res = 808;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b872:
+                    res = 872;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b904:
+                    res = 904;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b936:
+                    res = 936;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b968:
+                    res = 968;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1000:
+                    res = 1000;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1032:
+                    res = 1032;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1096:
+                    res = 1096;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1128:
+                    res = 1128;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1192:
+                    res = 1192;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1256:
+                    res = 1256;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1352:
+                    res = 1352;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1384:
+                    res = 1384;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1544:
+                    res = 1544;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1608:
+                    res = 1608;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1736:
+                    res = 1736;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b1800:
+                    res = 1800;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b2024:
+                    res = 2024;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b2280:
+                    res = 2280;
+                    break;
+                case PurSetupRequest::RequestedTbsR16::b2536:
+                    res = 2536;
+                    break;
+                default:
+                    break;
+             }
+            return res;
         }
 
 };
