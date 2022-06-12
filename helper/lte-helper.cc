@@ -1162,6 +1162,7 @@ LteHelper::SetUpPur (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, NbIotRrc
 
   NbIotRrcSap::InfoPurRequest infoPurRequest;
   infoPurRequest.purSetupRequest = purRequest;
+  infoPurRequest.imsi = ueRrc->GetImsi();
   infoPurRequest.rnti = rnti;
   infoPurRequest.rsrp = rsrp;
 

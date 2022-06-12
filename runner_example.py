@@ -88,7 +88,7 @@ simu_queue = TaskQueue(3) # This is the number of parallel workers. This number 
 seed = 1 # Number of runs. 5 means that simulations with seeds 1,2,3,4,5 will be started
 for i in range(1,seed+1):
     # Place here your different scenario setups. In this example 15 devices are simulated using standard transmission, C-IoT Opt. or EDT
-    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=False, edt=False, pur=True))
+    simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=1, num_ues_app_b=0, num_ues_app_c=0, ciot=False, edt=False, pur=True))
     #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=False, pur=True))
     #simu_queue.add_task(SimulationParameters(simTime=simTime,simulation=sim_command, randomSeed=i, num_ues_app_a=5, num_ues_app_b=5, num_ues_app_c=5, ciot=True, edt=True, pur=True))
 simu_queue.start_workers()

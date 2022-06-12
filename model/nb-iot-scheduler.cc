@@ -596,7 +596,7 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
           NbIotRrcSap::ConvertDciN0Repetitions2int (message.dciN0));
       if (test.size () > 0)
         {
-          uint64_t size_ru = 1; // 15 khz spacing
+          uint64_t size_ru = 1; // 15 khz spacing // TODO Pascal: This is 1 by Tim. Why? Since BW is fixed to 15 KHz for now, each RU is 8ms long.
           uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0)*size_ru *
                                      NbIotRrcSap::ConvertNumNpuschRepetitions2int (message.dciN0);
           // Have to be set by higher layer | 4 for debugging
@@ -1064,6 +1064,7 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
         {
           tbs = (m_rntiUeConfigMap[rnti].rlcDlBuffer) * 8;
         }
+      //std::cout << "Coupling Loss (N1) " <<m_rntiRsrpMap[rnti] - 43.0 - correction_factor << std::endl;
       std::pair<NbIotRrcSap::DciN1, uint64_t> dci_tbs = m_Amc.getBareboneDciN1 (
           m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, "standalone");
 
@@ -1092,7 +1093,7 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
         {
           tbs = (10+m_rntiUeConfigMap[rnti].rlcUlBuffer) * 8;
         }
-
+      //std::cout << "Coupling Loss (N0) " <<m_rntiRsrpMap[rnti] - 43.0 - correction_factor << std::endl;
       std::pair<NbIotRrcSap::DciN0, uint64_t> dci_tbs =
           m_Amc.getBareboneDciN0 (m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, 15000, 15);
 
@@ -1117,6 +1118,7 @@ void
 NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
 {
   NbIotRrcSap::PurSetupRequest purSetupRequest = infoPurRequest.purSetupRequest;
+  uint64_t imsi = infoPurRequest.imsi;
   uint16_t rnti = infoPurRequest.rnti;
   double rsrp = infoPurRequest.rsrp;
   double correction_factor =
@@ -1127,20 +1129,147 @@ NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
 
   //std::cout << "Beep5" << std::endl;
   uint32_t periodicity = NbIotRrcSap::ConvertPurPeriodicity2int(purSetupRequest.requestedPeriodicityR16); // in ms
-  uint16_t nextaccess = purSetupRequest.requestedOffsetR16 * 10240; // purSetupRequest.requestedOffsetR16 in HSF (10.24s)
+  uint16_t nextAccess = purSetupRequest.requestedOffsetR16 * 10240; // purSetupRequest.requestedOffsetR16 in HSF (10.24s)
   bool infiniteOccasions = false;
   if (purSetupRequest.requestedNumOccasionsR16 == NbIotRrcSap::PurSetupRequest::RequestedNumOccasionsR16::infinite){
     infiniteOccasions = true;
   } else{
     infiniteOccasions = false;
   }
-  std::cout << "SchedulePurNb: " << periodicity << ", " << nextaccess << ", " << infiniteOccasions << "\n";
+  std::cout << "SchedulePurNb: " << periodicity << ", " << nextAccess << ", " << infiniteOccasions << "\n";
 
-  uint64_t size_mac_pdu = NbIotRrcSap::ConvertRequestedTbs2int(purSetupRequest.requestedTbsR16);
+  uint64_t tbs = NbIotRrcSap::ConvertRequestedTbs2int(purSetupRequest.requestedTbsR16);
+  std::cout << "SchedulePurNb: imsi: "<< imsi<< "\n";
   std::cout << "SchedulePurNb: RNTI: "<< rnti<< "\n";
-  int couplingloss = m_rntiRsrpMap[rnti] - 43.0 - correction_factor;
+  int couplingloss = rsrp - 43.0 - correction_factor;
   std::cout << "SchedulePurNb: Couplingloss: " << couplingloss<< "\n";
+
+  NpuschMeasurementValues npusch = m_Amc.getBareboneNpusch (m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, 15000, 15);
+  if(ScheduleNpuschPur(npusch,rnti,periodicity, nextAccess,infiniteOccasions)){
+    // Do something
+  }
+
+  // if (ScheduleNpdcchMessage (dci_candidate, ssc))
+  //             {
+  //               scheduledMessages.push_back (dci_candidate);
+  //               if (int (m_rntiUeConfigMap[(*it)].rlcUlBuffer - (dci_candidate.tbs / 8)) > 0)
+  //                 {
+  //                   m_rntiUeConfigMap[(*it)].rlcUlBuffer =
+  //                       m_rntiUeConfigMap[(*it)].rlcUlBuffer - (dci_candidate.tbs / 8);
+  //                 }
+  //               else
+  //                 {
+  //                   m_rntiUeConfigMap[(*it)].rlcUlBuffer = 0;
+  //                 }
+  //               m_RoundRobinLastScheduled[ssc] = (*it);
+  //               m_rntiUeConfigMap[(*it)].priority = UeConfig::SchedulePriority::DOWNLINK;
+  //             }
+
 }
+
+bool 
+NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint16_t nextAccess, bool infiniteOcassions){
+  bool scheduleSuccessful = false;
+  
+  int8_t numRus = npusch.NRU;
+  uint8_t lenRu = 0; // length of a single Resource Unit in [ms]. This depends on the number of subcarriers: 1SC: 8ms, 3SC: 4ms, 6SC: 2ms, 8SC: 1ms
+  switch (npusch.NRUSC)
+  {
+  case 1:
+    lenRu = 8;
+    break;
+  case 3:
+    lenRu = 4;
+    break;
+  case 6:
+    lenRu = 2;
+    break;
+   case 12:
+    lenRu = 1;
+    break;
+  default:
+    break;
+  }
+  uint16_t subframesNpusch = lenRu * npusch.NRU * npusch.NRep;
+  std::cout << "ScheduleNpuschPur: " << npusch.SCS << ", " << npusch.NRUSC << ", " << npusch.NRU << ", " << npusch.TTI << "\n";
+
+
+  // std::vector<uint64_t> test = GetNextAvailablePurNpuschCandidate (nextAccess, );
+  // if (test.size () > 0)
+  //   {
+  //     uint64_t size_ru = 8; // 15 khz bandwidth // TODO Pascal: This was 1 by Tim. Why? Since BW is fixed to 15 KHz for now, each RU is 8ms long.
+  //     uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0)*size_ru *
+  //                                 NbIotRrcSap::ConvertNumNpuschRepetitions2int (message.dciN0);
+  //     // Have to be set by higher layer | 4 for debugging
+  //     std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschsubframes =
+  //         GetNextAvailableNpuschCandidate (*(test.end () - 1), 0, subframesNpusch, true);
+
+  //     if (npuschsubframes.size () > 0)
+  //       {
+  //         //NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
+
+  //         for (size_t j = 0; j < test.size (); ++j)
+  //           {
+  //             m_downlink[test[j]] = message.rnti;//m_currenthyperindex;
+  //             //NS_BUILD_DEBUG (std::cout << test[j] << " ");
+  //           }
+
+  //         //NS_BUILD_DEBUG (std::cout << std::endl);
+  //         //NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
+  //         scheduleSuccessful = true;
+  //         for (size_t i = 0; i < npuschsubframes[0].second.size (); i++)
+  //           {
+  //             m_uplink[npuschsubframes[0].first][npuschsubframes[0].second[i]] =
+  //                 message.rnti;
+  //                 //m_currenthyperindex;
+  //             //NS_BUILD_DEBUG (std::cout << npuschsubframes[0].second[i] << " ");
+  //           }
+  //         //NS_BUILD_DEBUG (std::cout << std::endl);
+
+  //         message.dciRepetitionsubframes = test;
+  //         message.dciN0.npuschOpportunity = npuschsubframes;
+  //         message.dciN0.dciSubframes = test;
+  //         m_rntiUeConfigMap[message.rnti].lastUl = npuschsubframes[0].second.back ();
+  //         //NS_BUILD_DEBUG (std::cout << std::endl);
+  //         return true;
+  //       }
+// }
+  return false;
+}
+
+std::vector<std::pair<uint64_t, std::vector<uint64_t>>>
+NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint64_t nextOccasion, uint64_t numSubframes)
+{
+  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> allocation;    
+  for (size_t j = 0; j < 4; ++j)
+  { // For subcarrier 0-3 for 15khz Subcarrier spacing | needs change for 3.75 Khz
+    NbIotRrcSap::DciN0 tmp;
+    uint64_t candidate = nextOccasion + 1; // Start on next subframe
+    std::vector<uint64_t> subframesOccupied =
+        GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j);
+    subframesOccupied =
+        CheckforNContiniousSubframesUl (subframesOccupied, candidate, numSubframes, j);
+    if (subframesOccupied.size () > 0)
+      {
+        return allocation;
+      }
+  }
+  return std::vector<std::pair<uint64_t, std::vector<uint64_t>>> ();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //void
 //NbiotScheduler::ScheduleMsg5Req (uint64_t rnti)

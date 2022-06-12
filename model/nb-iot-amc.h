@@ -58,24 +58,24 @@ struct MatlabNpdschMeasurement
 
 struct NpuschMeasurementValues
 {
-  int SCS;
-  int ISC;
-  int NRUSC;
-  int tRu;
-  double requiredSNR;
-  int IRU;
-  int NRU;
-  int ITBS;
+  int SCS; // Subcarrier spacing
+  int ISC; // Index Subcarrier
+  int NRUSC; // Number of Subcarriers used by the Resource Unit
+  int tRu;  // Time used by a single Resource Unit
+  double requiredSNR; // Required SNR for the given BLER
+  int IRU; // Index of numRU
+  int NRU; // Number of Resource Units
+  int ITBS; // Index of Transport Block Size
   int Qm;
-  int TBS;
-  int numTrBlks;
-  int NRep;
-  int SNR;
-  double BLER;
-  int TTI;
-  int Pathloss;
-  double datarate;
-  double bandwidth;
+  int TBS; // Transport Block Size
+  int numTrBlks; // Number of simulated Transport Blocks in MATLAB
+  int NRep; // Number of Repetitions of each Resource Unit
+  int SNR; // SNR of the Transmission, depending on the given signal quality
+  double BLER; // Block Error Rate
+  int TTI; // Transmission Time Interval
+  int Pathloss; // Pathloss in dB
+  double datarate; // Data rate based on TBS and 
+  double bandwidth; // Bandwidth
 
 };
 
@@ -107,6 +107,7 @@ public:
   std::pair<NbIotRrcSap::DciN1, int> getBareboneDciN1(double couplingloss, int dataSize, std::string opMode);
   std::pair<NbIotRrcSap::DciN0, int> getBareboneDciN0(double couplingloss, int dataSize, double scs, double bandwidth);
   int getMsg3Subframes (double couplingloss, int dataSize, double scs, double bandwidth);
+  NpuschMeasurementValues getBareboneNpusch (double couplingloss, int dataSize, double scs, double bandwidth);
 
 private:
   bool m_r13;

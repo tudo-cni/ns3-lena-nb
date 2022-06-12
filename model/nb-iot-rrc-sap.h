@@ -1178,6 +1178,7 @@ class NbIotRrcSap{
 
         struct InfoPurRequest{
             PurSetupRequest purSetupRequest;
+            uint64_t imsi;
             uint16_t rnti;
             double rsrp;
         };

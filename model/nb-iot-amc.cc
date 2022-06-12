@@ -538,4 +538,11 @@ NbiotAmc::getBareboneDciN0 (double couplingloss, int dataSize, double scs, doubl
   uint16_t tbs = TransportBlockSizeTableUlNb[value.ITBS][value.NRU];
   return std::make_pair (dci, tbs);
 }
+
+NpuschMeasurementValues
+NbiotAmc::getBareboneNpusch (double couplingloss, int dataSize, double scs, double bandwidth)
+{
+  NpuschMeasurementValues value = getNpuschParameters (couplingloss, dataSize, scs, bandwidth);
+  return value;
+}
 } // namespace ns3
