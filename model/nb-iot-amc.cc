@@ -346,7 +346,11 @@ NbiotAmc::getMsg3Subframes (double couplingloss, int dataSize, double scs, doubl
   NpuschMeasurementValues value = getNpuschParameters (couplingloss, dataSize, scs, bandwidth);
   // Only singletone 15khz supported yet
   // Extension later on
-  return value.NRep * value.NRU*1;
+
+  uint8_t len_ru = 8; // TODO: Currently only 15 kHz single-tone transmissions are possible, which result in RU length of 8ms for 15 kHz scs
+
+
+  return value.NRep * value.NRU*len_ru;
 }
 
 NbIotRrcSap::DciN1
@@ -508,10 +512,13 @@ NbiotAmc::mapMeasurementValuetoDciN0 (NpuschMeasurementValues value)
       break;
     }
 
+  value.NRUSC;
+
   NbIotRrcSap::DciN0 dci;
   dci.format = true;
   dci.numResourceUnits = subframes;
   dci.numNpuschRepetitions = repetitions;
+  dci.subcarrierIndicationNb.allocation = NbIotRrcSap::SubcarrierIndicationNb::Allocation::oneToneAllocation; // Currently only single-tone transmissions are supported
   return dci;
 }
 

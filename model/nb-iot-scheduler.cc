@@ -596,8 +596,8 @@ NbiotScheduler::ScheduleNpdcchMessage (NbIotRrcSap::NpdcchMessage &message, Sear
           NbIotRrcSap::ConvertDciN0Repetitions2int (message.dciN0));
       if (test.size () > 0)
         {
-          uint64_t size_ru = 1; // 15 khz spacing // TODO Pascal: This is 1 by Tim. Why? Since BW is fixed to 15 KHz for now, each RU is 8ms long.
-          uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0)*size_ru *
+          uint64_t len_ru = NbIotRrcSap::ConvertLenResourceUnits2int(message.dciN0); // 15 khz spacing 
+          uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0)*len_ru *
                                      NbIotRrcSap::ConvertNumNpuschRepetitions2int (message.dciN0);
           // Have to be set by higher layer | 4 for debugging
           std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschsubframes =
@@ -773,7 +773,7 @@ NbiotScheduler::GetNextAvailableNpuschCandidate (uint64_t endSubframeNpdsch,
       /*TODO NPUSCH DELAYS ETC*/
       for (auto &i : m_DciTimeOffsetUplink)
         {
-          for (size_t j = 0; j < 4; ++j)
+          for (size_t j = 0; j < 13; ++j)
             { // For subcarrier 0-3 for 15khz Subcarrier spacing | needs change for 3.75 Khz
               NbIotRrcSap::DciN0 tmp;
               tmp.npuschSchedulingDelay = i;
@@ -1171,7 +1171,7 @@ bool
 NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint16_t nextAccess, bool infiniteOcassions){
   bool scheduleSuccessful = false;
   
-  int8_t numRus = npusch.NRU;
+  uint8_t numRus = npusch.NRU;
   uint8_t lenRu = 0; // length of a single Resource Unit in [ms]. This depends on the number of subcarriers: 1SC: 8ms, 3SC: 4ms, 6SC: 2ms, 8SC: 1ms
   switch (npusch.NRUSC)
   {
@@ -1194,7 +1194,8 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
   std::cout << "ScheduleNpuschPur: " << npusch.SCS << ", " << npusch.NRUSC << ", " << npusch.NRU << ", " << npusch.TTI << "\n";
 
 
-  // std::vector<uint64_t> test = GetNextAvailablePurNpuschCandidate (nextAccess, );
+  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> test = GetNextAvailablePurNpuschCandidate (nextAccess, subframesNpusch);
+
   // if (test.size () > 0)
   //   {
   //     uint64_t size_ru = 8; // 15 khz bandwidth // TODO Pascal: This was 1 by Tim. Why? Since BW is fixed to 15 KHz for now, each RU is 8ms long.
@@ -1241,7 +1242,7 @@ std::vector<std::pair<uint64_t, std::vector<uint64_t>>>
 NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint64_t nextOccasion, uint64_t numSubframes)
 {
   std::vector<std::pair<uint64_t, std::vector<uint64_t>>> allocation;    
-  for (size_t j = 0; j < 4; ++j)
+  for (size_t j = 0; j < 13; ++j)
   { // For subcarrier 0-3 for 15khz Subcarrier spacing | needs change for 3.75 Khz
     NbIotRrcSap::DciN0 tmp;
     uint64_t candidate = nextOccasion + 1; // Start on next subframe

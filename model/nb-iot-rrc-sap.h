@@ -733,9 +733,20 @@ class NbIotRrcSap{
             std::vector<std::pair<uint64_t,std::vector<uint64_t>>> npuschOpportunity;
             std::vector<uint64_t> dciSubframes;
         };
+
+        struct SubcarrierIndicationNb{
+            enum class Allocation{
+                oneToneAllocation,
+                threeToneAllocation,
+                sixToneAllocation,
+                twelveToneAllocation
+            } allocation;
+            uint8_t indexFirstSubcarrier;
+        };
+
         struct DciN0{
             bool format = 0;           
-            uint8_t subframeIndication;
+            SubcarrierIndicationNb subcarrierIndicationNb;
             enum class NpuschSchedulingDelay{
                 ms8,
                 ms16,
@@ -2038,6 +2049,27 @@ class NbIotRrcSap{
                 default:
                     break;
              }
+            return res;
+        }
+
+        static uint16_t ConvertLenResourceUnits2int(DciN0 dci){
+            uint16_t res = 0;
+            switch(dci.subcarrierIndicationNb.allocation){
+                case SubcarrierIndicationNb::Allocation::oneToneAllocation:
+                    res = 8;
+                    break;
+                case SubcarrierIndicationNb::Allocation::threeToneAllocation:
+                    res = 4;
+                    break;
+                case SubcarrierIndicationNb::Allocation::sixToneAllocation:
+                    res = 2;
+                    break;
+                case SubcarrierIndicationNb::Allocation::twelveToneAllocation:
+                    res = 1;
+                    break;
+                default:
+                    break;
+            }
             return res;
         }
 
