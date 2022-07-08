@@ -105,6 +105,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
 
+  std::cout << "simTime: " << simTime << std::endl;
 
   // Calculate UES to consider
   ues_to_consider = num_ues_app_a + num_ues_app_b + num_ues_app_c;

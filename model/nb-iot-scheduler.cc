@@ -759,7 +759,7 @@ NbiotScheduler::GetNextAvailableNpuschCandidate (uint64_t endSubframeNpdsch,
               std::vector<uint64_t> subframesOccupied =
                   GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j);
               subframesOccupied =
-                  CheckforNContiniousSubframesUl (subframesOccupied, candidate, numSubframes, j);
+                  CheckforNContinuousSubframesUl (subframesOccupied, candidate, numSubframes, j);
               if (subframesOccupied.size () > 0)
                 {
                   allocation.push_back (std::make_pair (j, subframesOccupied));
@@ -773,7 +773,7 @@ NbiotScheduler::GetNextAvailableNpuschCandidate (uint64_t endSubframeNpdsch,
       /*TODO NPUSCH DELAYS ETC*/
       for (auto &i : m_DciTimeOffsetUplink)
         {
-          for (size_t j = 0; j < 13; ++j)
+          for (size_t j = 0; j < 12; ++j)
             { // For subcarrier 0-3 for 15khz Subcarrier spacing | needs change for 3.75 Khz
               NbIotRrcSap::DciN0 tmp;
               tmp.npuschSchedulingDelay = i;
@@ -783,7 +783,7 @@ NbiotScheduler::GetNextAvailableNpuschCandidate (uint64_t endSubframeNpdsch,
               std::vector<uint64_t> subframesOccupied =
                   GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j);
               subframesOccupied =
-                  CheckforNContiniousSubframesUl (subframesOccupied, candidate, numSubframes, j);
+                  CheckforNContinuousSubframesUl (subframesOccupied, candidate, numSubframes, j);
               if (subframesOccupied.size () > 0)
                 {
                   return allocation;
@@ -808,7 +808,7 @@ NbiotScheduler::GetNextAvailableMsg3UlGrantCandidate (uint64_t endSubframeMsg2,
           std::vector<uint64_t> subframesOccupied =
               GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j);
           subframesOccupied =
-              CheckforNContiniousSubframesUl (subframesOccupied, candidate, numSubframes, j);
+              CheckforNContinuousSubframesUl (subframesOccupied, candidate, numSubframes, j);
           if (subframesOccupied.size () > 0)
             {
               NbIotRrcSap::UlGrant ret;
@@ -847,7 +847,7 @@ NbiotScheduler::GetNextAvailableNpdschCandidate (uint64_t endSubframeDci,
           std::vector<uint64_t> subframesOccupied =
               GetDlSubframeRangeWithoutSystemResources (tmpCandidate, numSubframes);
           subframesOccupied =
-              CheckforNContiniousSubframesDl (subframesOccupied, tmpCandidate, numSubframes);
+              CheckforNContinuousSubframesDl (subframesOccupied, tmpCandidate, numSubframes);
           if (subframesOccupied.size () > 0)
             {
               return subframesOccupied;
@@ -864,7 +864,7 @@ NbiotScheduler::GetNextAvailableNpdschCandidate (uint64_t endSubframeDci,
           std::vector<uint64_t> subframesOccupied =
               GetDlSubframeRangeWithoutSystemResources (tmpCandidate, numSubframes);
           subframesOccupied =
-              CheckforNContiniousSubframesDl (subframesOccupied, tmpCandidate, numSubframes);
+              CheckforNContinuousSubframesDl (subframesOccupied, tmpCandidate, numSubframes);
           if (subframesOccupied.size () > 0)
             {
               return subframesOccupied;
@@ -914,7 +914,7 @@ NbiotScheduler::GetUlSubframeRangeWithoutSystemResources (uint64_t overallSubfra
   return subframeIndexes;
 }
 std::vector<uint64_t>
-NbiotScheduler::CheckforNContiniousSubframesDl (std::vector<uint64_t> Subframes,
+NbiotScheduler::CheckforNContinuousSubframesDl (std::vector<uint64_t> Subframes,
                                                 uint64_t StartSubframe, uint64_t N)
 {
   int startSubframeIndex = -1;
@@ -946,7 +946,7 @@ NbiotScheduler::CheckforNContiniousSubframesDl (std::vector<uint64_t> Subframes,
   return range;
 }
 std::vector<uint64_t>
-NbiotScheduler::CheckforNContiniousSubframesUl (std::vector<uint64_t> Subframes,
+NbiotScheduler::CheckforNContinuousSubframesUl (std::vector<uint64_t> Subframes,
                                                 uint64_t StartSubframe, uint64_t N,
                                                 uint64_t carrier)
 {
@@ -991,7 +991,7 @@ NbiotScheduler::GetNextAvailableSearchSpaceCandidate (uint32_t rnti, uint64_t Se
     {
       // Calculate start of dci candidate
       std::vector<uint64_t> subframes_to_use =
-          CheckforNContiniousSubframesDl (subframes, subframes[i * R], R);
+          CheckforNContinuousSubframesDl (subframes, subframes[i * R], R);
 
       if (subframes_to_use.size () > 0)
         {
@@ -1125,11 +1125,11 @@ NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
       10 *
       log10 (
           1.0 /
-          12.0); // correctionfactor applied to rsrp because it's for earch subcarrier and tx power is for full spectrum
+          12.0); // correction factor applied to rsrp because it's for each subcarrier and tx power is for full spectrum
 
   //std::cout << "Beep5" << std::endl;
   uint32_t periodicity = NbIotRrcSap::ConvertPurPeriodicity2int(purSetupRequest.requestedPeriodicityR16); // in ms
-  uint16_t nextAccess = purSetupRequest.requestedOffsetR16 * 10240; // purSetupRequest.requestedOffsetR16 in HSF (10.24s)
+  uint32_t nextAccess = purSetupRequest.requestedOffsetR16 * 10240; // purSetupRequest.requestedOffsetR16 in HSF (10.24s)
   bool infiniteOccasions = false;
   if (purSetupRequest.requestedNumOccasionsR16 == NbIotRrcSap::PurSetupRequest::RequestedNumOccasionsR16::infinite){
     infiniteOccasions = true;
@@ -1168,7 +1168,7 @@ NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
 }
 
 bool 
-NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint16_t nextAccess, bool infiniteOcassions){
+NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint32_t nextAccess, bool infiniteOcassions){
   bool scheduleSuccessful = false;
   
   uint8_t numRus = npusch.NRU;
@@ -1191,10 +1191,11 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
     break;
   }
   uint16_t subframesNpusch = lenRu * npusch.NRU * npusch.NRep;
+
   std::cout << "ScheduleNpuschPur: " << npusch.SCS << ", " << npusch.NRUSC << ", " << npusch.NRU << ", " << npusch.TTI << "\n";
 
 
-  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> test = GetNextAvailablePurNpuschCandidate (nextAccess, subframesNpusch);
+  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> purGrant = GetNextAvailablePurNpuschCandidate (periodicity, nextAccess, subframesNpusch);
 
   // if (test.size () > 0)
   //   {
@@ -1239,23 +1240,52 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
 }
 
 std::vector<std::pair<uint64_t, std::vector<uint64_t>>>
-NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint64_t nextOccasion, uint64_t numSubframes)
+NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint32_t periodicity, uint32_t nextAccess, uint64_t numSubframes)
 {
+  std::cout << "GetNextAvailablePurNpuschCandidate - Frame No: " << m_frameNo << ", Subframe No: " << m_subframeNo << "\n";
   std::vector<std::pair<uint64_t, std::vector<uint64_t>>> allocation;    
-  for (size_t j = 0; j < 13; ++j)
-  { // For subcarrier 0-3 for 15khz Subcarrier spacing | needs change for 3.75 Khz
-    NbIotRrcSap::DciN0 tmp;
-    uint64_t candidate = nextOccasion + 1; // Start on next subframe
-    std::vector<uint64_t> subframesOccupied =
-        GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j);
-    subframesOccupied =
-        CheckforNContiniousSubframesUl (subframesOccupied, candidate, numSubframes, j);
-    if (subframesOccupied.size () > 0)
+  uint16_t period = 0;
+  uint64_t candidate = m_frameNo*10 + m_subframeNo + nextAccess + periodicity*period; // calculate the absolute time of the first PUR occasion
+  bool purResourcesFound = false;
+  while (purResourcesFound == false) // For all periodic occasions free resources must be found
+  {
+    bool firstPurResourceFound = false;
+    while (candidate < (2*60*60 + 54*60 + 46)*1000) // Check for free resources in the complete hyperframe cycle
+    {
+      while (firstPurResourceFound == false) // Look for the UL grant of the first PUR occasion
       {
-        return allocation;
+        for (size_t j = 0; j < 12; ++j) // check for all subcarriers
+        { // For subcarrier 0-11 for 15khz Subcarrier spacing | needs change for 3.75 Khz
+          //uint64_t candidate = m_frameNo*10 + m_subframeNo + nextAccess; // Start on next subframe
+          std::vector<uint64_t> subframesRequired = GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j); // This checks for subframes that aren't occupied by network-specific resources such as Random Access Windows
+          std::vector<uint64_t> subframesOccupied = CheckforNContinuousSubframesUl (subframesRequired, candidate, numSubframes, j); // This checks if the required subframes are not already used by other users. If they are, check for other subframe
+          if (subframesOccupied.size () > 0)
+          {
+            allocation.push_back (std::make_pair (j, subframesOccupied));
+            firstPurResourceFound = true;
+          }
+        }
+        candidate = candidate + 1; // if all subcarriers are occupied, try the next subframe
+        if (candidate == (2*60*60 + 54*60 + 46)*1000) // End of hyperframe cycle
+        {
+          return std::vector<std::pair<uint64_t, std::vector<uint64_t>>> (); // No free resources were found
+        }
       }
+      
+      for (size_t j = 0; j < 12; ++j)
+      { // For subcarrier 0-11 for 15khz Subcarrier spacing | needs change for 3.75 Khz
+        //uint64_t candidate = m_frameNo*10 + m_subframeNo + nextAccess; // Start on next subframe
+        std::vector<uint64_t> subframesRequired = GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j); // This checks for subframes that aren't occupied by network-specific resources such as Random Access Windows
+        std::vector<uint64_t> subframesOccupied = CheckforNContinuousSubframesUl (subframesRequired, candidate, numSubframes, j); // This checks if the required subframes are not already used by other users. If they are, check for other subframe
+        if (subframesOccupied.size () > 0)
+          {
+            allocation.push_back (std::make_pair (j, subframesOccupied));
+            firstPurResourceFound = true;
+          }
+      }
+    }
+    return std::vector<std::pair<uint64_t, std::vector<uint64_t>>> ();
   }
-  return std::vector<std::pair<uint64_t, std::vector<uint64_t>>> ();
 }
 
 

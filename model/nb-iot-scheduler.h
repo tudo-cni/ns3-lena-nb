@@ -106,8 +106,8 @@ void SortBasedOnSelectedSchedulingAlgorithm(SearchSpaceConfig ssc);
 std::vector<uint64_t> GetNextAvailableSearchSpaceCandidate(uint32_t rnti, uint64_t SearchSpaceStartFrame, uint64_t SearchSpaceStartSubframe, uint64_t R_max, uint64_t R);
 std::vector<uint64_t> GetDlSubframeRangeWithoutSystemResources(uint64_t overallSubframeNo, uint64_t numSubframes);
 std::vector<uint64_t> GetUlSubframeRangeWithoutSystemResources(uint64_t overallSubframeNo, uint64_t numSubframes, uint64_t carrier);
-std::vector<uint64_t> CheckforNContiniousSubframesDl(std::vector<uint64_t> Subframes, uint64_t StartSubframe, uint64_t N);
-std::vector<uint64_t> CheckforNContiniousSubframesUl(std::vector<uint64_t> Subframes, uint64_t StartSubframe, uint64_t N, uint64_t carrier);
+std::vector<uint64_t> CheckforNContinuousSubframesDl(std::vector<uint64_t> Subframes, uint64_t StartSubframe, uint64_t N);
+std::vector<uint64_t> CheckforNContinuousSubframesUl(std::vector<uint64_t> Subframes, uint64_t StartSubframe, uint64_t N, uint64_t carrier);
 std::vector<uint64_t> GetNextAvailableNpdschCandidate(uint64_t endSubframeDci, uint64_t minSchedulingDelay, uint64_t numSubframes, uint64_t R_max);
 std::vector<NbIotRrcSap::NpdcchMessage> Schedule(uint64_t frameNo, uint64_t subframeNo);
 std::vector<NbIotRrcSap::NpdcchMessage> ScheduleSearchSpace(SearchSpaceConfig ssc);
@@ -115,8 +115,8 @@ std::vector<std::pair<uint64_t, std::vector<uint64_t>>> GetNextAvailableNpuschCa
 std::pair<NbIotRrcSap::UlGrant, std::pair<uint64_t,std::vector<uint64_t>>> GetNextAvailableMsg3UlGrantCandidate(uint64_t endSubframeMsg2, uint64_t numSubframes);
 NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::DciType dci_type);
 void SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
-bool ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint16_t nextaccess, bool infiniteOcassions);
-std::vector<std::pair<uint64_t, std::vector<uint64_t>>>GetNextAvailablePurNpuschCandidate (uint64_t nextOccasion, uint64_t numSubframes);
+bool ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint32_t nextaccess, bool infiniteOcassions);
+std::vector<std::pair<uint64_t, std::vector<uint64_t>>>GetNextAvailablePurNpuschCandidate (uint32_t periodicity, uint32_t nextAccess, uint64_t numSubframes);
 
 void SetLogDir(std::string logdir);
 void RoundRobinScheduling(SearchSpaceConfig ssc);
