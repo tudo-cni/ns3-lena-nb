@@ -116,7 +116,7 @@ std::pair<NbIotRrcSap::UlGrant, std::pair<uint64_t,std::vector<uint64_t>>> GetNe
 NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::DciType dci_type);
 void SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
 bool ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint32_t nextaccess, bool infiniteOcassions);
-std::vector<std::pair<uint64_t, std::vector<uint64_t>>>GetNextAvailablePurNpuschCandidate (uint32_t periodicity, uint32_t nextAccess, uint64_t numSubframes);
+std::vector<std::pair<uint64_t, std::vector<uint64_t>>>GetNextAvailablePurNpuschCandidate (uint16_t rnti, uint32_t periodicity, uint32_t nextAccess, uint64_t numSubframes);
 
 void SetLogDir(std::string logdir);
 void RoundRobinScheduling(SearchSpaceConfig ssc);

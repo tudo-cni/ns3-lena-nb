@@ -66,7 +66,7 @@ main (int argc, char *argv[])
   int packetsize_app_a = 49; // 32 Bytes 5G mMTC payload + 4 Bytes CoAP Header + 13 Bytes DTLS Header // UDP Header and IP Header  are added by NS-3
   int packetsize_app_b = 49;
   int packetsize_app_c = 49;
-  Time packetinterval_app_a = Days(1);
+  Time packetinterval_app_a = Minutes(15); // Days(1); TODO PASCAL 
   Time packetinterval_app_b = Days(1);
   Time packetinterval_app_c = Days(1);
   bool ciot = false;
@@ -105,7 +105,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
 
-  std::cout << "simTime: " << simTime << std::endl;
+  //std::cout << "simTime: " << simTime << std::endl;
 
   // Calculate UES to consider
   ues_to_consider = num_ues_app_a + num_ues_app_b + num_ues_app_c;

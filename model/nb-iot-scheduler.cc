@@ -1192,10 +1192,31 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
   }
   uint16_t subframesNpusch = lenRu * npusch.NRU * npusch.NRep;
 
-  std::cout << "ScheduleNpuschPur: " << npusch.SCS << ", " << npusch.NRUSC << ", " << npusch.NRU << ", " << npusch.TTI << "\n";
+  std::cout << "NbiotScheduler::ScheduleNpuschPur: " << npusch.SCS << ", " << npusch.NRUSC << ", " << npusch.NRU << ", " << npusch.TTI << "\n";
 
 
-  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> purGrant = GetNextAvailablePurNpuschCandidate (periodicity, nextAccess, subframesNpusch);
+  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> purGrant = GetNextAvailablePurNpuschCandidate (rnti, periodicity, nextAccess, subframesNpusch);
+
+  if (purGrant.size () > 0)
+  {
+    scheduleSuccessful = true;
+    for (size_t i = 0; i < purGrant.size(); i++) // Block all allocated PUR resources in the UL grid
+    {
+      for (size_t j = 0; j < purGrant[i].second.size (); j++)
+      {
+        m_uplink[purGrant[i].first][purGrant[i].second[j]] = rnti;
+      }
+    }
+    NbIotRrcSap::PurStartTimeParametersR16 purStartTimeParametersR16;
+    std::cout << "NbiotScheduler::ScheduleNpuschPur - Time of first subframe: " << purGrant[0].second[0] << "\n";
+  }
+    
+    //purStartTimeParametersR16.startSfnR16
+
+    // Now a PURConfigNB message is applied as a response
+
+    
+    
 
   // if (test.size () > 0)
   //   {
@@ -1240,9 +1261,9 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
 }
 
 std::vector<std::pair<uint64_t, std::vector<uint64_t>>>
-NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint32_t periodicity, uint32_t nextAccess, uint64_t numSubframes)
+NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint16_t rnti, uint32_t periodicity, uint32_t nextAccess, uint64_t numSubframes)
 {
-  std::cout << "GetNextAvailablePurNpuschCandidate - Frame No: " << m_frameNo << ", Subframe No: " << m_subframeNo << "\n";
+  std::cout << "NbiotScheduler::GetNextAvailablePurNpuschCandidate - Frame No: " << m_frameNo << ", Subframe No: " << m_subframeNo << "\n";
   std::vector<std::pair<uint64_t, std::vector<uint64_t>>> allocation;    
   uint16_t period = 0;
   uint64_t candidate = m_frameNo*10 + m_subframeNo + nextAccess + periodicity*period; // calculate the absolute time of the first PUR occasion
@@ -1250,42 +1271,52 @@ NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint32_t periodicity, uint32
   while (purResourcesFound == false) // For all periodic occasions free resources must be found
   {
     bool firstPurResourceFound = false;
-    while (candidate < (2*60*60 + 54*60 + 46)*1000) // Check for free resources in the complete hyperframe cycle
+    while (firstPurResourceFound == false) // Look for the UL grant of the first PUR occasion
     {
-      while (firstPurResourceFound == false) // Look for the UL grant of the first PUR occasion
-      {
-        for (size_t j = 0; j < 12; ++j) // check for all subcarriers
-        { // For subcarrier 0-11 for 15khz Subcarrier spacing | needs change for 3.75 Khz
-          //uint64_t candidate = m_frameNo*10 + m_subframeNo + nextAccess; // Start on next subframe
-          std::vector<uint64_t> subframesRequired = GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j); // This checks for subframes that aren't occupied by network-specific resources such as Random Access Windows
-          std::vector<uint64_t> subframesOccupied = CheckforNContinuousSubframesUl (subframesRequired, candidate, numSubframes, j); // This checks if the required subframes are not already used by other users. If they are, check for other subframe
-          if (subframesOccupied.size () > 0)
-          {
-            allocation.push_back (std::make_pair (j, subframesOccupied));
-            firstPurResourceFound = true;
-          }
-        }
-        candidate = candidate + 1; // if all subcarriers are occupied, try the next subframe
-        if (candidate == (2*60*60 + 54*60 + 46)*1000) // End of hyperframe cycle
-        {
-          return std::vector<std::pair<uint64_t, std::vector<uint64_t>>> (); // No free resources were found
-        }
-      }
-      
-      for (size_t j = 0; j < 12; ++j)
+      for (size_t j = 0; j < 12; ++j) // check for all subcarriers
       { // For subcarrier 0-11 for 15khz Subcarrier spacing | needs change for 3.75 Khz
         //uint64_t candidate = m_frameNo*10 + m_subframeNo + nextAccess; // Start on next subframe
         std::vector<uint64_t> subframesRequired = GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, j); // This checks for subframes that aren't occupied by network-specific resources such as Random Access Windows
         std::vector<uint64_t> subframesOccupied = CheckforNContinuousSubframesUl (subframesRequired, candidate, numSubframes, j); // This checks if the required subframes are not already used by other users. If they are, check for other subframe
         if (subframesOccupied.size () > 0)
-          {
-            allocation.push_back (std::make_pair (j, subframesOccupied));
-            firstPurResourceFound = true;
-          }
+        {
+          allocation.push_back (std::make_pair (j, subframesOccupied));
+          std::cout << "NbiotScheduler::GetNextAvailablePurNpuschCandidate - Found first PUR resource for RNTI " << rnti << "\n";
+          firstPurResourceFound = true;
+          break;
+        }
+      }
+      candidate = candidate + 1; // if all subcarriers are occupied, try the next subframe
+      if (candidate == (2*60*60 + 54*60 + 46)*1000) // End of hyperframe cycle
+      {
+        std::cout << "NbiotScheduler::GetNextAvailablePurNpuschCandidate - Found NO PUR resource for RNTI " << rnti << "\n";
+        return std::vector<std::pair<uint64_t, std::vector<uint64_t>>> (); // No free resources were found
       }
     }
-    return std::vector<std::pair<uint64_t, std::vector<uint64_t>>> ();
+
+    // After the first PUR resources were found, check if all other occasions can be scheduled in the current hyperframe cycle
+    period = period + 1;
+    candidate = m_frameNo*10 + m_subframeNo + nextAccess + periodicity*period;
+    purResourcesFound = true;
+    while (candidate < (2*60*60 + 54*60 + 46)*1000) // Check for free resources in the complete hyperframe cycle
+    {
+      std::vector<uint64_t> subframesRequired = GetUlSubframeRangeWithoutSystemResources (candidate, numSubframes, allocation[0].first); // This checks for subframes that aren't occupied by network-specific resources such as Random Access Windows
+      std::vector<uint64_t> subframesOccupied = CheckforNContinuousSubframesUl (subframesRequired, candidate, numSubframes, allocation[0].first); // This checks if the required subframes are not already used by other users. If they are, check for other subframe
+      if (subframesOccupied.size () > 0)
+      {
+        std::cout << "NbiotScheduler::GetNextAvailablePurNpuschCandidate - Found next PUR resource for RNTI " << rnti << " and period no. " << period << " with perdiodicity of "<< periodicity << "ms" << "\n";
+        allocation.push_back (std::make_pair (allocation[0].first, subframesOccupied));
+      }
+      else{
+        std::cout << "NbiotScheduler::GetNextAvailablePurNpuschCandidate - Following PUR resources already occupied..." << rnti << "\n";
+        allocation.clear();
+        purResourcesFound = false;
+      }
+      period = period + 1;
+      candidate = m_frameNo*10 + m_subframeNo + nextAccess + periodicity*period;
+    }
   }
+  return allocation;
 }
 
 

@@ -1090,7 +1090,7 @@ class NbIotRrcSap{
             } DecreaseThreshR16;
         };
 
-        struct PurStartTimeparametersR16{
+        struct PurStartTimeParametersR16{
             enum class PurPeriodicityNbR16{
                 Periodicity8,
                 Periodicity16,
@@ -1180,11 +1180,12 @@ class NbIotRrcSap{
                 pp32, 
                 pp64
             } purResponseWindowTimerR16;
-            PurStartTimeparametersR16 purStartTimeparametersR16;
+            PurStartTimeParametersR16 purStartTimeParametersR16;
             enum class PurNumOccasionsR16{
                 one,
                 infinite
             } purNumOccasionsR16;
+            PurPhysicalConfigR16 purPhysicalConfigR16;
         };
 
         struct InfoPurRequest{
