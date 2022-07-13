@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,9 @@
  *
  * Authors: Nicola Baldo <nbaldo@cttc.es>
  *          Lluis Parcerisa <lparcerisa@cttc.cat>
+ * Modified by: 
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT)
+ *			Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -107,11 +111,30 @@ private:
    */
   void DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg);
   /**
+   * Send RRC connection request function
+   *
+   * \param msg LteRrcSap::RrcConnectionRequest 
+   */
+  void DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+  /**
    * Send RRC connection setup completed function
    *
    * \param msg LteRrcSap::RrcConnectionSetupCompleted 
    */
   void DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg);
+  /**
+   * Send RRC connection setup completed function
+   *
+   * \param msg LteRrcSap::RrcConnectionSetupCompleted 
+   */
+  void DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
+  /**
+   * Send RRC connection setup completed function
+   *
+   * \param msg LteRrcSap::RrcConnectionSetupCompleted 
+   */
+  void DoSendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg);
+
   /**
    * Send RRC connection reconfiguration setup completed function
    *
@@ -162,6 +185,15 @@ private:
    */
   void DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params);
 
+  /**
+   * TODO
+   *
+   * \param logDir the logging directory
+   */
+  void DoSetLogDir (std::string logDir);
+
+  bool m_logging;
+  std::string m_logdir;
   Ptr<LteUeRrc> m_rrc; ///< the RRC
   uint16_t m_rnti; ///< the RNTI
   LteUeRrcSapProvider* m_ueRrcSapProvider; ///< UE RRC SAP provider
@@ -249,11 +281,26 @@ private:
    */
   void DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParameters params);
   /**
+   * Resume UE function
+   *
+   * \param rnti the RNTI
+   * \param params LteEnbRrcSapUser::SetupUeParameters
+   */
+  void DoResumeUe (uint16_t rnti, uint64_t resumeId);
+
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
    * Remove UE function
    *
    * \param rnti the RNTI
    */
   void DoRemoveUe (uint16_t rnti);
+  /**
+   * Remove UE function
+   *
+   * \param rnti the RNTI
+   */
+  void DoRemoveUe (uint16_t rnti, bool resumed);
   /**
    * Send system information function
    *
@@ -261,6 +308,13 @@ private:
    * \param msg LteRrcSap::SystemInformation
    */
   void DoSendSystemInformation (uint16_t cellId, LteRrcSap::SystemInformation msg);
+  /**
+   * Send system information function
+   *
+   * \param cellId cell ID
+   * \param msg LteRrcSap::SystemInformation
+   */
+  void DoSendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg);
   /**
    * Send system information function
    *
@@ -275,6 +329,20 @@ private:
    * \param msg LteRrcSap::RrcConnectionSetup
    */
   void DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcConnectionSetup msg);
+  /**
+   * Send RRC connection setup function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionSetup
+   */
+  void DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
+   * Send RRC connection setup function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionSetup
+   */
+  void DoSendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg);
   /**
    * Send RRC connection reconfiguration function
    *
@@ -303,6 +371,13 @@ private:
    * \param msg LteRrcSap::RrcConnectionRelease
    */
   void DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::RrcConnectionRelease msg);
+  /**
+   * Send RRC connection release function
+   *
+   * \param rnti the RNTI
+   * \param msg LteRrcSap::RrcConnectionRelease
+   */
+  void DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg);
   /**
    * Send RRC connection reject function
    *
@@ -353,6 +428,15 @@ private:
    */
   void DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p);
 
+  /**
+   * TODO
+   *
+   * \param logDir the logging directory
+   */
+  void DoSetLogDir (std::string logDir);
+
+  bool m_logging;
+  std::string m_logdir;
   uint16_t m_rnti; ///< the RNTI
   uint16_t m_cellId; ///< the cell ID
   LteEnbRrcSapProvider* m_enbRrcSapProvider; ///< ENB RRC SAP provider
@@ -360,6 +444,10 @@ private:
   std::map<uint16_t, LteUeRrcSapProvider*> m_enbRrcSapProviderMap; ///< ENB RRC SAP provider map
   std::map<uint16_t, LteEnbRrcSapUser::SetupUeParameters> m_setupUeParametersMap; ///< setup UE parameters map
   std::map<uint16_t, LteEnbRrcSapProvider::CompleteSetupUeParameters> m_completeSetupUeParametersMap; ///< complete setup UE parameters map
+  
+  std::map<uint64_t, LteUeRrcSapProvider*> m_resumeEnbRrcSapProviderMap; ///< ENB RRC SAP provider map
+  std::map<uint64_t, LteEnbRrcSapUser::SetupUeParameters> m_resumeSetupUeParametersMap; ///< setup UE parameters map
+  std::map<uint64_t, LteEnbRrcSapProvider::CompleteSetupUeParameters> m_resumeCompleteSetupUeParametersMap; ///< complete setup UE parameters map
 
 };
 

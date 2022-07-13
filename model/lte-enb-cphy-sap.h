@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011, 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>,
  *         Marco Miozzo <mmiozzo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_ENB_CPHY_SAP_H
@@ -26,6 +29,7 @@
 #include <ns3/ptr.h>
 
 #include <ns3/lte-rrc-sap.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -110,6 +114,18 @@ public:
    * \param sib1 the System Information Block Type 1 to be sent on the BCH
    */
   virtual void SetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockType1 sib1) = 0;
+  /** 
+   * 
+   * \param mib the Master Information Block to be sent on the BCH
+   */
+  virtual void SetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mib) = 0;
+
+  /**
+   *
+   * \param sib1 the System Information Block Type 1 to be sent on the BCH
+   */
+  virtual void SetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1) = 0;
+
 
   /**
    *
@@ -164,6 +180,8 @@ public:
   virtual void SetSrsConfigurationIndex (uint16_t  rnti, uint16_t srsCi);
   virtual void SetMasterInformationBlock (LteRrcSap::MasterInformationBlock mib);
   virtual void SetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockType1 sib1);
+  virtual void SetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mib);
+  virtual void SetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1);
   virtual int8_t GetReferenceSignalPower ();
   
 private:
@@ -252,6 +270,21 @@ MemberLteEnbCphySapProvider<C>::SetSystemInformationBlockType1 (LteRrcSap::Syste
 {
   m_owner->DoSetSystemInformationBlockType1 (sib1);
 }
+
+template <class C> 
+void 
+MemberLteEnbCphySapProvider<C>::SetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mib)
+{
+  m_owner->DoSetMasterInformationBlockNb (mib);
+}
+
+template <class C>
+void
+MemberLteEnbCphySapProvider<C>::SetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1)
+{
+  m_owner->DoSetSystemInformationBlockType1Nb (sib1);
+}
+
 
 template <class C>
 int8_t

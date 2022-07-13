@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,13 +17,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_MAC_SAP_H
 #define LTE_MAC_SAP_H
 
 #include <ns3/packet.h>
-
+#include "nb-iot-rrc-sap.h"
 namespace ns3 {
 
 
@@ -81,6 +84,8 @@ public:
    * \param params ReportBufferStatusParameters
    */
   virtual void ReportBufferStatus (ReportBufferStatusParameters params) = 0;
+  virtual void ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace) = 0;
+  virtual void ReportNoTransmissionNb (uint16_t rnti,uint8_t lcid) = 0;
 
 
 };
@@ -142,6 +147,14 @@ public:
   virtual void NotifyTxOpportunity (TxOpportunityParameters params) = 0;
 
   /**
+   * Called by the MAC to notify the RLC that the scheduler granted a
+   * transmission opportunity to this RLC instance.
+   *
+   * \param params the TxOpportunityParameters
+   */
+  virtual void NotifyTxOpportunityNb (TxOpportunityParameters params, uint32_t schedulingDelay) = 0;
+
+  /**
    * Called by the MAC to notify the RLC that an HARQ process related
    * to this RLC instance has failed
    *
@@ -200,6 +213,8 @@ public:
   // inherited from LteMacSapProvider
   virtual void TransmitPdu (TransmitPduParameters params);
   virtual void ReportBufferStatus (ReportBufferStatusParameters params);
+  virtual void ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+  virtual void ReportNoTransmissionNb(uint16_t rnti, uint8_t lcid); // used in Combination of MAC data for dataInactivity of RRC
 
 private:
   C* m_mac; ///< the MAC class
@@ -222,6 +237,16 @@ template <class C>
 void EnbMacMemberLteMacSapProvider<C>::ReportBufferStatus (ReportBufferStatusParameters params)
 {
   m_mac->DoReportBufferStatus (params);
+}
+template <class C>
+void EnbMacMemberLteMacSapProvider<C>::ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+{
+  m_mac->DoReportBufferStatusNb (params, searchspace);
+}
+template <class C>
+void EnbMacMemberLteMacSapProvider<C>::ReportNoTransmissionNb (uint16_t rnti,uint8_t lcid)
+{
+  m_mac->DoReportNoTransmissionNb(rnti,lcid);
 }
 
 

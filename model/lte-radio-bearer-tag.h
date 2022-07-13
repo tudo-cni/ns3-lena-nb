@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Author: Marco Miozzo  <marco.miozzo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 #ifndef LTE_RADIO_BEARER_TAG_H
 #define LTE_RADIO_BEARER_TAG_H
@@ -81,6 +84,14 @@ public:
   * @param layer the value of the layer to set
   */
   void SetLayer (uint8_t layer);
+  /**
+  * Simplification of BSR-Mac Control-Element of NB-IoT
+  *
+  * @param bsrIndex see 36.321 6.1.3.3
+  */
+  void SetBSR (uint8_t bsrIndex);
+
+
 
 
   virtual void Serialize (TagBuffer i) const;
@@ -106,11 +117,18 @@ public:
    * \returns layer
    */
   uint8_t GetLayer (void) const;
+  /**
+   * Get layer function
+   *
+   * \returns layer
+   */
+  uint8_t GetBsrIndex (void) const;
 
 private:
   uint16_t m_rnti; ///< RNTI
   uint8_t m_lcid; ///< LCID
   uint8_t m_layer; ///< layer
+  uint8_t m_bsrIndex; // 0 < m_dataSize < 64 5G LTE Narrowband IoT p.140
 
 };
 

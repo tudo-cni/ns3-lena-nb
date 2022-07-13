@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  * Copyright (c) 2018 Fraunhofer ESK : RLF extensions
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -22,6 +23,7 @@
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
  *          Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT extensions)
  */
 
 #ifndef LTE_UE_RRC_H
@@ -37,6 +39,7 @@
 #include <ns3/traced-callback.h>
 #include "ns3/component-carrier-ue.h"
 #include <ns3/lte-ue-ccm-rrc-sap.h>
+#include "nb-iot-energy.h"
 #include <vector>
 
 #include <map>
@@ -117,6 +120,10 @@ public:
     CONNECTED_HANDOVER,
     CONNECTED_PHY_PROBLEM,
     CONNECTED_REESTABLISHING,
+    IDLE_SUSPEND_EDRX,
+    IDLE_SUSPEND_PSM,
+    CONNECTED_TAU,
+    IDLE_EARLY_DATA_TRANSMISSION, // New state for different Preambles and StateMachine
     NUM_STATES
   };
 
@@ -422,7 +429,7 @@ private:
    */
   void DoSetTemporaryCellRnti (uint16_t rnti);
   /// Notify random access successful function
-  void DoNotifyRandomAccessSuccessful ();
+  void DoNotifyRandomAccessSuccessful (bool edt);
   /// Notify random access failed function
   void DoNotifyRandomAccessFailed ();
  
@@ -455,6 +462,7 @@ private:
    * \param bid the BID
    */
   void DoSendData (Ptr<Packet> packet, uint8_t bid);
+  void SendDataNb (Ptr<Packet> packet, uint8_t bid);
   /// Disconnect function
   void DoDisconnect ();
 
@@ -482,6 +490,26 @@ private:
    */
   void DoReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params);
 
+ /**
+   * Receive master information block function
+   *
+   * \param cellId the cell ID
+   * \param msg LteRrcSap::MasterInformationBlock
+   */
+  void DoRecvMasterInformationBlockNb (uint16_t cellId,
+                                     NbIotRrcSap::MasterInformationBlockNb msg);
+  /**
+   * Receive system information block type 1 function
+   *
+   * \param cellId the cell ID
+   * \param msg LteRrcSap::SystemInformationBlockType1
+   */
+  void DoRecvSystemInformationBlockType1Nb (uint16_t cellId,
+                                          NbIotRrcSap::SystemInformationBlockType1Nb msg);
+
+
+
+
   // RRC SAP methods
 
   /**
@@ -494,11 +522,26 @@ private:
    * \param msg the LteRrcSap::SystemInformation
    */
   void DoRecvSystemInformation (LteRrcSap::SystemInformation msg);
+/**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvSystemInformation interface.
+   * \param msg the LteRrcSap::SystemInformation
+   */
+  void DoRecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
    * \param msg the LteRrcSap::RrcConnectionSetup
    */
   void DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg);
+  /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
+   * \param msg the LteRrcSap::RrcConnectionSetup
+   */
+  void DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg);
+  /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
+   * \param msg the LteRrcSap::RrcConnectionSetup
+   */
+  void DoRecvRrcEarlyDataCompleteNb (NbIotRrcSap::RrcEarlyDataCompleteNb msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReconfiguration interface.
    * \param msg the LteRrcSap::RrcConnectionReconfiguration
@@ -519,6 +562,11 @@ private:
    * \param msg LteRrcSap::RrcConnectionRelease
    */
   void DoRecvRrcConnectionRelease (LteRrcSap::RrcConnectionRelease msg);
+  /**
+   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionRelease interface.
+   * \param msg LteRrcSap::RrcConnectionRelease
+   */
+  void DoRecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReject interface.
    * \param msg the LteRrcSap::RrcConnectionReject
@@ -562,6 +610,7 @@ private:
    */
   void EvaluateCellForSelection ();
 
+  void EvaluateCellForSelectionNb ();
   /**
    * \brief Update the current measurement configuration #m_varMeasConfig.
    * \param mc measurements to be performed by the UE
@@ -731,6 +780,8 @@ private:
   void ApplyRadioResourceConfigDedicatedSecondaryCarrier (LteRrcSap::NonCriticalExtensionConfiguration nonCec);
   /// Start connection function
   void StartConnection ();
+  /// Start connection function
+  void StartConnectionNb (bool edt);
   /**
    * \brief Leave connected mode method
    * Resets the UE back to an appropiate state depending
@@ -941,8 +992,17 @@ private:
   /// True if SIB2 was received for the current cell.
   bool m_hasReceivedSib2;
 
+  /// True if SIB2 was received for the current cell.
+  bool m_hasReceivedMibNb;
+  /// True if SIB1 was received for the current cell.
+  bool m_hasReceivedSib1Nb;
+  /// True if SIB2 was received for the current cell.
+  bool m_hasReceivedSib2Nb;
+
+
   /// Stored content of the last SIB1 received.
   LteRrcSap::SystemInformationBlockType1 m_lastSib1;
+  NbIotRrcSap::SystemInformationBlockType1Nb m_lastSib1Nb;
 
   /// List of cell ID of acceptable cells for cell selection that have been detected.
   std::set<uint16_t> m_acceptableCell;
@@ -1336,11 +1396,46 @@ private:
    */
   void ResetRlfParams ();
 
+  // NBIOT SPECIFIC
+  // Temporary Logging method for successful random access
+  void LogRA(bool success, Time timetillconnection);
+  void LogDataTransmission();
+  void LogEnergyRemaining();
+  std::string m_logdir;
+
+  uint64_t m_resumeId;
+  bool m_resumePending;
+  bool m_enablePSM;
+  bool m_enableEDRX;
+  bool m_useEdtPreamble;
+
+  EventId m_eDrxTimeout;
+
+  EventId m_psmTimeout;
+  Time m_t3412;
+  Time m_t3324;
+  bool m_cIotOpt;
+  bool m_edt;
+  bool m_logging;
+  std::vector<Ptr<Packet>> m_packetStored;
+  NbIotRrcSap::RadioResourceConfigCommonNb m_rc;
 public:
   /** 
    * The number of component carriers.
    */
+  void EnableLogging();
+  void AttachSuspendedNb(uint64_t resumeId, uint16_t cellid, uint32_t dlEarfcn, LteRrcSap::RadioResourceConfigDedicated rrcd, NbIotRrcSap::SystemInformationBlockType1Nb sib1, NbIotRrcSap::SystemInformationNb si);
+  void DoNotifyEnergyState(NbiotEnergyModel::PowerState state);
+  bool DoGetEdtEnabled();
+
+  NbiotEnergyModel::PowerState DoGetEnergyState();
+
   uint16_t m_numberOfComponentCarriers;
+  void SetLogDir(std::string dirname);
+  Time m_connectStartTime;
+  Time m_dataSendTime;
+
+  NbiotEnergyModel m_energyModel;
 
 }; // end of class LteUeRrc
 

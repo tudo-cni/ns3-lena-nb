@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2015 Danilo Abrignani
  * Copyright (c) 2016 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +19,8 @@
  *
  * Authors: Danilo Abrignani <danilo.abrignani@unibo.it>
  *          Biljana Bojovic <biljana.bojovic@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT extensions)
  */
 
 #ifndef NO_OP_COMPONENT_CARRIER_MANAGER_H
@@ -26,6 +29,7 @@
 #include <ns3/lte-enb-component-carrier-manager.h>
 #include <ns3/lte-ccm-rrc-sap.h>
 #include <ns3/lte-rrc-sap.h>
+#include "nb-iot-scheduler.h"
 #include <map>
 
 namespace ns3 {
@@ -104,7 +108,25 @@ protected:
    *
    * \param txOpParams the LteMacSapUser::TxOpportunityParameters
    */
+  virtual void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+  /**
+   * \brief Notify transmit opportunity.
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
+  virtual void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
+  /**
+   * \brief Notify transmit opportunity.
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+  /**
+   * \brief Notify transmit opportunity.
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
+  virtual void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
   /**
    * \brief Receive PDU.
    *
@@ -118,6 +140,16 @@ protected:
    * \param rnti the RNTI
    */
   virtual void DoRemoveUe (uint16_t rnti);
+  /**
+   * \brief Remove UE.
+   * \param rnti the RNTI
+   */
+  virtual void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
+   * \brief Remove UE.
+   * \param rnti the RNTI
+   */
+  virtual void DoResumeUe(uint16_t rnti, uint64_t resumeId);
   /**
    * \brief Release data radio bearer.
    * \param rnti the RNTI
@@ -155,6 +187,10 @@ protected:
 protected:
 
   std::map <uint8_t, double > m_ccPrbOccupancy;//!< The physical resource block occupancy per carrier.
+  std::map <uint64_t, std::map<uint8_t, LteMacSapUser*> > m_resumeUeAttached;//!< The map that contains the rnti, lcid, SAP of the RLC instance
+  std::map <uint64_t, std::map<uint8_t, LteEnbCmacSapProvider::LcInfo> > m_resumeRlcLcInstantiated; //!< This map contains logical channel configuration per flow Id (rnti, lcid).
+  std::map <uint64_t, uint8_t> m_resumeEnabledComponentCarrier; //!< This map tells for each RNTI the number of enabled component carriers.
+  std::map <uint64_t, uint8_t> m_resumeUeState; //!< Map of RRC states per UE (rnti, state), e.g. CONNECTED_NORMALLY
 
 }; // end of class NoOpComponentCarrierManager
 

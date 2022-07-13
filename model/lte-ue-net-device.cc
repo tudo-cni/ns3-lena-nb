@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,6 +22,7 @@
  * Modified by:
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include "ns3/llc-snap-header.h"
@@ -94,7 +96,7 @@ TypeId LteUeNetDevice::GetTypeId (void)
     .AddAttribute ("DlEarfcn",
                    "Downlink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (100),
+                   UintegerValue (6300),
                    MakeUintegerAccessor (&LteUeNetDevice::SetDlEarfcn,
                                          &LteUeNetDevice::GetDlEarfcn),
                    MakeUintegerChecker<uint32_t> (0, 262143))
@@ -116,6 +118,7 @@ TypeId LteUeNetDevice::GetTypeId (void)
 LteUeNetDevice::LteUeNetDevice (void)
   : m_isConstructed (false)
 {
+
   NS_LOG_FUNCTION (this);
 }
 
@@ -281,6 +284,7 @@ LteUeNetDevice::DoInitialize (void)
       it->second->GetMac ()->Initialize ();
     }
   m_rrc->Initialize ();
+  m_nas->SetUeNetDevice(this->GetObject<LteUeNetDevice>());
 }
 
 bool

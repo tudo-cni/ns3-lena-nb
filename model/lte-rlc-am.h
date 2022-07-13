@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_RLC_AM_H
@@ -58,12 +61,20 @@ public:
    * \param txOpParams the LteMacSapUser::TxOpportunityParameters
    */
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+
+  /**
+   * MAC SAP
+   *
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
+  virtual void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
     /**
    * Notify HARQ delivery failure
    */
   virtual void DoNotifyHarqDeliveryFailure ();
   virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
 
+  virtual void DoReset();
 private:
   /**
    * This method will schedule a timeout at WaitReplyTimeout interval
@@ -106,6 +117,9 @@ private:
    */
   void DoReportBufferStatus ();
 
+
+
+
 private:
   /**
    * \brief Store an incoming (from layer above us) PDU, waiting to transmit it
@@ -146,6 +160,12 @@ private:
     uint32_t m_txonBufferSize; ///< transmit on buffer size
     uint32_t m_retxBufferSize; ///< retransmit buffer size
     uint32_t m_txedBufferSize; ///< transmit ed buffer size
+
+    uint32_t m_lastTxQueueSize; ///< transmit on buffer size
+    uint32_t m_lastRetxQueueSize; ///< retransmit buffer size
+    uint32_t m_lastStatusPduSize; ///< transmit ed buffer size
+
+
 
     bool     m_statusPduRequested; ///< status PDU requested
     uint32_t m_statusPduBufferSize; ///< status PDU buffer size
@@ -216,6 +236,7 @@ private:
   
   bool m_txOpportunityForRetxAlwaysBigEnough; ///< transmit opportunity for retransmit? 
   bool m_pollRetransmitTimerJustExpired; ///< poll retransmit timer just expired?
+
 
   /**
    * SDU Reassembling state

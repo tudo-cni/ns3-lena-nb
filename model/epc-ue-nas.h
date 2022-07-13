@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by:	
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef EPC_UE_NAS_H
@@ -24,6 +27,7 @@
 
 #include <ns3/object.h>
 #include <ns3/lte-as-sap.h>
+#include <ns3/lte-ue-net-device.h>
 #include <ns3/epc-tft-classifier.h>
 
 namespace ns3 {
@@ -115,7 +119,7 @@ public:
    * The end result is equivalent with EMM Registered + ECM Connected states.
    */
   void Connect ();
-
+  void ConnectSchedule();
   /**
    * \brief Causes NAS to tell AS to camp to a specific cell and go to ACTIVE
    *        state.
@@ -166,6 +170,8 @@ public:
     IDLE_REGISTERED,
     CONNECTING_TO_EPC,
     ACTIVE,
+    CONNECTING,
+    SUSPENDED,
     NUM_STATES
   };
 
@@ -182,7 +188,9 @@ public:
    */
   typedef void (* StateTracedCallback)
     (const State oldState, const State newState);
- 
+
+ void SetUeNetDevice(Ptr<LteUeNetDevice> dev);
+
 private:
 
   // LTE AS SAP methods
@@ -192,6 +200,12 @@ private:
   void DoNotifyConnectionFailed ();
   /// Notify connection released
   void DoNotifyConnectionReleased ();
+
+  void DoNotifyConnectionSuspended ();
+
+  void DoNotifyMessage4();
+
+  void DoNotifyDie();
   /**
    * Receive data
    * \param packet the packet
@@ -224,6 +238,8 @@ private:
   /// The UE NetDevice.
   Ptr<NetDevice> m_device;
 
+  Ptr<LteUeNetDevice> m_netdevice;
+
   /// The unique UE identifier.
   uint64_t m_imsi;
 
@@ -255,6 +271,8 @@ private:
    *
    */
   std::list<BearerToBeActivated> m_bearersToBeActivatedListForReconnection;
+
+  std::vector<std::pair<Ptr<Packet>, uint16_t>> m_packetBuffer;
 
 };
 

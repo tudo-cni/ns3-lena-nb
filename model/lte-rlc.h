@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_RLC_H
@@ -85,6 +88,12 @@ public:
   void SetLteRlcSapUser (LteRlcSapUser * s);
 
   /**
+   * Resume Procedure
+   *
+   * \param s the RLC SAP user to be used by this LTE_RLC
+   */
+  LteRlcSapUser* GetLteRlcSapUser ();
+  /**
    *
    *
    * \return the RLC SAP Provider interface offered to the PDCP by this LTE_RLC
@@ -104,6 +113,13 @@ public:
    * \return the MAC SAP User interface offered to the MAC by this LTE_RLC
    */
   LteMacSapUser* GetLteMacSapUser ();
+
+  /**
+   * Receive PDU function
+   *
+   * \param params the LteMacSapUser::ReceivePduParameters
+   */ 
+  virtual void DoReset() = 0;
 
 
   /**
@@ -151,6 +167,12 @@ protected:
    * \param params LteMacSapUser::TxOpportunityParameters
    */ 
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters params) = 0;
+  /**
+   * Notify transmit opportunity
+   *
+   * \param params LteMacSapUser::TxOpportunityParameters
+   */ 
+  virtual void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters params, uint32_t schedulingDelay) = 0;
   /**
    * Notify HARQ delivery failure
    */ 
@@ -201,9 +223,11 @@ public:
   static TypeId GetTypeId (void);
   virtual void DoInitialize ();
   virtual void DoDispose ();
+  virtual void DoReset();
 
   virtual void DoTransmitPdcpPdu (Ptr<Packet> p);
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+  virtual void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
   virtual void DoNotifyHarqDeliveryFailure ();
   virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
 

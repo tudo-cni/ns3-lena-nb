@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
  * Author: Marco Miozzo <marco.miozzo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 #ifndef LTE_COMMON_H
 #define LTE_COMMON_H
@@ -169,6 +172,30 @@ public:
 
 };
 
+// NBIOT 
+/// DataVolume class
+class DataVolumeDPR
+{
+
+public:
+  /**
+   * Convert DV ID to buffer size
+   *
+   * \param val DV ID
+   * \returns buffer size
+   */
+  static uint32_t DVId2BufferSize (uint8_t val);
+  /**
+   * Convert Buffer size to BSR ID
+   *
+   * \param val buffer size
+   * \returns BSR ID
+   */
+  static uint8_t BufferSize2DVId (uint32_t val);
+
+  static int  m_bufferSizeLevelBsr[16]; ///< buffer size level BSR
+
+};
 /// TransmissionModesLayers class
 class TransmissionModesLayers
 {

@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011,2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Marco Miozzo <marco.miozzo@cttc.es>
  *         Nicola Baldo <nbaldo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -58,7 +61,7 @@ EpsBearerTag::EpsBearerTag ()
     m_bid (0)
 {
 }
-EpsBearerTag::EpsBearerTag (uint16_t rnti, uint8_t bid)
+EpsBearerTag::EpsBearerTag (uint16_t rnti, uint8_t bid, uint64_t imsi)
   : m_rnti (rnti),
     m_bid (bid)
 {
@@ -76,10 +79,15 @@ EpsBearerTag::SetBid (uint8_t bid)
   m_bid = bid;
 }
 
+void
+EpsBearerTag::SetImsi(uint64_t imsi)
+{
+  m_imsi = imsi;
+}
 uint32_t
 EpsBearerTag::GetSerializedSize (void) const
 {
-  return 3;
+  return 11;
 }
 
 void
@@ -87,6 +95,7 @@ EpsBearerTag::Serialize (TagBuffer i) const
 {
   i.WriteU16 (m_rnti);
   i.WriteU8 (m_bid);
+  i.WriteU64(m_imsi);
 }
 
 void
@@ -94,6 +103,7 @@ EpsBearerTag::Deserialize (TagBuffer i)
 {
   m_rnti = (uint16_t) i.ReadU16 ();
   m_bid = (uint8_t) i.ReadU8 ();
+  m_imsi = (uint64_t) i.ReadU64 ();
 }
 
 uint16_t
@@ -107,7 +117,11 @@ EpsBearerTag::GetBid () const
 {
   return m_bid;
 }
-
+uint64_t
+EpsBearerTag::GetImsi () const
+{
+  return m_imsi;
+}
 void
 EpsBearerTag::Print (std::ostream &os) const
 {

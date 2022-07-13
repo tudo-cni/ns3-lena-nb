@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Authors: Nicola Baldo <nbaldo@cttc.es>
  *          Lluis Parcerisa <lparcerisa@cttc.cat>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -28,6 +31,7 @@
 
 #include <ns3/ptr.h>
 #include <ns3/simulator.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -937,6 +941,8 @@ public:
    */
   virtual void SendRrcConnectionRequest (RrcConnectionRequest msg) = 0;
 
+  virtual void SendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg) = 0;
+
   /**
    * \brief Send an _RRCConnectionSetupComplete_ message to the serving eNodeB
    *        during an RRC connection establishment procedure
@@ -944,6 +950,24 @@ public:
    * \param msg the message
    */
   virtual void SendRrcConnectionSetupCompleted (RrcConnectionSetupCompleted msg) = 0;
+
+  /**
+   * \brief Send an _RRCConnectionSetupComplete_ message to the serving eNodeB
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void SendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg) = 0;
+
+  /**
+   * \brief Send an _RRCConnectionSetupComplete_ message to the serving eNodeB
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void SendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg) = 0;
+
+
 
   /**
    * \brief Send an _RRCConnectionReconfigurationComplete_ message to the serving eNodeB
@@ -988,6 +1012,17 @@ public:
    */
    virtual void SendIdealUeContextRemoveRequest (uint16_t rnti) = 0;
 
+   /**
+   * \brief TODO
+   *
+   * Request eNodeB to remove UE context once radio link failure or
+   * random access failure is detected. It is needed since no RLF
+   * detection mechanism at eNodeB is implemented.
+   *
+   * \param logDir The log directory for debug logging
+   */
+   virtual void SetLogDir (std::string logDir) = 0;
+
 };
 
 
@@ -1020,7 +1055,13 @@ public:
    * \param msg the message
    */
   virtual void RecvSystemInformation (SystemInformation msg) = 0;
-
+  /**
+   * \brief Receive a _SystemInformation_ message from the serving eNodeB
+   *        during a system information acquisition procedure
+   *        (Section 5.2.2 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void RecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg) = 0;
   /**
    * \brief Receive an _RRCConnectionSetup_ message from the serving eNodeB
    *        during an RRC connection establishment procedure
@@ -1028,6 +1069,22 @@ public:
    * \param msg the message
    */
   virtual void RecvRrcConnectionSetup (RrcConnectionSetup msg) = 0;
+  
+  /**
+   * \brief Receive an _RRCConnectionSetup_ message from the serving eNodeB
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void RecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg) = 0;
+
+  /**
+   * \brief Receive an _RRCConnectionSetup_ message from the serving eNodeB
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void RecvRrcEarlyDataCompleteNb (NbIotRrcSap::RrcEarlyDataCompleteNb msg) = 0;
 
   /**
    * \brief Receive an _RRCConnectionReconfiguration_ message from the serving eNodeB
@@ -1060,6 +1117,14 @@ public:
    * \param msg the message
    */
   virtual void RecvRrcConnectionRelease (RrcConnectionRelease msg) = 0;
+
+  /**
+   * \brief Receive an _RRCConnectionRelease_ message from the serving eNodeB
+   *        during an RRC connection release procedure
+   *        (Section 5.3.8 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void RecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg) = 0;
 
   /**
    * \brief Receive an _RRCConnectionReject_ message from the serving eNodeB
@@ -1099,6 +1164,21 @@ public:
    * \param rnti the RNTI
    */
   virtual void RemoveUe (uint16_t rnti) = 0;
+  /**
+   * \brief Remove UE function
+   * \param rnti the RNTI
+   */
+  virtual void RemoveUe (uint16_t rnti, bool resumed) = 0;
+  /**
+   * \brief Remove UE function
+   * \param rnti the RNTI
+   */
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId) = 0;
+  /**
+   * \brief Remove UE function
+   * \param rnti the RNTI
+   */
+  virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId) = 0;
 
   /**
    * \brief Send a _SystemInformation_ message to all attached UEs
@@ -1108,7 +1188,14 @@ public:
    * \param msg the message
    */
   virtual void SendSystemInformation (uint16_t cellId, SystemInformation msg) = 0;
-
+  /**
+   * \brief Send a _SystemInformation_ message to all attached UEs
+   *        during a system information acquisition procedure
+   *        (Section 5.2.2 of TS 36.331).
+   * \param cellId cell ID
+   * \param msg the message
+   */
+  virtual void SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg) = 0;
   /**
    * \brief Send an _RRCConnectionSetup_ message to a UE
    *        during an RRC connection establishment procedure
@@ -1117,6 +1204,25 @@ public:
    * \param msg the message
    */
   virtual void SendRrcConnectionSetup (uint16_t rnti, RrcConnectionSetup msg) = 0;
+
+  /**
+   * \brief Send an _RRCConnectionSetup_ message to a UE
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param rnti the RNTI of the destination UE
+   * \param msg the message
+   */
+  virtual void SendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg) = 0;
+  /**
+   * \brief Send an _RRCConnectionSetup_ message to a UE
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param rnti the RNTI of the destination UE
+   * \param msg the message
+   */
+  virtual void SendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg) = 0;
+
+
 
   /**
    * \brief Send an _RRCConnectionReconfiguration_ message to a UE
@@ -1155,6 +1261,14 @@ public:
   virtual void SendRrcConnectionRelease (uint16_t rnti, RrcConnectionRelease msg) = 0;
 
   /**
+   * \brief Send an _RRCConnectionRelease_ message to a UE
+   *        during an RRC connection release procedure
+   *        (Section 5.3.8 of TS 36.331).
+   * \param rnti the RNTI of the destination UE
+   * \param msg the message
+   */
+  virtual void SendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg) = 0;
+  /**
    * \brief Send an _RRCConnectionReject_ message to a UE
    *        during an RRC connection establishment procedure
    *        (Section 5.3.3 of TS 36.331).
@@ -1187,6 +1301,17 @@ public:
    * \returns RrcConnectionReconfiguration
    */
   virtual RrcConnectionReconfiguration DecodeHandoverCommand (Ptr<Packet> p) = 0;
+
+  /**
+   * \brief TODO
+   *
+   * Request eNodeB to remove UE context once radio link failure or
+   * random access failure is detected. It is needed since no RLF
+   * detection mechanism at eNodeB is implemented.
+   *
+   * \param logDir The log directory for debug logging
+   */
+   virtual void SetLogDir (std::string logDir) = 0;
 
 };
 
@@ -1223,8 +1348,24 @@ public:
    */
   virtual void RecvRrcConnectionRequest (uint16_t rnti,
                                          RrcConnectionRequest msg) = 0;
-
   /**
+   * \brief Receive an _RRCConnectionRequest_ message from a UE
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param rnti the RNTI of UE which sent the message
+   * \param msg the message
+   */
+  virtual void RecvRrcConnectionResumeRequestNb (uint16_t rnti,
+                                         NbIotRrcSap::RrcConnectionResumeRequestNb msg) = 0;
+  /**
+   * \brief Receive an _RRCConnectionSetup_ message from the serving eNodeB
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param msg the message
+   */
+  virtual void RecvRrcEarlyDataRequestNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataRequestNb msg) = 0;
+  /**
+   * 
    * \brief Receive an _RRCConnectionSetupComplete_ message from a UE
    *        during an RRC connection establishment procedure
    *        (Section 5.3.3 of TS 36.331).
@@ -1233,6 +1374,18 @@ public:
    */
   virtual void RecvRrcConnectionSetupCompleted (uint16_t rnti,
                                                 RrcConnectionSetupCompleted msg) = 0;
+
+  /**
+   * \brief Receive an _RRCConnectionSetupComplete_ message from a UE
+   *        during an RRC connection establishment procedure
+   *        (Section 5.3.3 of TS 36.331).
+   * \param rnti the RNTI of UE which sent the message
+   * \param msg the message
+   */
+  virtual void RecvRrcConnectionResumeCompletedNb (uint16_t rnti,
+                                                NbIotRrcSap::RrcConnectionResumeCompleteNb msg) = 0;
+
+
 
   /**
    * \brief Receive an _RRCConnectionReconfigurationComplete_ message from a UE
@@ -1315,12 +1468,16 @@ public:
   // inherited from LteUeRrcSapUser
   virtual void Setup (SetupParameters params);
   virtual void SendRrcConnectionRequest (RrcConnectionRequest msg);
+  virtual void SendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg);
   virtual void SendRrcConnectionSetupCompleted (RrcConnectionSetupCompleted msg);
+  virtual void SendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
+  virtual void SendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg);
   virtual void SendRrcConnectionReconfigurationCompleted (RrcConnectionReconfigurationCompleted msg);
   virtual void SendRrcConnectionReestablishmentRequest (RrcConnectionReestablishmentRequest msg);
   virtual void SendRrcConnectionReestablishmentComplete (RrcConnectionReestablishmentComplete msg);
   virtual void SendMeasurementReport (MeasurementReport msg);
   virtual void SendIdealUeContextRemoveRequest (uint16_t rnti);
+  virtual void SetLogDir (std::string logDir);
 
 private:
   MemberLteUeRrcSapUser ();
@@ -1354,9 +1511,30 @@ MemberLteUeRrcSapUser<C>::SendRrcConnectionRequest (RrcConnectionRequest msg)
 
 template <class C>
 void
+MemberLteUeRrcSapUser<C>::SendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  m_owner->DoSendRrcConnectionResumeRequestNb (msg);
+}
+
+template <class C>
+void
 MemberLteUeRrcSapUser<C>::SendRrcConnectionSetupCompleted (RrcConnectionSetupCompleted msg)
 {
   m_owner->DoSendRrcConnectionSetupCompleted (msg);
+}
+
+template <class C>
+void
+MemberLteUeRrcSapUser<C>::SendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg)
+{
+  m_owner->DoSendRrcConnectionResumeCompletedNb (msg);
+}
+
+template <class C>
+void
+MemberLteUeRrcSapUser<C>::SendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  m_owner->DoSendRrcEarlyDataRequestNb (msg);
 }
 
 template <class C>
@@ -1394,6 +1572,13 @@ MemberLteUeRrcSapUser<C>::SendIdealUeContextRemoveRequest (uint16_t rnti)
   m_owner->DoSendIdealUeContextRemoveRequest (rnti);
 }
 
+template <class C>
+void
+MemberLteUeRrcSapUser<C>::SetLogDir (std::string logDir)
+{
+  m_owner->DoSetLogDir (logDir);
+}
+
 /**
  * Template for the implementation of the LteUeRrcSapProvider as a member
  * of an owner class of type C to which all methods are forwarded
@@ -1413,11 +1598,15 @@ public:
   // methods inherited from LteUeRrcSapProvider go here
   virtual void CompleteSetup (CompleteSetupParameters params);
   virtual void RecvSystemInformation (SystemInformation msg);
+  virtual void RecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg);
   virtual void RecvRrcConnectionSetup (RrcConnectionSetup msg);
+  virtual void RecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg);
+  virtual void RecvRrcEarlyDataCompleteNb (NbIotRrcSap::RrcEarlyDataCompleteNb msg);
   virtual void RecvRrcConnectionReconfiguration (RrcConnectionReconfiguration msg);
   virtual void RecvRrcConnectionReestablishment (RrcConnectionReestablishment msg);
   virtual void RecvRrcConnectionReestablishmentReject (RrcConnectionReestablishmentReject msg);
   virtual void RecvRrcConnectionRelease (RrcConnectionRelease msg);
+  virtual void RecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg);
   virtual void RecvRrcConnectionReject (RrcConnectionReject msg);
 
 private:
@@ -1452,10 +1641,32 @@ MemberLteUeRrcSapProvider<C>::RecvSystemInformation (SystemInformation msg)
 
 template <class C>
 void
+MemberLteUeRrcSapProvider<C>::RecvSystemInformationNb (NbIotRrcSap::SystemInformationNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvSystemInformationNb, m_owner, msg);
+}
+
+template <class C>
+void
 MemberLteUeRrcSapProvider<C>::RecvRrcConnectionSetup (RrcConnectionSetup msg)
 {
   Simulator::ScheduleNow (&C::DoRecvRrcConnectionSetup, m_owner, msg);
 }
+
+template <class C>
+void
+MemberLteUeRrcSapProvider<C>::RecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvRrcConnectionResumeNb, m_owner, msg);
+}
+
+template <class C>
+void
+MemberLteUeRrcSapProvider<C>::RecvRrcEarlyDataCompleteNb (NbIotRrcSap::RrcEarlyDataCompleteNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvRrcEarlyDataCompleteNb, m_owner, msg);
+}
+
 
 template <class C>
 void
@@ -1487,6 +1698,13 @@ MemberLteUeRrcSapProvider<C>::RecvRrcConnectionRelease (RrcConnectionRelease msg
 
 template <class C>
 void
+MemberLteUeRrcSapProvider<C>::RecvRrcConnectionReleaseNb (NbIotRrcSap::RrcConnectionReleaseNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvRrcConnectionReleaseNb, m_owner, msg);
+}
+
+template <class C>
+void
 MemberLteUeRrcSapProvider<C>::RecvRrcConnectionReject (RrcConnectionReject msg)
 {
   Simulator::ScheduleNow (&C::DoRecvRrcConnectionReject, m_owner, msg);
@@ -1512,18 +1730,26 @@ public:
   // inherited from LteEnbRrcSapUser
 
   virtual void SetupUe (uint16_t rnti, SetupUeParameters params);
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId);
+  virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId);
   virtual void RemoveUe (uint16_t rnti);
+  virtual void RemoveUe (uint16_t rnti, bool resumed);
   virtual void SendSystemInformation (uint16_t cellId, SystemInformation msg);
+  virtual void SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg);
   virtual void SendRrcConnectionSetup (uint16_t rnti, RrcConnectionSetup msg);
+  virtual void SendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg);
+  virtual void SendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg);
   virtual void SendRrcConnectionReconfiguration (uint16_t rnti, RrcConnectionReconfiguration msg);
   virtual void SendRrcConnectionReestablishment (uint16_t rnti, RrcConnectionReestablishment msg);
   virtual void SendRrcConnectionReestablishmentReject (uint16_t rnti, RrcConnectionReestablishmentReject msg);
   virtual void SendRrcConnectionRelease (uint16_t rnti, RrcConnectionRelease msg);
+  virtual void SendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg);
   virtual void SendRrcConnectionReject (uint16_t rnti, RrcConnectionReject msg);
   virtual Ptr<Packet> EncodeHandoverPreparationInformation (HandoverPreparationInfo msg);
   virtual HandoverPreparationInfo DecodeHandoverPreparationInformation (Ptr<Packet> p);
   virtual Ptr<Packet> EncodeHandoverCommand (RrcConnectionReconfiguration msg);
   virtual RrcConnectionReconfiguration DecodeHandoverCommand (Ptr<Packet> p);
+  virtual void SetLogDir (std::string logDir);
 
 private:
   MemberLteEnbRrcSapUser ();
@@ -1550,16 +1776,41 @@ MemberLteEnbRrcSapUser<C>::SetupUe (uint16_t rnti, SetupUeParameters params)
 
 template <class C>
 void
+MemberLteEnbRrcSapUser<C>::ResumeUe (uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoResumeUe (rnti, resumeId);
+}
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::MoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoMoveUeToResume(rnti, resumeId);
+}
+template <class C>
+void
 MemberLteEnbRrcSapUser<C>::RemoveUe (uint16_t rnti)
 {
   m_owner->DoRemoveUe (rnti);
 }
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::RemoveUe (uint16_t rnti, bool resumed)
+{
+  m_owner->DoRemoveUe (rnti, resumed);
+}
+
 
 template <class C>
 void
 MemberLteEnbRrcSapUser<C>::SendSystemInformation (uint16_t cellId, SystemInformation msg)
 {
   m_owner->DoSendSystemInformation (cellId, msg);
+}
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::SendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg)
+{
+  m_owner->DoSendSystemInformationNb (cellId, msg);
 }
 
 template <class C>
@@ -1569,6 +1820,18 @@ MemberLteEnbRrcSapUser<C>::SendRrcConnectionSetup (uint16_t rnti, RrcConnectionS
   m_owner->DoSendRrcConnectionSetup (rnti, msg);
 }
 
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::SendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg)
+{
+  m_owner->DoSendRrcConnectionResumeNb (rnti, msg);
+}
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::SendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg)
+{
+  m_owner->DoSendRrcEarlyDataCompleteNb (rnti, msg);
+}
 template <class C>
 void
 MemberLteEnbRrcSapUser<C>::SendRrcConnectionReconfiguration (uint16_t rnti, RrcConnectionReconfiguration msg)
@@ -1595,6 +1858,13 @@ void
 MemberLteEnbRrcSapUser<C>::SendRrcConnectionRelease (uint16_t rnti, RrcConnectionRelease msg)
 {
   m_owner->DoSendRrcConnectionRelease (rnti, msg);
+}
+
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::SendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg)
+{
+  m_owner->DoSendRrcConnectionReleaseNb (rnti, msg);
 }
 
 template <class C>
@@ -1633,6 +1903,13 @@ MemberLteEnbRrcSapUser<C>::DecodeHandoverCommand (Ptr<Packet> p)
   return m_owner->DoDecodeHandoverCommand (p);
 }
 
+template <class C>
+void
+MemberLteEnbRrcSapUser<C>::SetLogDir (std::string logDir)
+{
+  m_owner->DoSetLogDir (logDir);
+}
+
 /**
  * Template for the implementation of the LteEnbRrcSapProvider as a member
  * of an owner class of type C to which all methods are forwarded
@@ -1653,7 +1930,10 @@ public:
 
   virtual void CompleteSetupUe (uint16_t rnti, CompleteSetupUeParameters params);
   virtual void RecvRrcConnectionRequest (uint16_t rnti, RrcConnectionRequest msg);
+  virtual void RecvRrcConnectionResumeRequestNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+  virtual void RecvRrcEarlyDataRequestNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataRequestNb msg);
   virtual void RecvRrcConnectionSetupCompleted (uint16_t rnti, RrcConnectionSetupCompleted msg);
+  virtual void RecvRrcConnectionResumeCompletedNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
   virtual void RecvRrcConnectionReconfigurationCompleted (uint16_t rnti, RrcConnectionReconfigurationCompleted msg);
   virtual void RecvRrcConnectionReestablishmentRequest (uint16_t rnti, RrcConnectionReestablishmentRequest msg);
   virtual void RecvRrcConnectionReestablishmentComplete (uint16_t rnti, RrcConnectionReestablishmentComplete msg);
@@ -1692,9 +1972,30 @@ MemberLteEnbRrcSapProvider<C>::RecvRrcConnectionRequest (uint16_t rnti, RrcConne
 
 template <class C>
 void
+MemberLteEnbRrcSapProvider<C>::RecvRrcConnectionResumeRequestNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvRrcConnectionResumeRequestNb, m_owner, rnti, msg);
+}
+
+template <class C>
+void
+MemberLteEnbRrcSapProvider<C>::RecvRrcEarlyDataRequestNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvRrcEarlyDataRequestNb, m_owner, rnti, msg);
+}
+
+template <class C>
+void
 MemberLteEnbRrcSapProvider<C>::RecvRrcConnectionSetupCompleted (uint16_t rnti, RrcConnectionSetupCompleted msg)
 {
   Simulator::ScheduleNow (&C::DoRecvRrcConnectionSetupCompleted, m_owner, rnti, msg);
+}
+
+template <class C>
+void
+MemberLteEnbRrcSapProvider<C>::RecvRrcConnectionResumeCompletedNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeCompleteNb msg)
+{
+  Simulator::ScheduleNow (&C::DoRecvRrcConnectionResumeCompletedNb, m_owner, rnti, msg);
 }
 
 template <class C>

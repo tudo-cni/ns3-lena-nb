@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2015 Danilo Abrignani
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -74,7 +77,7 @@ TypeId CcHelper::GetTypeId (void)
                    MakeUintegerChecker<uint32_t> (0))
     .AddAttribute ("DlBandwidth",
                    "Set Dl Bandwidth for the first carrier component",
-                   UintegerValue (25),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&CcHelper::m_dlBandwidth),
                    MakeUintegerChecker<uint16_t> (0,100))
     .AddAttribute ("UlBandwidth",

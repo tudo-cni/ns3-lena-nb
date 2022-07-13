@@ -2,7 +2,7 @@
 
 def build(bld):
 
-    lte_module_dependencies = ['core', 'network', 'spectrum', 'stats', 'buildings', 'virtual-net-device','point-to-point','applications','internet','csma']
+    lte_module_dependencies = ['core', 'network', 'spectrum', 'stats', 'buildings', 'virtual-net-device','point-to-point','applications','internet','csma','energy']
     if (bld.env['ENABLE_EMU']):
         lte_module_dependencies.append('fd-net-device')
     module = bld.create_ns3_module('lte', lte_module_dependencies)
@@ -133,7 +133,13 @@ def build(bld):
         'model/component-carrier.cc',
         'helper/cc-helper.cc',
         'model/component-carrier-ue.cc',
-        'model/component-carrier-enb.cc'
+        'model/component-carrier-enb.cc',
+        'model/nb-iot-rrc-sap.cc',
+        'model/nb-iot-scheduler.cc',
+        'model/nb-iot-amc.cc',
+        'model/nb-iot-energy.cc',
+        'model/nb-iot-data-volume-and-power-headroom-tag.cc',
+        'model/nb-iot-buffer-status-report-tag.cc'
         ]
 
     module_test = bld.create_ns3_module_test_library('lte')
@@ -195,6 +201,7 @@ def build(bld):
         'test/lte-test-ipv6-routing.cc',
         'test/lte-test-carrier-aggregation-configuration.cc',
         'test/lte-test-radio-link-failure.cc',
+        
         ]
 
     # Tests encapsulating example programs should be listed here
@@ -332,7 +339,13 @@ def build(bld):
         'helper/cc-helper.h',
         'model/component-carrier.h',
         'model/component-carrier-ue.h',
-        'model/component-carrier-enb.h'
+        'model/component-carrier-enb.h',
+        'model/nb-iot-rrc-sap.h',
+        'model/nb-iot-scheduler.h',
+        'model/nb-iot-amc.h',
+        'model/nb-iot-energy.h',
+        'model/nb-iot-data-volume-and-power-headroom-tag.h',
+        'model/nb-iot-buffer-status-report-tag.h'
         ]
 
     if (bld.env['ENABLE_EMU']):
@@ -342,4 +355,4 @@ def build(bld):
     if (bld.env['ENABLE_EXAMPLES']):
       bld.recurse('examples')
 
-    bld.ns3_python_bindings()
+    #bld.ns3_python_bindings()

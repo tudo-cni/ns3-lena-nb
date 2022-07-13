@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Giuseppe Piro  <g.piro@poliba.it>
  *         Marco Miozzo <mmiozzo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/object-factory.h>
@@ -179,7 +182,7 @@ LteEnbPhy::GetTypeId (void)
     .AddConstructor<LteEnbPhy> ()
     .AddAttribute ("TxPower",
                    "Transmission power in dBm",
-                   DoubleValue (30.0),
+                   DoubleValue (43.0),
                    MakeDoubleAccessor (&LteEnbPhy::SetTxPower, 
                                        &LteEnbPhy::GetTxPower),
                    MakeDoubleChecker<double> ())
@@ -193,7 +196,8 @@ LteEnbPhy::GetTypeId (void)
                    "the same overall gain and bandwidth when the receivers "
                    "are connected to sources at the standard noise "
                    "temperature T0.\"  In this model, we consider T0 = 290K.",
-                   DoubleValue (5.0),
+                   //DoubleValue (5.0),
+                   DoubleValue (0),
                    MakeDoubleAccessor (&LteEnbPhy::SetNoiseFigure, 
                                        &LteEnbPhy::GetNoiseFigure),
                    MakeDoubleChecker<double> ())
@@ -536,6 +540,13 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
     {
       switch ((*it)->GetMessageType ())
         {
+        case LteControlMessage::NPRACH_PREAMBLE:
+          {
+            Ptr<NprachPreambleNbiotControlMessage> nprachPreamble = DynamicCast<NprachPreambleNbiotControlMessage> (*it);
+            m_enbPhySapUser->ReceiveNprachPreamble (nprachPreamble->GetRapId(), nprachPreamble->GetSubcarrierOffset(), nprachPreamble->GetRanti());
+            
+          }
+          break;
         case LteControlMessage::RACH_PREAMBLE:
           {
             Ptr<RachPreambleLteControlMessage> rachPreamble = DynamicCast<RachPreambleLteControlMessage> (*it);
@@ -546,6 +557,7 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
           {
             Ptr<DlCqiLteControlMessage> dlcqiMsg = DynamicCast<DlCqiLteControlMessage> (*it);
             CqiListElement_s dlcqi = dlcqiMsg->GetDlCqi ();
+            
             // check whether the UE is connected
             if (m_ueAttached.find (dlcqi.m_rnti) != m_ueAttached.end ())
               {
@@ -575,6 +587,16 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
               }
           }
           break;
+        case LteControlMessage::DL_HARQ_NB:
+          {
+            //int currentsubframe = 10*(m_nrFrames-1)+(m_nrSubFrames-1);
+            Ptr<DlHarqFeedbackNbiotControlMessage> dlharqMsg = DynamicCast<DlHarqFeedbackNbiotControlMessage> (*it);
+            if (m_ueAttached.find (dlharqMsg->GetRnti()) != m_ueAttached.end ())
+              {
+                m_enbPhySapUser->ReceiveLteControlMessage (*it);
+              }
+          }
+          break;
         default:
           NS_FATAL_ERROR ("Unexpected LteControlMessage type");
           break;
@@ -592,13 +614,57 @@ LteEnbPhy::StartFrame (void)
   ++m_nrFrames;
   NS_LOG_INFO ("-----frame " << m_nrFrames << "-----");
   m_nrSubFrames = 0;
+  if(m_legacy_lte){
+    // send MIB at beginning of every frame
+    m_mib.systemFrameNumber = m_nrSubFrames;
+    Ptr<MibLteControlMessage> mibMsg = Create<MibLteControlMessage> ();
+    mibMsg->SetMib (m_mib);
+    m_controlMessagesQueue.at (0).push_back (mibMsg);
+  }else{
+    if((m_nrFrames % 65) == 0){
+      m_mibNbRepetitionsCounter = 0; // Cout Repetitions
+      std::bitset<4> systemFrameNumberMsb(m_nrFrames >> 6);
+      m_mibNb.systemFrameNumberMsb = systemFrameNumberMsb;
+    }
+    else{
+      m_mibNbRepetitionsCounter++;
+      if(m_mibNbRepetitionsCounter == 8){
+        m_mibNbRepetitionsCounter = 0;
+      }
+    }
+    m_mibNb.abEnabled = false;
+    m_mibNb.inbandSamePci.eutraCrsSequenceInfo = 1;
+    m_mibNb.schedulingInfoSib1 = 2;
+    m_mibNb.hyperSfnLsb = std::bitset<2>(3);
+    
+    Ptr<MibNbiotControlMessage> mibMsg = Create<MibNbiotControlMessage>();
+    mibMsg->SetMib (m_mibNb);
+    m_controlMessagesQueue.at(0).push_back(mibMsg);
 
-  // send MIB at beginning of every frame
-  m_mib.systemFrameNumber = m_nrSubFrames;
-  Ptr<MibLteControlMessage> mibMsg = Create<MibLteControlMessage> ();
-  mibMsg->SetMib (m_mib);
-  m_controlMessagesQueue.at (0).push_back (mibMsg);
+    if ((m_nrFrames % 257) == 0){
+      m_sib1NbPeriod=true;
+      switch(m_mibNb.schedulingInfoSib1){
+        case 0:
+        case 3:
+        case 6:
+        case 9:
+          m_sib1NbRepetitions = 4;
+          break;
+        case 1:
+        case 4:
+        case 7:
+        case 10:
+          m_sib1NbRepetitions = 8;
+          break;
+        default:
+          m_sib1NbRepetitions = 16;
+          break;
+      }
+    }
 
+
+    
+  }
   StartSubFrame ();
 }
 
@@ -617,22 +683,37 @@ LteEnbPhy::StartSubFrame (void)
    * which SFN mod 2 = 0," except that 3GPP counts frames and subframes starting
    * from 0, while ns-3 counts starting from 1.
    */
-  if ((m_nrSubFrames == 6) && ((m_nrFrames % 2) == 1))
-    {
-      Ptr<Sib1LteControlMessage> msg = Create<Sib1LteControlMessage> ();
-      msg->SetSib1 (m_sib1);
-      m_controlMessagesQueue.at (0).push_back (msg);
-    }
+  if (m_legacy_lte){
+    if ((m_nrSubFrames == 6) && ((m_nrFrames % 2) == 1))
+      {
+        Ptr<Sib1LteControlMessage> msg = Create<Sib1LteControlMessage> ();
+        msg->SetSib1 (m_sib1);
+        m_controlMessagesQueue.at (0).push_back (msg);
+      }
+  }
+  else{
+    if((m_nrSubFrames == 5) && (m_sib1NbPeriod) && (m_sib1NbRepetitions > 0) && ((m_nrFrames % 2) == 1)){
+      m_sib1NbRepetitions--;
 
-  if (m_srsPeriodicity>0)
-    { 
-      // might be 0 in case the eNB has no UEs attached
-      NS_ASSERT_MSG (m_nrFrames > 1, "the SRS index check code assumes that frameNo starts at 1");
-      NS_ASSERT_MSG (m_nrSubFrames > 0 && m_nrSubFrames <= 10, "the SRS index check code assumes that subframeNo starts at 1");
-      m_currentSrsOffset = (((m_nrFrames-1)*10 + (m_nrSubFrames-1)) % m_srsPeriodicity);
+      m_sib1Nb.hyperSfnMsb = std::bitset<8>(0);
+      Ptr<Sib1NbiotControlMessage> msg = Create<Sib1NbiotControlMessage> ();
+      msg->SetSib1(m_sib1Nb);
+      m_controlMessagesQueue.at(0).push_back(msg);
     }
+    if(m_sib1NbRepetitions == 0){
+      m_sib1NbPeriod = false;
+    }
+  }
+
+  //if (m_srsPeriodicity>0)
+  //  { 
+  //    // might be 0 in case the eNB has no UEs attached
+  //    NS_ASSERT_MSG (m_nrFrames > 1, "the SRS index check code assumes that frameNo starts at 1");
+  //    NS_ASSERT_MSG (m_nrSubFrames > 0 && m_nrSubFrames <= 10, "the SRS index check code assumes that subframeNo starts at 1");
+  //    m_currentSrsOffset = (((m_nrFrames-1)*10 + (m_nrSubFrames-1)) % m_srsPeriodicity);
+  //  }
   NS_LOG_INFO ("-----sub frame " << m_nrSubFrames << "-----");
-  m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
+  //m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
 
   // update info on TB to be received
   std::list<UlDciLteControlMessage> uldcilist = DequeueUlDci ();
@@ -656,6 +737,7 @@ LteEnbPhy::StartSubFrame (void)
             {
               rbMap.push_back (i);
             }
+
           m_uplinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_ndi, (*dciIt).GetDci ().m_tbSize, (*dciIt).GetDci ().m_mcs, rbMap, 0 /* always SISO*/, 0 /* no HARQ proc id in UL*/, 0 /*evaluated by LteSpectrumPhy*/, false /* UL*/);
           if ((*dciIt).GetDci ().m_ndi==1)
             {
@@ -748,6 +830,53 @@ LteEnbPhy::StartSubFrame (void)
                   QueueUlDci (msg);
                 }
             }
+          else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
+            {
+              Ptr<RarNbiotControlMessage> rarMsg = DynamicCast<RarNbiotControlMessage> (msg);
+              for (std::list<NbIotRrcSap::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
+                {
+                  
+                  NbIotRrcSap::UlGrant ulGrant = it->rarPayload.ulGrant;
+                  // translate the UL grant in a standard UL-DCI and queue it
+                  UlDciListElement_s dci;
+                  dci.m_rnti = it->cellRnti;
+                  dci.m_rbStart = 0;
+                  dci.m_rbLen = 1;
+                  dci.m_tbSize = 11;
+                  dci.m_ndi = 1;
+                  dci.m_mcs = 1;
+                  dci.m_hopping = false;
+                  dci.m_tpc = 20;
+                  dci.m_cqiRequest = false;
+                  UlDciLteControlMessage msg;
+                  msg.SetDci (dci);
+                  int subframetoawait= *(it->rarPayload.ulGrant.subframes.second.end()-1)-(10*(m_nrFrames-1)+(m_nrSubFrames-1));
+
+                  //std::cout << "Scheduling Expected TBs at " << *(it->rarPayload.ulGrant.subframes.end()-1) << "\n";
+                  Simulator::Schedule(MilliSeconds(subframetoawait+1),&LteEnbPhy::QueueUlDci,this, msg);
+                  //QueueUlDci(msg);
+                }
+            }
+          else if(msg->GetMessageType() == LteControlMessage::UL_DCI_NB){
+              Ptr<UlDciN0NbiotControlMessage> uldci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
+              UlDciListElement_s dci;
+              dci.m_rnti = uldci->GetRnti();
+              dci.m_rbStart = 0;
+              dci.m_rbLen = 1;
+              dci.m_tbSize = 11;
+              dci.m_ndi = 1;
+              dci.m_mcs = 1;
+              dci.m_hopping = false;
+              dci.m_tpc = 20;
+              dci.m_cqiRequest = false;
+              UlDciLteControlMessage msg;
+              msg.SetDci (dci);
+              int subframetoawait= *(uldci->GetDci().npuschOpportunity[0].second.end()-1)-(10*(m_nrFrames-1)+(m_nrSubFrames-1));
+
+              //std::cout << "Scheduling Expected TBs at " << *(it->rarPayload.ulGrant.subframes.end()-1) << "\n";
+              Simulator::Schedule(MilliSeconds(subframetoawait+1),&LteEnbPhy::QueueUlDci,this, msg);
+
+          }
           it++;
 
         }
@@ -791,6 +920,32 @@ LteEnbPhy::SendControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList)
       pss = true;
     }
   m_downlinkSpectrumPhy->StartTxDlCtrlFrame (ctrlMsgList, pss);
+
+}
+
+void
+LteEnbPhy::SendNarrowbandControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList)
+{
+  NS_LOG_FUNCTION (this << " eNB " << m_cellId << " start tx ctrl frame");
+  // set the current tx power spectral density (full bandwidth)
+  std::vector <int> dlRb;
+  for (uint8_t i = 0; i < m_dlBandwidth; i++)
+    {
+      dlRb.push_back (i);
+    }
+  SetDownlinkSubChannels (dlRb);
+  NS_LOG_LOGIC (this << " eNB start TX CTRL");
+  bool npss = false;
+  bool nsss = false;
+  if ((m_nrSubFrames-1 == 5))
+    {
+      npss = true;
+    }
+  else if ((m_nrFrames-1)% 2 == 0 && (m_nrSubFrames-1 == 9) )
+  {
+    nsss = true;
+  }
+  m_downlinkSpectrumPhy->StartTxDlCtrlFrameNb (ctrlMsgList, npss, nsss);
 
 }
 
@@ -851,6 +1006,12 @@ LteEnbPhy::GenerateDataCqiReport (const SpectrumValue& sinr)
 }
 
 void
+LteEnbPhy::GenerateCqiReportNb (const SpectrumValue& sinr)
+{
+  NS_LOG_FUNCTION (this << sinr);
+  m_enbPhySapUser->UlCqiReportNb (CreateNpuschCqiReport (sinr));
+}
+void
 LteEnbPhy::ReportInterference (const SpectrumValue& interf)
 {
   NS_LOG_FUNCTION (this << interf);
@@ -891,7 +1052,22 @@ LteEnbPhy::CreatePuschCqiReport (const SpectrumValue& sinr)
   return (ulcqi);
 	
 }
-
+std::vector<double>
+LteEnbPhy::CreateNpuschCqiReport (const SpectrumValue& sinr)
+{
+  std::vector<double> ulcqi;
+  NS_LOG_FUNCTION (this << sinr);
+  Values::const_iterator it;
+  for (it = sinr.ConstValuesBegin (); it != sinr.ConstValuesEnd (); it++)
+    {
+      double sinrdb = 10 * std::log10 ((*it));
+//       NS_LOG_DEBUG ("ULCQI RB " << i << " value " << sinrdb);
+      // convert from double to fixed point notation Sxxxxxxxxxxx.xxx
+      ulcqi.push_back (sinrdb);
+    }
+  return (ulcqi);
+	
+}
 
 void
 LteEnbPhy::DoSetBandwidth (uint16_t ulBandwidth, uint16_t dlBandwidth)
@@ -1162,6 +1338,19 @@ LteEnbPhy::DoSetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockTy
   m_sib1 = sib1;
 }
 
+void
+LteEnbPhy::DoSetMasterInformationBlockNb (NbIotRrcSap::MasterInformationBlockNb mibNb)	// Used by NB-IoT. 3GPP Release 13.
+{
+  NS_LOG_FUNCTION (this);
+  m_mibNb = mibNb;
+}
+
+void
+LteEnbPhy::DoSetSystemInformationBlockType1Nb (NbIotRrcSap::SystemInformationBlockType1Nb sib1Nb)  // Used by NB-IoT. 3GPP Release 13.
+{
+  NS_LOG_FUNCTION (this);
+  m_sib1Nb = sib1Nb;
+}
 
 void
 LteEnbPhy::SetHarqPhyModule (Ptr<LteHarqPhy> harq)

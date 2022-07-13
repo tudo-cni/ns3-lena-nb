@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2009 CTTC
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +19,7 @@
  * Author: Nicola Baldo <nbaldo@cttc.es>
  *         Giuseppe Piro  <g.piro@poliba.it>
  * Modified by: Marco Miozzo <mmiozzo@cttc.es> (introduce physical error model)
+ * 				Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_SPECTRUM_PHY_H
@@ -89,6 +91,7 @@ class LteControlMessage;
 struct LteSpectrumSignalParametersDataFrame;
 struct LteSpectrumSignalParametersDlCtrlFrame;
 struct LteSpectrumSignalParametersUlSrsFrame;
+struct NbiotSpectrumSignalParametersDlCtrlFrame;
 
 /**
 * This method is used by the LteSpectrumPhy to notify the PHY that a
@@ -125,6 +128,18 @@ typedef Callback< void > LtePhyRxCtrlEndErrorCallback;
 * PSS has been received
 */
 typedef Callback< void, uint16_t, Ptr<SpectrumValue> > LtePhyRxPssCallback;
+/**
+* This method is used by the LteSpectrumPhy to notify the UE PHY that a
+* PSS has been received
+*/
+typedef Callback< void, uint16_t, Ptr<SpectrumValue> > NbiotPhyRxNpssCallback;
+/**
+* This method is used by the LteSpectrumPhy to notify the UE PHY that a
+* PSS has been received
+*/
+typedef Callback< void, uint16_t, Ptr<SpectrumValue> > NbiotPhyRxNsssCallback;
+
+
 
 
 /**
@@ -193,6 +208,11 @@ public:
    */
   void StartRxDlCtrl (Ptr<LteSpectrumSignalParametersDlCtrlFrame> lteDlCtrlRxParams);
   /**
+   * \brief Start receive DL control function
+   * \param lteDlCtrlRxParams Ptr<LteSpectrumSignalParametersDlCtrlFrame>
+   */
+  void StartRxDlCtrlNb (Ptr<NbiotSpectrumSignalParametersDlCtrlFrame> nbiotDlCtrlRxParams);
+  /**
    * \brief Start receive UL SRS function
    * \param lteUlSrsRxParams Ptr<LteSpectrumSignalParametersUlSrsFrame>
    */
@@ -254,6 +274,8 @@ public:
   * started, false otherwise.
   */
   bool StartTxDlCtrlFrame (std::list<Ptr<LteControlMessage> > ctrlMsgList, bool pss);
+
+  bool StartTxDlCtrlFrameNb (std::list<Ptr<LteControlMessage> > ctrlMsgList, bool npss, bool nsss);
   
   
   /**
@@ -303,6 +325,22 @@ public:
   * @param c the callback
   */
   void SetLtePhyRxPssCallback (LtePhyRxPssCallback c);
+  /**
+  * set the callback for the reception of the NPSS as part
+  * of the interconnections between the LteSpectrumPhy and the UE PHY
+  *
+  * @param c the callback
+  */
+  void SetNbiotPhyRxNpssCallback (NbiotPhyRxNpssCallback c);
+  /**
+  * set the callback for the reception of the NSSS as part
+  * of the interconnections between the LteSpectrumPhy and the UE PHY
+  *
+  * @param c the callback
+  */
+  void SetNbiotPhyRxNsssCallback (NbiotPhyRxNsssCallback c);
+
+
 
   /**
   * set the callback for the DL HARQ feedback as part of the 
@@ -508,6 +546,9 @@ private:
   LtePhyRxCtrlEndErrorCallback  m_ltePhyRxCtrlEndErrorCallback; ///< the LTE phy receive control end error callback
   LtePhyRxPssCallback  m_ltePhyRxPssCallback; ///< the LTE phy receive PSS callback
 
+  NbiotPhyRxNpssCallback m_nbiotPhyRxNpssCallback; ///< the Nbiot phy receive NPSS callback
+  NbiotPhyRxNsssCallback m_nbiotPhyRxNsssCallback; ///< the Nbiot phy receive NSSS callback
+
   Ptr<LteInterference> m_interferenceData; ///< the data interference
   Ptr<LteInterference> m_interferenceCtrl; ///< the control interference
 
@@ -521,6 +562,7 @@ private:
   Ptr<UniformRandomVariable> m_random;
   bool m_dataErrorModelEnabled; ///< when true (default) the phy error model is enabled
   bool m_ctrlErrorModelEnabled; ///< when true (default) the phy error model is enabled for DL ctrl frame
+  bool m_interferenceEnabled; ///< when true (default) the phy error model is enabled for DL ctrl frame
   
   uint8_t m_transmissionMode; ///< for UEs: store the transmission mode
   uint8_t m_layersNum; ///< layers num

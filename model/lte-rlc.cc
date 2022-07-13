@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -45,6 +48,7 @@ public:
 
   // Interface implemented from LteMacSapUser
   virtual void NotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters params);
+  virtual void NotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters params, uint32_t schedulingDelay);
   virtual void NotifyHarqDeliveryFailure ();
   virtual void ReceivePdu (LteMacSapUser::ReceivePduParameters params);
 
@@ -67,6 +71,12 @@ LteRlcSpecificLteMacSapUser::NotifyTxOpportunity (TxOpportunityParameters params
 {
   m_rlc->DoNotifyTxOpportunity (params);
 }
+void
+LteRlcSpecificLteMacSapUser::NotifyTxOpportunityNb (TxOpportunityParameters params, uint32_t schedulingDelay)
+{
+  m_rlc->DoNotifyTxOpportunityNb (params, schedulingDelay);
+}
+
 
 void
 LteRlcSpecificLteMacSapUser::NotifyHarqDeliveryFailure ()
@@ -147,6 +157,12 @@ LteRlc::SetLteRlcSapUser (LteRlcSapUser * s)
   m_rlcSapUser = s;
 }
 
+LteRlcSapUser*
+LteRlc::GetLteRlcSapUser ()
+{
+  NS_LOG_FUNCTION (this);
+  return m_rlcSapUser;
+}
 LteRlcSapProvider*
 LteRlc::GetLteRlcSapProvider ()
 {
@@ -208,7 +224,11 @@ LteRlcSm::DoDispose ()
   NS_LOG_FUNCTION (this);
   LteRlc::DoDispose ();
 }
-
+void
+LteRlcSm::DoReset()
+{
+  NS_LOG_FUNCTION (this);
+}
 void
 LteRlcSm::DoTransmitPdcpPdu (Ptr<Packet> p)
 {
@@ -234,6 +254,37 @@ LteRlcSm::DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams)
 
 void
 LteRlcSm::DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams)
+{
+  NS_LOG_FUNCTION (this << txOpParams.bytes);
+  LteMacSapProvider::TransmitPduParameters params;
+  RlcTag tag (Simulator::Now ());
+
+  params.pdu = Create<Packet> (txOpParams.bytes);
+  NS_ABORT_MSG_UNLESS (txOpParams.bytes > 0, "Bytes must be > 0");
+  /**
+   * For RLC SM, the packets are not passed to the upper layers, therefore,
+   * in the absence of an header we can safely byte tag the entire packet.
+   */
+  params.pdu->AddByteTag (tag, 1, params.pdu->GetSize ());
+
+  params.rnti = m_rnti;
+  params.lcid = m_lcid;
+  params.layer = txOpParams.layer;
+  params.harqProcessId = txOpParams.harqId;
+  params.componentCarrierId = txOpParams.componentCarrierId;
+
+  // RLC Performance evaluation
+  NS_LOG_LOGIC (" RNTI=" << m_rnti
+                << " LCID=" << (uint32_t) m_lcid
+                << " size=" << txOpParams.bytes);
+  m_txPdu(m_rnti, m_lcid, txOpParams.bytes);
+
+  m_macSapProvider->TransmitPdu (params);
+  ReportBufferStatus ();
+}
+
+void
+LteRlcSm::DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
 {
   NS_LOG_FUNCTION (this << txOpParams.bytes);
   LteMacSapProvider::TransmitPduParameters params;

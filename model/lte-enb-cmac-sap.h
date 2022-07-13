@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
  *         Marco Miozzo <mmiozzo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_ENB_CMAC_SAP_H
@@ -26,6 +29,7 @@
 #include <ns3/ff-mac-common.h>
 #include <ns3/eps-bearer.h>
 #include <ns3/lte-common.h>
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -65,6 +69,26 @@ public:
    */
   virtual void RemoveUe (uint16_t rnti) = 0;
 
+  /** 
+   * remove the UE, e.g., after handover or termination of the RRC connection
+   * 
+   * \param rnti 
+   */
+  virtual void MoveUeToResume(uint16_t rnti, uint64_t resumeId) = 0;
+
+  /** 
+   * remove the UE, e.g., after handover or termination of the RRC connection
+   * 
+   * \param rnti 
+   */
+  virtual void ResumeUe(uint16_t rnti, uint64_t resumeId) = 0;
+
+  /** 
+   * remove the UE, e.g., after handover or termination of the RRC connection
+   * 
+   * \param rnti 
+   */
+  virtual void RemoveUeFromScheduler(uint16_t rnti) = 0;
   /**
    * Logical Channel information to be passed to CmacSapProvider::ConfigureLc
    *
@@ -148,6 +172,16 @@ public:
    */
   virtual RachConfig GetRachConfig () = 0;
 
+  struct RachConfigNb : NbIotRrcSap::RachConfigCommon {} ;
+
+  /** 
+   * 
+   * \return the current RACH configuration of the MAC
+   */
+  virtual RachConfigNb GetRachConfigNb () = 0;
+
+
+  virtual void NotifyConnectionSuccessful(uint16_t rnti) = 0;
   /**
    * \brief AllocateNcRaPreambleReturnValue structure
    * 
@@ -167,6 +201,9 @@ public:
    * \return  the newly allocated random access preamble 
    */
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti) = 0;
+
+
+  virtual void SetLogDir(std::string logdir) = 0;
 
 };
 
@@ -198,6 +235,32 @@ public:
    * \param success true if the operation was successful, false otherwise
    */
   virtual void NotifyLcConfigResult (uint16_t rnti, uint8_t lcid, bool success) = 0;
+
+  /**
+   * notify the result of the last LC config operation
+   *
+   * \param rnti the rnti of the user
+   * \param lcid the logical channel id
+   * \param success true if the operation was successful, false otherwise
+   */
+  virtual void NotifyDataInactivityNb(uint16_t rnti, uint8_t lcid) = 0;
+
+  /**
+   * notify the result of the last LC config operation
+   *
+   * \param rnti the rnti of the user
+   * \param lcid the logical channel id
+   * \param success true if the operation was successful, false otherwise
+   */
+  virtual void NotifyDataInactivitySchedulerNb(uint16_t rnti) = 0;
+    /**
+   * notify the result of the last LC config operation
+   *
+   * \param rnti the rnti of the user
+   * \param lcid the logical channel id
+   * \param success true if the operation was successful, false otherwise
+   */
+  virtual void NotifyDataActivitySchedulerNb(uint16_t rnti) = 0;
 
   /**
    * \brief Parameters for [re]configuring the UE 
@@ -234,6 +297,8 @@ public:
    * \return true if the random access in connected mode is completed
    */
   virtual bool IsRandomAccessCompleted (uint16_t rnti) = 0;
+
+  virtual NbIotRrcSap::SystemInformationBlockType2Nb GetCurrentSystemInformationBlockType2Nb() = 0;
 };
 
 

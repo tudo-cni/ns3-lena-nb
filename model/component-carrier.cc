@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2015 Danilo Abrignani
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Danilo Abrignani <danilo.abrignani@unibo.it>
+ * Modified by:	
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include "component-carrier.h"
@@ -45,21 +48,21 @@ TypeId ComponentCarrier::GetTypeId (void)
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("DlBandwidth",
                    "Downlink Transmission Bandwidth Configuration in number of Resource Blocks",
-                   UintegerValue (25),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&ComponentCarrier::SetDlBandwidth,
                                          &ComponentCarrier::GetDlBandwidth),
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("DlEarfcn",
                    "Downlink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (100),
+                   UintegerValue (6300),
                    MakeUintegerAccessor (&ComponentCarrier::SetDlEarfcn,
                                          &ComponentCarrier::GetDlEarfcn),
                    MakeUintegerChecker<uint32_t> (0, 262143))
     .AddAttribute ("UlEarfcn",
                    "Uplink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
                    "as per 3GPP 36.101 Section 5.7.3. ",
-                   UintegerValue (18100),
+                   UintegerValue (24300),
                    MakeUintegerAccessor (&ComponentCarrier::SetUlEarfcn,
                                          &ComponentCarrier::GetUlEarfcn),
                    MakeUintegerChecker<uint32_t> (18000, 262143))
@@ -143,6 +146,7 @@ ComponentCarrier::SetDlBandwidth (uint16_t bw)
   NS_LOG_FUNCTION (this << bw);
   switch (bw)
     {
+    case 1:
     case 6:
     case 15:
     case 25:

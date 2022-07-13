@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
 * Copyright (c) 2015 Danilo Abrignani
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *
 * Author: Danilo Abrignani <danilo.abrignani@unibo.it>
+* Modified by: 
+* 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT extensions)
 *
 */
 
@@ -51,6 +54,8 @@ public:
   // inherited from LteMacSapProvider
   virtual void TransmitPdu (LteMacSapProvider::TransmitPduParameters params);
   virtual void ReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+  virtual void ReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+  virtual void ReportNoTransmissionNb (uint16_t rnti,uint8_t lcid);
 
 private:
   SimpleUeComponentCarrierManager* m_mac; ///< the component carrier manager
@@ -73,7 +78,16 @@ SimpleUeCcmMacSapProvider::ReportBufferStatus (ReportBufferStatusParameters para
 {
   m_mac->DoReportBufferStatus (params);
 }
-
+void
+SimpleUeCcmMacSapProvider::ReportBufferStatusNb (ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+{
+  m_mac->DoReportBufferStatus (params);
+}
+void
+SimpleUeCcmMacSapProvider::ReportNoTransmissionNb(uint16_t rnti, uint8_t lcid)
+{
+  // For simplicity, not needed
+}
 ///////////////////////////////////////////////////////////
 // MAC SAP USER SAP forwarders
 /////////////// ////////////////////////////////////////////
@@ -91,6 +105,7 @@ public:
 
   // inherited from LteMacSapUser
   virtual void NotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+  virtual void NotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
   virtual void ReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
   virtual void NotifyHarqDeliveryFailure ();
 
@@ -110,6 +125,14 @@ SimpleUeCcmMacSapUser::NotifyTxOpportunity (LteMacSapUser::TxOpportunityParamete
   NS_LOG_INFO ("SimpleUeCcmMacSapUser::NotifyTxOpportunity for ccId:"<<(uint32_t)txOpParams.componentCarrierId);
   m_mac->DoNotifyTxOpportunity (txOpParams);
 }
+
+void
+SimpleUeCcmMacSapUser::NotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
+{
+  NS_LOG_INFO ("SimpleUeCcmMacSapUser::NotifyTxOpportunity for ccId:"<<(uint32_t)txOpParams.componentCarrierId);
+  m_mac->DoNotifyTxOpportunityNb (txOpParams, schedulingDelay);
+}
+
 
 
 void
@@ -220,6 +243,28 @@ SimpleUeComponentCarrierManager::DoReportBufferStatus (LteMacSapProvider::Report
     }
 }
 
+void
+SimpleUeComponentCarrierManager::DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("BSR from RLC for LCID = " << (uint16_t)params.lcid);
+  std::map <uint8_t, LteMacSapProvider*>::iterator it =  m_macSapProvidersMap.find (0);
+  NS_ABORT_MSG_IF (it == m_macSapProvidersMap.end (), "could not find Sap for ComponentCarrier");
+
+  NS_LOG_DEBUG ("Size of component carrier LC map "<< m_componentCarrierLcMap.size());
+
+  for (std::map <uint8_t, std::map<uint8_t, LteMacSapProvider*> >::iterator ccLcMapIt = m_componentCarrierLcMap.begin();
+                                                                   ccLcMapIt != m_componentCarrierLcMap.end(); ccLcMapIt++)
+    {
+      NS_LOG_DEBUG ("BSR from RLC for CC id = "<< (uint16_t)ccLcMapIt->first);
+      std::map <uint8_t, LteMacSapProvider*>::iterator it = ccLcMapIt->second.find (params.lcid);
+      if (it !=ccLcMapIt->second.end())
+        {
+          it->second->ReportBufferStatus (params);
+        }
+    }
+}
+
 void 
 SimpleUeComponentCarrierManager::DoNotifyHarqDeliveryFailure ()
 {
@@ -240,6 +285,21 @@ SimpleUeComponentCarrierManager::DoNotifyTxOpportunity (LteMacSapUser::TxOpportu
   NS_LOG_DEBUG (this << " MAC is asking component carrier id = " << (uint16_t) txOpParams.componentCarrierId
                 << " with lcid = " << (uint32_t) txOpParams.lcid << " to transmit "<< txOpParams.bytes<< " bytes");
   (*lcidIt).second->NotifyTxOpportunity (txOpParams);
+}
+
+void 
+SimpleUeComponentCarrierManager::DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay)
+{
+  NS_LOG_FUNCTION (this);
+  std::map<uint8_t, LteMacSapUser*>::iterator lcidIt = m_lcAttached.find (txOpParams.lcid);
+  NS_ABORT_MSG_IF (lcidIt == m_lcAttached.end (), "could not find LCID" << (uint16_t) txOpParams.lcid);
+  NS_LOG_DEBUG (this << " lcid = " << (uint32_t) txOpParams.lcid << " layer= "
+                << (uint16_t) txOpParams.layer << " componentCarierId "
+                << (uint16_t) txOpParams.componentCarrierId << " rnti " << txOpParams.rnti);
+
+  NS_LOG_DEBUG (this << " MAC is asking component carrier id = " << (uint16_t) txOpParams.componentCarrierId
+                << " with lcid = " << (uint32_t) txOpParams.lcid << " to transmit "<< txOpParams.bytes<< " bytes");
+  (*lcidIt).second->NotifyTxOpportunityNb (txOpParams, schedulingDelay);
 }
 void
 SimpleUeComponentCarrierManager::DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams)

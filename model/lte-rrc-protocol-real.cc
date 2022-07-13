@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,9 @@
  *
  * Authors: Nicola Baldo <nbaldo@cttc.es>
  *          Lluis Parcerisa <lparcerisa@cttc.cat>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT)
+ *			Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/fatal-error.h>
@@ -25,12 +29,20 @@
 #include <ns3/node-list.h>
 #include <ns3/node.h>
 #include <ns3/simulator.h>
+#include <ns3/build-profile.h>
 
 #include "lte-rrc-protocol-real.h"
 #include "lte-ue-rrc.h"
 #include "lte-enb-rrc.h"
 #include "lte-enb-net-device.h"
 #include "lte-ue-net-device.h"
+
+#include <chrono>
+#include <iomanip>
+#include <stdlib.h>
+#include <ctime>    
+#include <fstream>
+
 
 namespace ns3 {
 
@@ -45,6 +57,7 @@ LteUeRrcProtocolReal::LteUeRrcProtocolReal ()
   :  m_ueRrcSapProvider (0),
     m_enbRrcSapProvider (0)
 {
+  m_logging = false;
   m_ueRrcSapUser = new MemberLteUeRrcSapUser<LteUeRrcProtocolReal> (this);
   m_completeSetupParameters.srb0SapUser = new LteRlcSpecificLteRlcSapUser<LteUeRrcProtocolReal> (this);
   m_completeSetupParameters.srb1SapUser = new LtePdcpSpecificLtePdcpSapUser<LteUeRrcProtocolReal> (this);    
@@ -123,8 +136,52 @@ LteUeRrcProtocolReal::DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionReques
   transmitPdcpPduParameters.rnti = m_rnti;
   transmitPdcpPduParameters.lcid = 0;
 
+  uint64_t imsi = msg.ueIdentity; 
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionRequest," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
   m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
 }
+
+void 
+LteUeRrcProtocolReal::DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  // initialize the RNTI and get the EnbLteRrcSapProvider for the
+  // eNB we are currently attached to
+  m_rnti = m_rrc->GetRnti ();
+  SetEnbRrcSapProvider ();
+
+  Ptr<Packet> packet = Create<Packet> ();
+
+  RrcConnectionResumeRequestNbHeader rrcConnectionResumeRequestNbHeader;
+  rrcConnectionResumeRequestNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcConnectionResumeRequestNbHeader);
+
+  LteRlcSapProvider::TransmitPdcpPduParameters transmitPdcpPduParameters;
+  transmitPdcpPduParameters.pdcpPdu = packet;
+  transmitPdcpPduParameters.rnti = m_rnti;
+  transmitPdcpPduParameters.lcid = 0;
+
+  uint64_t imsi = msg.resumeIdentity; 
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionResumeRequestNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
+  m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+}
+
 
 void 
 LteUeRrcProtocolReal::DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg)
@@ -145,6 +202,76 @@ LteUeRrcProtocolReal::DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectio
     {
       m_setupParameters.srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
     }
+}
+
+void 
+LteUeRrcProtocolReal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg)
+{
+  Ptr<Packet> packet = Create<Packet> ();
+
+  RrcConnectionResumeCompleteNbHeader rrcConnectionResumeCompleteNbHeader;
+  rrcConnectionResumeCompleteNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcConnectionResumeCompleteNbHeader);
+  //uint32_t size = packet->GetSerializedSize();
+  if(msg.dedicatedInfoNas->GetSize() > 0){
+    packet->AddAtEnd(msg.dedicatedInfoNas);
+  }
+  //packet->AddByteTag(NasTag(),size,msg.dedicatedInfoNas->GetSerializedSize());
+
+  LtePdcpSapProvider::TransmitPdcpSduParameters transmitPdcpSduParameters;
+  transmitPdcpSduParameters.pdcpSdu = packet;
+  transmitPdcpSduParameters.rnti = m_rnti;
+  transmitPdcpSduParameters.lcid = 1;
+
+  if (m_setupParameters.srb1SapProvider)
+    {
+      uint64_t imsi = msg.rrcTransactionIdentifier; 
+      if (m_logging)
+      {
+        std::string logfile_path = m_logdir+"RRC.log";
+        std::ofstream logfile;
+        logfile.open(logfile_path, std::ios_base::app);
+        logfile <<  imsi << ",DoSendRrcConnectionResumeCompletedNb," << Simulator::Now().GetMilliSeconds() << "\n";
+        logfile.close();
+      }
+      m_setupParameters.srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
+    }
+}
+
+
+void 
+LteUeRrcProtocolReal::DoSendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  m_rnti = m_rrc->GetRnti ();
+  Ptr<Packet> packet = Create<Packet> ();
+
+  RrcEarlyDataRequestNbHeader rrcEarlyDataRequestNbHeader;
+  rrcEarlyDataRequestNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcEarlyDataRequestNbHeader);
+  //uint32_t size = packet->GetSerializedSize();
+
+  if(msg.dedicatedInfoNas->GetSize() > 0){
+    packet->AddAtEnd(msg.dedicatedInfoNas);
+  }
+  //packet->AddByteTag(NasTag(),size,msg.dedicatedInfoNas->GetSerializedSize());
+  LteRlcSapProvider::TransmitPdcpPduParameters transmitPdcpPduParameters;
+  transmitPdcpPduParameters.pdcpPdu = packet;
+  transmitPdcpPduParameters.rnti = m_rnti;
+  transmitPdcpPduParameters.lcid = 0;
+
+  uint64_t imsi = msg.sTmsiNb.mTmsi;
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  m_rnti << ",DoSendRrcEarlyDataRequestNb," << Simulator::Now().GetMilliSeconds() << ",imsi: " << imsi << "\n";
+    logfile.close();
+  }
+
+  m_setupParameters.srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
 }
 
 void 
@@ -307,12 +434,14 @@ LteUeRrcProtocolReal::DoReceivePdcpPdu (Ptr<Packet> p)
   RrcConnectionReestablishmentRejectHeader rrcConnectionReestablishmentRejectHeader;
   RrcConnectionSetupHeader rrcConnectionSetupHeader;
   RrcConnectionRejectHeader rrcConnectionRejectHeader;
+  RrcEarlyDataCompleteNbHeader rrcEarlyDataCompleteNbHeader;
 
   // Declare possible messages
   LteRrcSap::RrcConnectionReestablishment rrcConnectionReestablishmentMsg;
   LteRrcSap::RrcConnectionReestablishmentReject rrcConnectionReestablishmentRejectMsg;
   LteRrcSap::RrcConnectionSetup rrcConnectionSetupMsg;
   LteRrcSap::RrcConnectionReject rrcConnectionRejectMsg;
+  NbIotRrcSap::RrcEarlyDataCompleteNb rrcEarlyDataCompleteNbMsg;
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcDlCcchMessage.GetMessageType () )
@@ -341,6 +470,13 @@ LteUeRrcProtocolReal::DoReceivePdcpPdu (Ptr<Packet> p)
       rrcConnectionSetupMsg = rrcConnectionSetupHeader.GetMessage ();
       m_ueRrcSapProvider->RecvRrcConnectionSetup (rrcConnectionSetupMsg);
       break;
+    case 4:
+      p->RemoveHeader(rrcEarlyDataCompleteNbHeader);
+      rrcEarlyDataCompleteNbMsg = rrcEarlyDataCompleteNbHeader.GetMessage();
+      rrcEarlyDataCompleteNbMsg.dedicatedInfoNas = p;
+      m_ueRrcSapProvider->RecvRrcEarlyDataCompleteNb(rrcEarlyDataCompleteNbMsg);
+
+
     }
 }
 
@@ -354,10 +490,14 @@ LteUeRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters
   // Declare possible headers to receive
   RrcConnectionReconfigurationHeader rrcConnectionReconfigurationHeader;
   RrcConnectionReleaseHeader rrcConnectionReleaseHeader;
+  RrcConnectionResumeNbHeader rrcConnectionResumeNbHeader;
+  RrcConnectionReleaseNbHeader rrcConnectionReleaseNbHeader;
 
   // Declare possible messages to receive
   LteRrcSap::RrcConnectionReconfiguration rrcConnectionReconfigurationMsg;
   LteRrcSap::RrcConnectionRelease rrcConnectionReleaseMsg;
+  NbIotRrcSap::RrcConnectionResumeNb rrcConnectionResumeNbMsg;
+  NbIotRrcSap::RrcConnectionReleaseNb rrcConnectionReleaseNbMsg;
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcDlDcchMessage.GetMessageType () )
@@ -371,8 +511,22 @@ LteUeRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters
       params.pdcpSdu->RemoveHeader (rrcConnectionReleaseHeader);
       rrcConnectionReleaseMsg = rrcConnectionReleaseHeader.GetMessage ();
       //m_ueRrcSapProvider->RecvRrcConnectionRelease (rrcConnectionReleaseMsg);
+    case 12:
+      params.pdcpSdu->RemoveHeader (rrcConnectionResumeNbHeader);
+      rrcConnectionResumeNbMsg = rrcConnectionResumeNbHeader.GetMessage ();
+      m_ueRrcSapProvider->RecvRrcConnectionResumeNb (rrcConnectionResumeNbMsg);
+      break;
+    case 13:
+      params.pdcpSdu->RemoveHeader (rrcConnectionReleaseNbHeader);
+      rrcConnectionReleaseNbMsg = rrcConnectionReleaseNbHeader.GetMessage ();
+      m_ueRrcSapProvider->RecvRrcConnectionReleaseNb (rrcConnectionReleaseNbMsg);
       break;
     }
+}
+
+void LteUeRrcProtocolReal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
+  m_logging = true;
 }
 
 NS_OBJECT_ENSURE_REGISTERED (LteEnbRrcProtocolReal);
@@ -381,6 +535,7 @@ LteEnbRrcProtocolReal::LteEnbRrcProtocolReal ()
   :  m_enbRrcSapProvider (0)
 {
   NS_LOG_FUNCTION (this);
+  m_logging = true;
   m_enbRrcSapUser = new MemberLteEnbRrcSapUser<LteEnbRrcProtocolReal> (this);
 }
 
@@ -516,6 +671,16 @@ LteEnbRrcProtocolReal::DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParame
 }
 
 void 
+LteEnbRrcProtocolReal::DoResumeUe(uint16_t rnti, uint64_t resumeId){
+  m_completeSetupUeParametersMap[rnti] = m_resumeCompleteSetupUeParametersMap[resumeId];
+  m_resumeCompleteSetupUeParametersMap.erase(resumeId);
+  m_enbRrcSapProviderMap[rnti] = m_resumeEnbRrcSapProviderMap[resumeId];
+  m_resumeEnbRrcSapProviderMap.erase (resumeId);
+  m_setupUeParametersMap[rnti] = m_resumeSetupUeParametersMap[resumeId];
+  m_setupUeParametersMap.erase (resumeId);
+}
+
+void 
 LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << rnti);
@@ -527,6 +692,29 @@ LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti)
   m_completeSetupUeParametersMap.erase (it);
   m_enbRrcSapProviderMap.erase (rnti);
   m_setupUeParametersMap.erase (rnti);
+}
+
+void 
+LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti, bool resumed)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  std::map<uint16_t, LteEnbRrcSapProvider::CompleteSetupUeParameters>::iterator 
+    it = m_completeSetupUeParametersMap.find (rnti);
+  NS_ASSERT (it != m_completeSetupUeParametersMap.end ());
+  if(!resumed){
+    delete it->second.srb0SapUser;
+    delete it->second.srb1SapUser;
+  }
+  m_completeSetupUeParametersMap.erase (it);
+  m_enbRrcSapProviderMap.erase (rnti);
+  m_setupUeParametersMap.erase (rnti);
+}
+
+void 
+LteEnbRrcProtocolReal::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId){
+  m_resumeCompleteSetupUeParametersMap[resumeId] = m_completeSetupUeParametersMap[rnti];
+  m_resumeEnbRrcSapProviderMap[resumeId] = m_enbRrcSapProviderMap[rnti];
+  m_resumeSetupUeParametersMap[resumeId] = m_setupUeParametersMap[rnti];
 }
 
 void 
@@ -560,6 +748,38 @@ LteEnbRrcProtocolReal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::Syst
         }
     } 
 }
+void 
+
+LteEnbRrcProtocolReal::DoSendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg)
+{
+  NS_LOG_FUNCTION (this << cellId);
+  // walk list of all nodes to get UEs with this cellId
+  Ptr<LteUeRrc> ueRrc;
+  for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
+    {
+      Ptr<Node> node = *i;
+      int nDevs = node->GetNDevices ();
+      for (int j = 0; j < nDevs; ++j)
+        {
+          Ptr<LteUeNetDevice> ueDev = node->GetDevice (j)->GetObject <LteUeNetDevice> ();
+          if (ueDev != 0)
+            {
+              Ptr<LteUeRrc> ueRrc = ueDev->GetRrc ();
+              NS_LOG_LOGIC ("considering UE IMSI " << ueDev->GetImsi () << " that has cellId " << ueRrc->GetCellId ());
+              if (ueRrc->GetCellId () == cellId)
+                {
+                  NS_LOG_LOGIC ("sending SI to IMSI " << ueDev->GetImsi ());
+
+                  Simulator::ScheduleWithContext (node->GetId (),
+                                                  RRC_REAL_MSG_DELAY,
+                                                  &LteUeRrcSapProvider::RecvSystemInformationNb,
+                                                  ueRrc->GetLteUeRrcSapProvider (),
+                                                  msg);
+                }
+            }
+        }
+    } 
+}
 
 void 
 LteEnbRrcProtocolReal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcConnectionSetup msg)
@@ -575,8 +795,35 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcCo
   transmitPdcpPduParameters.pdcpPdu = packet;
   transmitPdcpPduParameters.rnti = rnti;
   transmitPdcpPduParameters.lcid = 0;
-
+  //NS_BUILD_DEBUG(std::cout << "Send connection setup" << std::endl);
   m_setupUeParametersMap.at (rnti).srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+}
+
+void 
+LteEnbRrcProtocolReal::DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg)
+{
+  Ptr<Packet> packet = Create<Packet> ();
+
+  RrcConnectionResumeNbHeader rrcConnectionResumeNbHeader;
+  rrcConnectionResumeNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcConnectionResumeNbHeader);
+  LtePdcpSapProvider::TransmitPdcpSduParameters transmitPdcpSduParameters;
+  transmitPdcpSduParameters.pdcpSdu = packet;
+  transmitPdcpSduParameters.rnti = rnti;
+  transmitPdcpSduParameters.lcid = 1;
+
+  uint64_t imsi = msg.rrcTransactionIdentifier; 
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionResumeNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
+  m_setupUeParametersMap[rnti].srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
 }
 
 void 
@@ -668,6 +915,33 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::Rrc
 
   m_setupUeParametersMap[rnti].srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
 }
+void 
+LteEnbRrcProtocolReal::DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg)
+{
+  Ptr<Packet> packet = Create<Packet> ();
+
+  RrcConnectionReleaseNbHeader rrcConnectionReleaseNbHeader;
+  rrcConnectionReleaseNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcConnectionReleaseNbHeader);
+
+  LtePdcpSapProvider::TransmitPdcpSduParameters transmitPdcpSduParameters;
+  transmitPdcpSduParameters.pdcpSdu = packet;
+  transmitPdcpSduParameters.rnti = rnti;
+  transmitPdcpSduParameters.lcid = 1;
+
+  uint64_t imsi = msg.rrcTransactionIdentifier;
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  imsi << ",DoSendRrcConnectionReleaseNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
+  m_setupUeParametersMap[rnti].srb1SapProvider->TransmitPdcpSdu (transmitPdcpSduParameters);
+}
 
 void
 LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
@@ -679,6 +953,16 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
   // Declare possible headers to receive
   RrcConnectionReestablishmentRequestHeader rrcConnectionReestablishmentRequestHeader;
   RrcConnectionRequestHeader rrcConnectionRequestHeader;
+  RrcConnectionResumeRequestNbHeader rrcConnectionResumeRequestNbHeader;
+  RrcEarlyDataRequestNbHeader rrcEarlyDataRequestNbHeader;
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  rnti << ",DoReceivePdcpPdu," << Simulator::Now().GetMilliSeconds() << ",MessageType," << rrcUlCcchMessage.GetMessageType () << "\n";
+    logfile.close();
+  }
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcUlCcchMessage.GetMessageType () )
@@ -695,27 +979,71 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
       rrcConnectionRequestMsg = rrcConnectionRequestHeader.GetMessage ();
       m_enbRrcSapProvider->RecvRrcConnectionRequest (rnti,rrcConnectionRequestMsg);
       break;
+    case 2:
+      p->RemoveHeader(rrcConnectionResumeRequestNbHeader);
+      NbIotRrcSap::RrcConnectionResumeRequestNb rrcConnectionResumeRequestNbMsg;
+      rrcConnectionResumeRequestNbMsg = rrcConnectionResumeRequestNbHeader.GetMessage();
+      m_enbRrcSapProvider->RecvRrcConnectionResumeRequestNb (rnti, rrcConnectionResumeRequestNbMsg);
+      break;
+    case 3:
+      p->RemoveHeader(rrcEarlyDataRequestNbHeader);
+      NbIotRrcSap::RrcEarlyDataRequestNb rrcEarlyDataRequestNbMsg;
+      rrcEarlyDataRequestNbMsg = rrcEarlyDataRequestNbHeader.GetMessage();
+      rrcEarlyDataRequestNbMsg.dedicatedInfoNas= p;
+      m_enbRrcSapProvider->RecvRrcEarlyDataRequestNb (rnti, rrcEarlyDataRequestNbMsg);
+      break;
     }
 }
+void 
+LteEnbRrcProtocolReal::DoSendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg)
+{
+  Ptr<Packet> packet = Create<Packet> ();
 
+  RrcEarlyDataCompleteNbHeader rrcEarlyDataCompleteNbHeader;
+  rrcEarlyDataCompleteNbHeader.SetMessage (msg);
+
+  packet->AddHeader (rrcEarlyDataCompleteNbHeader);
+  //uint32_t size = packet->GetSerializedSize();
+  if(msg.dedicatedInfoNas->GetSize() > 0){
+    packet->AddAtEnd(msg.dedicatedInfoNas);
+  }
+  //packet->AddByteTag(NasTag(),size,msg.dedicatedInfoNas->GetSerializedSize());
+
+  LteRlcSapProvider::TransmitPdcpPduParameters transmitPdcpPduParameters;
+  transmitPdcpPduParameters.pdcpPdu = packet;
+  transmitPdcpPduParameters.rnti = rnti;
+  transmitPdcpPduParameters.lcid = 0;
+
+  if (m_logging)
+  {
+    std::string logfile_path = m_logdir+"RRC.log";
+    std::ofstream logfile;
+    logfile.open(logfile_path, std::ios_base::app);
+    logfile <<  rnti << ",DoSendRrcEarlyDataCompleteNb," << Simulator::Now().GetMilliSeconds() << "\n";
+    logfile.close();
+  }
+
+  m_setupUeParametersMap[rnti].srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+}
 void
 LteEnbRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params)
 {
   // Get type of message received
   RrcUlDcchMessage rrcUlDcchMessage;
   params.pdcpSdu->PeekHeader (rrcUlDcchMessage);
-
   // Declare possible headers to receive
   MeasurementReportHeader measurementReportHeader;
   RrcConnectionReconfigurationCompleteHeader rrcConnectionReconfigurationCompleteHeader;
   RrcConnectionReestablishmentCompleteHeader rrcConnectionReestablishmentCompleteHeader;
   RrcConnectionSetupCompleteHeader rrcConnectionSetupCompleteHeader;
+  RrcConnectionResumeCompleteNbHeader rrcConnectionResumeCompleteNbHeader;
 
   // Declare possible messages to receive
   LteRrcSap::MeasurementReport measurementReportMsg;
   LteRrcSap::RrcConnectionReconfigurationCompleted rrcConnectionReconfigurationCompleteMsg;
   LteRrcSap::RrcConnectionReestablishmentComplete rrcConnectionReestablishmentCompleteMsg;
   LteRrcSap::RrcConnectionSetupCompleted rrcConnectionSetupCompletedMsg;
+  NbIotRrcSap::RrcConnectionResumeCompleteNb rrcConnectionResumeCompleteNbMsg;
 
   // Deserialize packet and call member recv function with appropriate structure
   switch ( rrcUlDcchMessage.GetMessageType () )
@@ -739,6 +1067,12 @@ LteEnbRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameter
       params.pdcpSdu->RemoveHeader (rrcConnectionSetupCompleteHeader);
       rrcConnectionSetupCompletedMsg = rrcConnectionSetupCompleteHeader.GetMessage ();
       m_enbRrcSapProvider->RecvRrcConnectionSetupCompleted (params.rnti, rrcConnectionSetupCompletedMsg);
+      break;
+    case 14:
+      params.pdcpSdu->RemoveHeader (rrcConnectionResumeCompleteNbHeader);
+      rrcConnectionResumeCompleteNbMsg = rrcConnectionResumeCompleteNbHeader.GetMessage ();
+      rrcConnectionResumeCompleteNbMsg.dedicatedInfoNas= params.pdcpSdu;
+      m_enbRrcSapProvider->RecvRrcConnectionResumeCompletedNb (params.rnti, rrcConnectionResumeCompleteNbMsg);
       break;
     }
 }
@@ -780,6 +1114,11 @@ LteEnbRrcProtocolReal::DoDecodeHandoverCommand (Ptr<Packet> p)
   p->RemoveHeader (h);
   LteRrcSap::RrcConnectionReconfiguration msg = h.GetMessage ();
   return msg;
+}
+
+void LteEnbRrcProtocolReal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
+  m_logging = true;
 }
 
 //////////////////////////////////////////////////////

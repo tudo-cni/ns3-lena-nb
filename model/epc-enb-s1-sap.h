@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef EPC_ENB_S1_SAP_H
@@ -88,6 +91,8 @@ public:
    * \param rnti 
    */
   virtual void UeContextRelease (uint16_t rnti) = 0;
+  virtual void MoveUeToResume (uint16_t rnti, uint64_t resumeId) = 0;
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId) = 0;
     
 };
   
@@ -181,6 +186,8 @@ public:
 
   virtual void PathSwitchRequest (PathSwitchRequestParameters params);
   virtual void UeContextRelease (uint16_t rnti);
+  virtual void MoveUeToResume (uint16_t rnti, uint64_t resumeId);
+  virtual void ResumeUe (uint16_t rnti, uint64_t resumeId);
 
 private:
   MemberEpcEnbS1SapProvider ();
@@ -222,7 +229,16 @@ void MemberEpcEnbS1SapProvider<C>::UeContextRelease (uint16_t rnti)
 {
   m_owner->DoUeContextRelease (rnti);
 }
-
+template <class C>
+void MemberEpcEnbS1SapProvider<C>::MoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  m_owner->DoMoveUeToResume(rnti,resumeId);
+}
+template <class C>
+void MemberEpcEnbS1SapProvider<C>::ResumeUe (uint16_t rnti,uint64_t resumeId)
+{
+  m_owner->DoResumeUe(rnti, resumeId);
+}
 /**
  * Template for the implementation of the EpcEnbS1SapUser as a member
  * of an owner class of type C to which all methods are forwarded

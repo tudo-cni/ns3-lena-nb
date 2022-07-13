@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011,2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,12 +18,15 @@
  *
  * Author: Manuel Requena <manuel.requena@cttc.es> 
  *         Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_RLC_TM_H
 #define LTE_RLC_TM_H
 
 #include "ns3/lte-rlc.h"
+#include "nb-iot-scheduler.h"
 
 #include <ns3/event-id.h>
 #include <map>
@@ -62,16 +66,25 @@ public:
    */
   virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
   /**
+   * MAC SAP
+   * 
+   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   */
+  virtual void DoNotifyTxOpportunityNb (LteMacSapUser::TxOpportunityParameters txOpParams, uint32_t schedulingDelay);
+  /**
    * Notify HARQ deliver failure
    */
   virtual void DoNotifyHarqDeliveryFailure ();
   virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
+
+  virtual void DoReset();
 
 private:
   /// Expire RBS timer function
   void ExpireRbsTimer (void);
   /// Report buffer status
   void DoReportBufferStatus ();
+  void DoReportBufferStatusNb (NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
 private:
   /**

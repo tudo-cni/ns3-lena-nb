@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/fatal-error.h>
@@ -116,6 +119,21 @@ LteUeRrcProtocolIdeal::DoSendRrcConnectionRequest (LteRrcSap::RrcConnectionReque
 }
 
 void 
+LteUeRrcProtocolIdeal::DoSendRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg)
+{
+  //no ideal rrc for Nb-iot
+  // initialize the RNTI and get the EnbLteRrcSapProvider for the
+  // eNB we are currently attached to
+  //m_rnti = m_rrc->GetRnti ();
+  //SetEnbRrcSapProvider ();
+    
+  //Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+  //                     &LteEnbRrcSapProvider::RecvRrcConnectionRequest,
+  //                     m_enbRrcSapProvider,
+  //                     m_rnti, 
+  //                     msg);
+}
+void 
 LteUeRrcProtocolIdeal::DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg)
 {
   Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
@@ -124,6 +142,27 @@ LteUeRrcProtocolIdeal::DoSendRrcConnectionSetupCompleted (LteRrcSap::RrcConnecti
 		       m_rnti, 
 		       msg);
 }
+
+void 
+LteUeRrcProtocolIdeal::DoSendRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteEnbRrcSapProvider::RecvRrcConnectionResumeCompletedNb,
+                       m_enbRrcSapProvider,
+		       m_rnti, 
+		       msg);
+}
+
+void 
+LteUeRrcProtocolIdeal::DoSendRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteEnbRrcSapProvider::RecvRrcEarlyDataRequestNb,
+                       m_enbRrcSapProvider,
+		       m_rnti, 
+		       msg);
+}
+
 
 void 
 LteUeRrcProtocolIdeal::DoSendRrcConnectionReconfigurationCompleted (LteRrcSap::RrcConnectionReconfigurationCompleted msg)
@@ -234,6 +273,10 @@ LteUeRrcProtocolIdeal::SetEnbRrcSapProvider ()
   enbRrcProtocolIdeal->SetUeRrcSapProvider (m_rnti, m_ueRrcSapProvider);
 }
 
+void LteUeRrcProtocolIdeal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
+}
+
 
 NS_OBJECT_ENSURE_REGISTERED (LteEnbRrcProtocolIdeal);
 
@@ -303,6 +346,16 @@ LteEnbRrcProtocolIdeal::SetUeRrcSapProvider (uint16_t rnti, LteUeRrcSapProvider*
                                          << " could not find RNTI = " << rnti);
   it->second = p;
 }
+void 
+LteEnbRrcProtocolIdeal::DoResumeUe (uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+}
+void 
+LteEnbRrcProtocolIdeal::DoMoveUeToResume(uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+}
 
 void 
 LteEnbRrcProtocolIdeal::DoSetupUe (uint16_t rnti, LteEnbRrcSapUser::SetupUeParameters params)
@@ -352,7 +405,12 @@ LteEnbRrcProtocolIdeal::DoRemoveUe (uint16_t rnti)
   NS_LOG_FUNCTION (this << rnti);
   m_enbRrcSapProviderMap.erase (rnti);
 }
-
+void 
+LteEnbRrcProtocolIdeal::DoRemoveUe (uint16_t rnti, bool resumed)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  m_enbRrcSapProviderMap.erase (rnti);
+}
 void 
 LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::SystemInformation msg)
 {
@@ -385,6 +443,36 @@ LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::Sys
 }
 
 void 
+LteEnbRrcProtocolIdeal::DoSendSystemInformationNb (uint16_t cellId, NbIotRrcSap::SystemInformationNb msg)
+{
+  NS_LOG_FUNCTION (this << cellId);
+  // walk list of all nodes to get UEs with this cellId
+  Ptr<LteUeRrc> ueRrc;
+  for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
+    {
+      Ptr<Node> node = *i;
+      int nDevs = node->GetNDevices ();
+      for (int j = 0; j < nDevs; ++j)
+        {
+          Ptr<LteUeNetDevice> ueDev = node->GetDevice (j)->GetObject <LteUeNetDevice> ();
+          if (ueDev != 0)
+            {
+              Ptr<LteUeRrc> ueRrc = ueDev->GetRrc ();              
+              NS_LOG_LOGIC ("considering UE IMSI " << ueDev->GetImsi () << " that has cellId " << ueRrc->GetCellId ());
+              if (ueRrc->GetCellId () == cellId)
+                {       
+                  NS_LOG_LOGIC ("sending SI to IMSI " << ueDev->GetImsi ());
+                  ueRrc->GetLteUeRrcSapProvider ()->RecvSystemInformationNb (msg);
+                  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+                                       &LteUeRrcSapProvider::RecvSystemInformationNb,
+                                       ueRrc->GetLteUeRrcSapProvider (), 
+                                       msg);          
+                }             
+            }
+        }
+    } 
+}
+void 
 LteEnbRrcProtocolIdeal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcConnectionSetup msg)
 {
   Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
@@ -393,6 +481,22 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcC
 		       msg);
 }
 
+void 
+LteEnbRrcProtocolIdeal::DoSendRrcConnectionResumeNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteUeRrcSapProvider::RecvRrcConnectionResumeNb,
+		       GetUeRrcSapProvider (rnti), 
+		       msg);
+}
+void 
+LteEnbRrcProtocolIdeal::DoSendRrcEarlyDataCompleteNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataCompleteNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteUeRrcSapProvider::RecvRrcEarlyDataCompleteNb,
+		       GetUeRrcSapProvider (rnti), 
+		       msg);
+}
 void 
 LteEnbRrcProtocolIdeal::DoSendRrcConnectionReconfiguration (uint16_t rnti, LteRrcSap::RrcConnectionReconfiguration msg)
 {
@@ -429,6 +533,14 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::Rr
 		       msg);
 }
 
+void 
+LteEnbRrcProtocolIdeal::DoSendRrcConnectionReleaseNb (uint16_t rnti, NbIotRrcSap::RrcConnectionReleaseNb msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
+		       &LteUeRrcSapProvider::RecvRrcConnectionReleaseNb,
+		       GetUeRrcSapProvider (rnti), 
+		       msg);
+}
 void 
 LteEnbRrcProtocolIdeal::DoSendRrcConnectionReject (uint16_t rnti, LteRrcSap::RrcConnectionReject msg)
 {
@@ -688,6 +800,10 @@ LteEnbRrcProtocolIdeal::DoDecodeHandoverCommand (Ptr<Packet> p)
   LteRrcSap::RrcConnectionReconfiguration msg = it->second;
   g_handoverCommandMsgMap.erase (it);
   return msg;
+}
+
+void LteEnbRrcProtocolIdeal::DoSetLogDir(std::string dirname){
+  m_logdir = dirname;
 }
 
 

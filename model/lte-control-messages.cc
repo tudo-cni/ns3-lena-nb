@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Giuseppe Piro  <g.piro@poliba.it>
  *         Marco Miozzo <marco.miozzo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include "lte-control-messages.h"
@@ -308,6 +311,247 @@ DlHarqFeedbackLteControlMessage::GetDlHarqFeedback (void)
   return m_dlInfoListElement;
 }
 
+// ----------------------------------------------------------------------------------------------------------
 
+
+
+MibNbiotControlMessage::MibNbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::MIB_NB);
+}
+
+
+void
+MibNbiotControlMessage::SetMib (NbIotRrcSap::MasterInformationBlockNb mib)
+{
+  m_mib = mib;
+}
+
+NbIotRrcSap::MasterInformationBlockNb MibNbiotControlMessage::GetMib () const
+{
+  return m_mib;
+}
+
+
+// ----------------------------------------------------------------------------------------------------------
+
+
+
+Sib1NbiotControlMessage::Sib1NbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::SIB1_NB);
+}
+
+
+void
+Sib1NbiotControlMessage::SetSib1 (NbIotRrcSap::SystemInformationBlockType1Nb sib1)
+{
+  m_sib1 = sib1;
+}
+
+NbIotRrcSap::SystemInformationBlockType1Nb Sib1NbiotControlMessage::GetSib1 () const
+{
+  return m_sib1;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+NprachPreambleNbiotControlMessage::NprachPreambleNbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::NPRACH_PREAMBLE);
+}
+
+void
+NprachPreambleNbiotControlMessage::SetRapId (uint8_t rapId)
+{
+  m_rapId = rapId;
+}
+
+uint8_t 
+NprachPreambleNbiotControlMessage::GetRapId () const
+{
+  return m_rapId;
+}
+void
+NprachPreambleNbiotControlMessage::SetSubcarrierOffset (uint8_t subcarrierOffset)
+{
+  m_subcarrierOffset = subcarrierOffset;
+}
+
+uint8_t 
+NprachPreambleNbiotControlMessage::GetSubcarrierOffset() const
+{
+  return m_subcarrierOffset;
+}
+void
+NprachPreambleNbiotControlMessage::SetRanti(uint32_t ranti)
+{
+  m_ranti= ranti;
+}
+
+uint32_t 
+NprachPreambleNbiotControlMessage::GetRanti() const
+{
+  return m_ranti;
+}
+// ----------------------------------------------------------------------------------------------------------
+
+
+DlDciN1NbiotControlMessage::DlDciN1NbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::DL_DCI_NB);
+}
+
+
+DlDciN1NbiotControlMessage::~DlDciN1NbiotControlMessage (void)
+{
+
+}
+
+void
+DlDciN1NbiotControlMessage::SetDci (NbIotRrcSap::DciN1 dci)
+{
+  m_dci = dci;
+
+}
+
+
+NbIotRrcSap::DciN1
+DlDciN1NbiotControlMessage::GetDci (void)
+{
+  return m_dci;
+}
+
+void
+DlDciN1NbiotControlMessage::SetRnti (uint32_t rnti)
+{
+  m_rnti = rnti;
+
+}
+
+
+uint32_t
+DlDciN1NbiotControlMessage::GetRnti (void)
+{
+  return m_rnti;
+}
+
+// ----------------------------------------------------------------------------------------------------------
+
+
+UlDciN0NbiotControlMessage::UlDciN0NbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::UL_DCI_NB);
+}
+
+
+UlDciN0NbiotControlMessage::~UlDciN0NbiotControlMessage (void)
+{
+
+}
+
+void
+UlDciN0NbiotControlMessage::SetDci (NbIotRrcSap::DciN0 dci)
+{
+  m_dci = dci;
+
+}
+
+
+NbIotRrcSap::DciN0
+UlDciN0NbiotControlMessage::GetDci (void)
+{
+  return m_dci;
+}
+
+void
+UlDciN0NbiotControlMessage::SetRnti (uint32_t rnti)
+{
+  m_rnti = rnti;
+
+}
+
+
+uint32_t
+UlDciN0NbiotControlMessage::GetRnti (void)
+{
+  return m_rnti;
+}
+void
+UlDciN0NbiotControlMessage::SetLc(uint8_t lc)
+{
+  m_lc = lc;
+
+}
+
+
+uint8_t
+UlDciN0NbiotControlMessage::GetLc(void)
+{
+  return m_lc;
+}
+// ----------------------------------------------------------------------------------------------------------
+
+
+RarNbiotControlMessage::RarNbiotControlMessage (void)
+{
+  SetMessageType (LteControlMessage::RAR_NB);
+}
+
+
+void
+RarNbiotControlMessage::SetRaRnti (uint16_t raRnti)
+{
+  m_raRnti = raRnti;
+}
+
+uint16_t 
+RarNbiotControlMessage::GetRaRnti () const
+{
+  return m_raRnti;
+}
+
+
+void
+RarNbiotControlMessage::AddRar (NbIotRrcSap::Rar rar)
+{
+  m_rarList.push_back (rar);
+}
+
+std::list<NbIotRrcSap::Rar>::const_iterator 
+RarNbiotControlMessage::RarListBegin () const
+{
+  return m_rarList.begin ();
+}
+
+std::list<NbIotRrcSap::Rar>::const_iterator 
+RarNbiotControlMessage::RarListEnd () const
+{
+  return m_rarList.end ();
+}
+
+//-------------------------------------------------------------------------------------------
+
+DlHarqFeedbackNbiotControlMessage::DlHarqFeedbackNbiotControlMessage(void){
+  SetMessageType(LteControlMessage::DL_HARQ_NB);
+}
+
+DlHarqFeedbackNbiotControlMessage::~DlHarqFeedbackNbiotControlMessage(void){
+
+}
+void DlHarqFeedbackNbiotControlMessage::SetAcknowledgement(bool ack){
+  m_ack = ack;
+}
+void DlHarqFeedbackNbiotControlMessage::SetRnti(int16_t rnti){
+  m_rnti = rnti;
+}
+bool DlHarqFeedbackNbiotControlMessage::GetAcknowledgement(void){
+  return m_ack;
+}
+int16_t DlHarqFeedbackNbiotControlMessage::GetRnti(void){
+  return m_rnti;
+}
 } // namespace ns3
 

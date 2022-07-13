@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2011, 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  * Copyright (c) 2018 Fraunhofer ESK : RLF extensions
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -23,6 +24,7 @@
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
  *          Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_ENB_RRC_H
@@ -88,6 +90,7 @@ public:
     INITIAL_RANDOM_ACCESS = 0,
     CONNECTION_SETUP,
     CONNECTION_REJECTED,
+    CONNECTION_RESUME, // New NBIOT
     ATTACH_REQUEST,
     CONNECTED_NORMALLY,
     CONNECTION_RECONFIGURATION,
@@ -96,6 +99,10 @@ public:
     HANDOVER_JOINING,
     HANDOVER_PATH_SWITCH,
     HANDOVER_LEAVING,
+    IDLE_SUSPEND_EDRX,// New NBIOT
+    IDLE_SUSPEND_PSM,// New NBIOT
+    CONNECTED_TAU,// New NBIOT
+    IDLE_EARLY_DATA_TRANSMISSION,// New NBIOT
     NUM_STATES
   };
 
@@ -141,6 +148,31 @@ public:
    * \param imsi the IMSI
    */
   void SetImsi (uint64_t imsi);
+
+  void SetResumeId(uint64_t resumeId);
+
+  void SetRnti(uint16_t rnti);
+
+  void NotifyDataInactivityNb(uint8_t lcid);
+  
+  void NotifyDataInactivitySchedulerNb();
+  void NotifyDataActivitySchedulerNb();
+  uint64_t AttachSuspendedNb(uint32_t imsi);
+  /**
+   * Notify LC config result function
+   *
+   * \param rnti RNTI
+   * \param lcid LCID
+   */
+  void SwitchToResumeNb();
+
+  /** 
+   * Set the directory for txt file logging
+   * 
+   * \param logfile The log file name
+   * 
+   */
+  void SetLogDir(std::string logfile);
 
   /**
    * Process Initial context setup request message from the MME.
@@ -232,6 +264,8 @@ public:
    * \param p the packet
    */
   void SendData (uint8_t bid, Ptr<Packet> p);
+  
+  
 
   /** 
    * 
@@ -281,10 +315,23 @@ public:
    */
   void RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg);
   /**
+   * Implement the LteEnbRrcSapProvider::RecvRrcConnectionRequest interface.
+   * \param msg the RRC connection request message
+   */
+  void RecvRrcConnectionResumeRequestNb (NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+
+  void RecvRrcEarlyDataRequestNb (NbIotRrcSap::RrcEarlyDataRequestNb msg);
+
+  /**
    * Implement the LteEnbRrcSapProvider::RecvRrcConnectionSetupCompleted interface.
    * \param msg RRC connection setup completed message
    */
   void RecvRrcConnectionSetupCompleted (LteRrcSap::RrcConnectionSetupCompleted msg);
+  /**
+   * Implement the LteEnbRrcSapProvider::RecvRrcConnectionSetupCompleted interface.
+   * \param msg RRC connection setup completed message
+   */
+  void RecvRrcConnectionResumeCompletedNb (NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
   /**
    * Implement the LteEnbRrcSapProvider::RecvRrcConnectionReconfigurationCompleted interface.
    * \param msg RRC connection reconfiguration completed message
@@ -341,6 +388,8 @@ public:
    * \return the IMSI, i.e., a globally unique UE identifier
    */
   uint64_t GetImsi (void) const;
+
+  uint64_t GetResumeId (void) const;
 
   /**
    *
@@ -532,6 +581,8 @@ private:
    * unique UE identifier.
    */
   uint64_t m_imsi;
+
+  uint64_t m_resumeId;
   /**
    * ID of the primary CC for this UE
    */
@@ -584,6 +635,12 @@ private:
    */
   EventId m_connectionSetupTimeout;
   /**
+   * Time limit before a _connection setup timeout_ occurs. Set after an RRC
+   * CONNECTION SETUP is sent. Calling LteEnbRrc::ConnectionSetupTimeout() when
+   * it expires. Cancelled when RRC CONNECTION SETUP COMPLETE is received.
+   */
+  EventId m_connectionResumeTimeout;
+  /**
    * The delay before a _connection rejected timeout_ occurs. Set after an RRC
    * CONNECTION REJECT is sent. Calling LteEnbRrc::ConnectionRejectedTimeout()
    * when it expires.
@@ -604,6 +661,11 @@ private:
    */
   EventId m_handoverLeavingTimeout;
 
+  EventId m_dataInactivityTimeout;
+
+  EventId m_eDrxTimeout;
+
+  EventId m_psmTimeout;
   /// Define if the Carrier Aggregation was already configure for the current UE on not
   bool m_caSupportConfigured;
 
@@ -622,6 +684,15 @@ private:
    */
   std::list<std::pair<uint8_t, Ptr<Packet> > > m_packetBuffer;
 
+  bool m_energyModel;
+  Time m_t3412;
+  Time m_t3324;
+  uint16_t m_dataInactivityInterval;
+  Time m_eDrxCycle;
+  bool m_dataReceived;
+  bool m_enablePSM;
+  std::list<EventId> id_suspend;
+  std::string m_logdir;
 }; // end of `class UeManager`
 
 
@@ -875,7 +946,17 @@ public:
    *
    * \return the corresponding UeManager instance
    */
-  Ptr<UeManager> GetUeManager (uint16_t rnti);
+  Ptr<UeManager> GetUeManagerbyRnti (uint16_t rnti);
+
+  /**
+   *
+   *
+   * \param rnti the identifier of an UE
+   *
+   * \return the corresponding UeManager instance
+   */
+  Ptr<UeManager> GetUeManagerbyResumeId (uint64_t resumeId);
+
 
   /**
    * \brief Add a new UE measurement reporting configuration
@@ -965,6 +1046,7 @@ public:
    */
   bool SendData (Ptr<Packet> p);
 
+  bool SendSavedPackets (uint64_t imsi, uint16_t rnti);
   /** 
    * set the callback used to forward data packets up the stack
    * 
@@ -988,6 +1070,18 @@ public:
    * \param rnti the T-C-RNTI whose timeout expired
    */
   void ConnectionSetupTimeout (uint16_t rnti);
+
+  /** 
+   * Method triggered when a UE is expected to complete a connection setup
+   * procedure but does not do so in a reasonable time. The method will remove
+   * the UE context.
+   *
+   * \param rnti the T-C-RNTI whose timeout expired
+   **/
+
+  void ConnectionResumeTimeout (uint16_t rnti);
+
+
 
   /**
    * Method triggered a while after sending RRC Connection Rejected. The method
@@ -1119,12 +1213,38 @@ private:
    */
   void DoRecvRrcConnectionRequest (uint16_t rnti, LteRrcSap::RrcConnectionRequest msg);
   /**
+   * Part of the RRC protocol. Forwarding LteEnbRrcSapProvider::RecvRrcConnectionRequest interface to UeManager::RecvRrcConnectionRequest
+   *
+   * \param rnti the RNTI
+   * \param msg the LteRrcSap::RrcConnectionRequest
+   */
+  void DoRecvRrcConnectionResumeRequestNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeRequestNb msg);
+  /**
+   * Part of the RRC protocol. Forwarding LteEnbRrcSapProvider::RecvRrcConnectionRequest interface to UeManager::RecvRrcConnectionRequest
+   *
+   * \param rnti the RNTI
+   * \param msg the LteRrcSap::RrcConnectionRequest
+   */
+  void DoRecvRrcEarlyDataRequestNb (uint16_t rnti, NbIotRrcSap::RrcEarlyDataRequestNb msg);
+
+
+  bool DoCheckIfResumeIdExists(uint64_t resumeId);
+
+  uint64_t GetImsifromResumeId(uint64_t resumeId);
+  /**
    * Part of the RRC protocol. Forwarding LteEnbRrcSapProvider::RecvRrcConnectionSetupCompleted interface to UeManager::RecvRrcConnectionSetupCompleted
    *
    * \param rnti the RNTI
    * \param msg the LteRrcSap::RrcConnectionSetupCompleted
    */
   void DoRecvRrcConnectionSetupCompleted (uint16_t rnti, LteRrcSap::RrcConnectionSetupCompleted msg);
+  /**
+   * Part of the RRC protocol. Forwarding LteEnbRrcSapProvider::RecvRrcConnectionSetupCompleted interface to UeManager::RecvRrcConnectionSetupCompleted
+   *
+   * \param rnti the RNTI
+   * \param msg the LteRrcSap::RrcConnectionSetupCompleted
+   */
+  void DoRecvRrcConnectionResumeCompletedNb (uint16_t rnti, NbIotRrcSap::RrcConnectionResumeCompleteNb msg);
   /**
    * Part of the RRC protocol. Forwarding LteEnbRrcSapProvider::RecvRrcConnectionReconfigurationCompleted interface to UeManager::RecvRrcConnectionReconfigurationCompleted
    *
@@ -1247,6 +1367,24 @@ private:
    */
   uint16_t DoAllocateTemporaryCellRnti (uint8_t componentCarrierId);
   /**
+   * Allocate temporary Resume ID function
+   *
+   * \param componentCarrierId ID of the primary component carrier
+   * \return temporary RNTI
+   */
+  uint64_t DoAllocateTemporaryResumeId();
+  /**
+   * Allocate temporary Resume ID function
+   *
+   * \param componentCarrierId ID of the primary component carrier
+   * \return temporary RNTI
+   */
+  void MoveUeToResumed(uint16_t rnti, uint64_t m_resumeId);
+
+  void ResumeUe(uint16_t rnti, uint64_t m_resumeId);
+
+
+  /**
    * Notify LC config result function
    *
    * \param rnti RNTI
@@ -1254,6 +1392,22 @@ private:
    * \param success the success indicator
    */
   void DoNotifyLcConfigResult (uint16_t rnti, uint8_t lcid, bool success);
+  /**
+   * Notify LC config result function
+   *
+   * \param rnti RNTI
+   * \param lcid LCID
+   */
+  void DoNotifyDataInactivityNb(uint16_t rnti, uint8_t lcid);
+  /**
+   * Notify LC config result function
+   *
+   * \param rnti RNTI
+   * \param lcid LCID
+   */
+  void DoNotifyDataInactivitySchedulerNb(uint16_t rnti);
+
+  void DoNotifyDataActivitySchedulerNb(uint16_t rnti);
   /**
    * RRC configuration update indication function
    *
@@ -1344,6 +1498,13 @@ private:
    * \param rnti the C-RNTI identiftying the user
    */
   void RemoveUe (uint16_t rnti);
+  /**
+   * remove a UE from the cell
+   *
+   * \param rnti the C-RNTI identiftying the user
+   */
+  void RemoveUeNb(uint16_t rnti,bool resumed);
+
 
 
   /** 
@@ -1462,6 +1623,14 @@ private:
    */
   void SendSystemInformation ();
 
+  /** 
+   * method used to periodically send System Information
+   * 
+   */
+  void SendSystemInformationNb ();
+
+  NbIotRrcSap::SystemInformationBlockType2Nb DoGetCurrentSystemInformationBlockType2Nb();
+
   Callback <void, Ptr<Packet> > m_forwardUpCallback;  ///< forward up callback function
 
   /// Interface to receive messages from neighbour eNodeB over the X2 interface.
@@ -1527,11 +1696,18 @@ private:
 
   /// The System Information Block Type 1 that is currently broadcasted over BCH.
   std::vector<LteRrcSap::SystemInformationBlockType1> m_sib1;
+  std::vector<NbIotRrcSap::SystemInformationBlockType1Nb> m_sib1Nb;
+  std::vector<NbIotRrcSap::SystemInformationBlockType2Nb> m_sib2Nb;
 
   /**
    * The `UeMap` attribute. List of UeManager by C-RNTI.
    */
-  std::map<uint16_t, Ptr<UeManager> > m_ueMap;
+  std::map<uint16_t, Ptr<UeManager> > m_ueActiveMap;
+  /**
+   * The `UeMap` attribute. List of UeManager by C-RNTI.
+   */
+
+  std::map<uint16_t, Ptr<UeManager> > m_ueResumedMap;
 
   /**
    * List of measurement configuration which are active in every UE attached to
@@ -1598,6 +1774,11 @@ private:
    */
   bool m_admitRrcConnectionRequest;
   /**
+   * The `AdmitRrcConnectionRequest` attribute. Whether to admit a connection
+   * request from a UE.
+   */
+  bool m_admitRrcConnectionResumeRequest;
+  /**
    * The `RsrpFilterCoefficient` attribute. Determines the strength of
    * smoothing effect induced by layer 3 filtering of RSRP in all attached UE.
    * If equals to 0, no layer 3 filtering is applicable.
@@ -1623,6 +1804,13 @@ private:
    * CONNECTION SETUP and transmission of RRC CONNECTION SETUP COMPLETE.
    */
   Time m_connectionSetupTimeoutDuration;
+  /**
+   * The `ConnectionSetupTimeoutDuration` attribute. After accepting connection
+   * request, if no RRC CONNECTION SETUP COMPLETE is received before this time,
+   * the UE context is destroyed. Must account for the UE's reception of RRC
+   * CONNECTION SETUP and transmission of RRC CONNECTION SETUP COMPLETE.
+   */
+  Time m_connectionResumeTimeoutDuration;
   /**
    * The `ConnectionRejectedTimeoutDuration` attribute. Time to wait between
    * sending a RRC CONNECTION REJECT and destroying the UE context.
@@ -1692,6 +1880,33 @@ private:
   bool m_carriersConfigured; ///< are carriers configured
 
   std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> m_componentCarrierPhyConf; ///< component carrier phy configuration
+
+  bool m_legacy_lte;
+
+  std::vector<uint64_t> m_resumeIds;
+  std::map<uint16_t,uint64_t> m_lastRntiResumeIdMap;
+  std::map<uint64_t, std::vector<std::pair<uint8_t,Ptr<Packet>>>> m_imsiSavedPacketsMap;
+  int32_t m_t3324;
+
+  int64_t m_t3412;
+
+  int32_t m_eDrxCycle;
+
+  uint16_t m_dataInactivityInterval;
+
+  bool m_enablePSM;
+
+  void GenerateSystemInformationBlockType1Nb();
+  void GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, ns3::Ptr<ns3::ComponentCarrierBaseStation>> cc);
+  bool m_edt;
+  std::string m_logdir;
+public:
+  uint64_t AttachSuspendedUeNb(uint32_t imsi);
+  void SetLogDir(std::string logfile);
+  void LogDataReception(uint32_t imsi);
+
+  NbIotRrcSap::SystemInformationBlockType1Nb GetSib1Nb();
+  NbIotRrcSap::SystemInformationNb GetSiNb();
 
 }; // end of `class LteEnbRrc`
 

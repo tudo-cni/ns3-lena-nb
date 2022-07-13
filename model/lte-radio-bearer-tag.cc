@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Marco Miozzo <marco.miozzo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -89,10 +92,16 @@ LteRadioBearerTag::SetLayer (uint8_t layer)
   m_layer = layer;
 }
 
+void
+LteRadioBearerTag::SetBSR (uint8_t bsrIndex)
+{
+  m_bsrIndex = bsrIndex;
+}
+
 uint32_t
 LteRadioBearerTag::GetSerializedSize (void) const
 {
-  return 4;
+  return 5; // PASCAL: Woher kommt die Zahl?
 }
 
 void
@@ -101,6 +110,7 @@ LteRadioBearerTag::Serialize (TagBuffer i) const
   i.WriteU16 (m_rnti);
   i.WriteU8 (m_lcid);
   i.WriteU8 (m_layer);
+  i.WriteU8 (m_bsrIndex);
 }
 
 void
@@ -109,6 +119,7 @@ LteRadioBearerTag::Deserialize (TagBuffer i)
   m_rnti = (uint16_t) i.ReadU16 ();
   m_lcid = (uint8_t) i.ReadU8 ();
   m_layer = (uint8_t) i.ReadU8 ();
+  m_bsrIndex = (uint8_t) i.ReadU8();
 }
 
 uint16_t
@@ -128,7 +139,11 @@ LteRadioBearerTag::GetLayer () const
 {
   return m_layer;
 }
-
+uint8_t
+LteRadioBearerTag::GetBsrIndex() const
+{
+  return m_bsrIndex;
+}
 void
 LteRadioBearerTag::Print (std::ostream &os) const
 {

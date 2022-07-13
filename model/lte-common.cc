@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
  * Author: Marco Miozzo <marco.miozzo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include "lte-common.h"
@@ -180,6 +183,8 @@ static const uint32_t BufferSizeLevelBsrTable[64] = {
 
 };
 
+
+
 uint32_t
 BufferSizeLevelBsr::BsrId2BufferSize (uint8_t val)
 {
@@ -207,6 +212,39 @@ BufferSizeLevelBsr::BufferSize2BsrId (uint32_t val)
   return (index);
 }
 
+/// Buffer size level DPR table
+static const uint32_t DataVolumeDPRTable[16] = {
+
+  0,10,14,19,26,36,49,67,91,125,171,234,321,768,1500,1500 
+
+};
+
+uint32_t
+DataVolumeDPR::DVId2BufferSize (uint8_t val)
+{
+  NS_ABORT_MSG_UNLESS (val < 16, "val = " << val << " is out of range");
+  return DataVolumeDPRTable[val];
+}
+
+uint8_t
+DataVolumeDPR::BufferSize2DVId (uint32_t val)
+{
+  int index = 0;
+  if (DataVolumeDPRTable[15] < val)
+    {
+      index = 15;
+    }
+  else
+    {
+      while (DataVolumeDPRTable[index] < val)
+        {
+          NS_ASSERT (index < 16);
+          index++;
+        }
+    }
+
+  return (index);
+}
 
 uint8_t
 TransmissionModesLayers::TxMode2LayerNum (uint8_t txMode)

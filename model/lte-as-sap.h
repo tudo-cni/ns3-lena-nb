@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by:	
+ * Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -91,6 +94,7 @@ public:
    */
   virtual void Disconnect () = 0;
 
+
 };
 
 
@@ -133,6 +137,9 @@ public:
    */
   virtual void RecvData (Ptr<Packet> packet) = 0;
 
+  virtual void NotifyMessage4()= 0;
+  
+  virtual void NotifyConnectionSuspended()= 0;
 };
 
 
@@ -242,6 +249,8 @@ public:
   virtual void NotifyConnectionFailed ();
   virtual void RecvData (Ptr<Packet> packet);
   virtual void NotifyConnectionReleased ();
+  virtual void NotifyMessage4();
+  virtual void NotifyConnectionSuspended();
 
 private:
   MemberLteAsSapUser ();
@@ -286,8 +295,18 @@ MemberLteAsSapUser<C>::NotifyConnectionReleased ()
 {
   m_owner->DoNotifyConnectionReleased ();
 }
-
-
+template <class C>
+void 
+MemberLteAsSapUser<C>::NotifyMessage4()
+{
+  m_owner->DoNotifyMessage4 ();
+}
+template <class C>
+void 
+MemberLteAsSapUser<C>::NotifyConnectionSuspended()
+{
+  m_owner->DoNotifyConnectionSuspended();
+}
 } // namespace ns3
 
 #endif // LTE_AS_SAP_H

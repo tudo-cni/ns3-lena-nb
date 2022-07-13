@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 CTTC
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,7 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
- * Modified by Marco Miozzo <mmiozzo@cttc.es> (add data and ctrl diversity)
+ * Modified by:
+ *			Marco Miozzo <mmiozzo@cttc.es> (add data and ctrl diversity)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_SPECTRUM_SIGNAL_PARAMETERS_H
@@ -123,6 +126,32 @@ struct LteSpectrumSignalParametersDlCtrlFrame : public SpectrumSignalParameters
   uint16_t cellId; ///< cell ID
   bool pss; ///< primary synchronization signal
 };
+
+struct NbiotSpectrumSignalParametersDlCtrlFrame : public SpectrumSignalParameters
+{
+  
+  // inherited from SpectrumSignalParameters
+  virtual Ptr<SpectrumSignalParameters> Copy ();
+  
+  /**
+  * default constructor
+  */
+  NbiotSpectrumSignalParametersDlCtrlFrame ();
+  
+  /**
+  * copy constructor
+  * \param p the LteSpectrumSignalParametersDlCtrlFrame to copy
+  */
+  NbiotSpectrumSignalParametersDlCtrlFrame (const NbiotSpectrumSignalParametersDlCtrlFrame& p);
+
+
+  std::list<Ptr<LteControlMessage> > ctrlMsgList; ///< control message list
+  
+  uint16_t cellId; ///< cell ID
+  bool npss; ///< primary synchronization signal
+  bool nsss; ///< secondary synchronization signal
+};
+
 
 
 

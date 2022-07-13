@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
  * Copyright (c) 2018 Fraunhofer ESK : RLF extensions
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,6 +22,7 @@
  *         Nicola Baldo <nbaldo@cttc.es>
  * Modified by:
  *          Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include <ns3/object-factory.h>
@@ -44,6 +46,7 @@
 #include <ns3/pointer.h>
 #include <ns3/boolean.h>
 #include <ns3/lte-ue-power-control.h>
+#include <ns3/build-profile.h>
 
 namespace ns3 {
 
@@ -88,7 +91,10 @@ public:
   virtual void SendMacPdu (Ptr<Packet> p);
   virtual void SendLteControlMessage (Ptr<LteControlMessage> msg);
   virtual void SendRachPreamble (uint32_t prachId, uint32_t raRnti);
+  virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset);
   virtual void NotifyConnectionSuccessful ();
+  virtual double GetRSRP();
+  virtual void SendHarqAckResponse(bool ack);
 
 private:
   LteUePhy* m_phy; ///< the Phy
@@ -116,13 +122,24 @@ UeMemberLteUePhySapProvider::SendRachPreamble (uint32_t prachId, uint32_t raRnti
 {
   m_phy->DoSendRachPreamble (prachId, raRnti);
 }
-
+void
+UeMemberLteUePhySapProvider::SendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset)
+{
+  m_phy->DoSendNprachPreamble (prachId, raRnti,subcarrieroffset);
+}
 void
 UeMemberLteUePhySapProvider::NotifyConnectionSuccessful ()
 {
   m_phy->DoNotifyConnectionSuccessful ();
 }
+double UeMemberLteUePhySapProvider::GetRSRP()
+{
+  return m_phy->DoGetRSRP();
+}
 
+void UeMemberLteUePhySapProvider::SendHarqAckResponse(bool ack){
+  m_phy->DoSendHarqResponse(ack);
+}
 
 ////////////////////////////////////////
 // LteUePhy methods
@@ -177,7 +194,7 @@ LteUePhy::LteUePhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
 
   NS_ASSERT_MSG (Simulator::Now ().GetNanoSeconds () == 0,
                  "Cannot create UE devices after simulation started");
-  Simulator::Schedule (m_ueMeasurementsFilterPeriod, &LteUePhy::ReportUeMeasurements, this);
+  m_measurementEvent = Simulator::Schedule (m_ueMeasurementsFilterPeriod, &LteUePhy::ReportUeMeasurements, this);
 
   DoReset ();
 }
@@ -208,7 +225,7 @@ LteUePhy::GetTypeId (void)
     .AddConstructor<LteUePhy> ()
     .AddAttribute ("TxPower",
                    "Transmission power in dBm",
-                   DoubleValue (10.0),
+                   DoubleValue (20.0),
                    MakeDoubleAccessor (&LteUePhy::SetTxPower, 
                                        &LteUePhy::GetTxPower),
                    MakeDoubleChecker<double> ())
@@ -220,7 +237,8 @@ LteUePhy::GetTypeId (void)
                    " ideal receiver with the same overall gain and bandwidth when the receivers "
                    " are connected to sources at the standard noise temperature T0.\" "
                    "In this model, we consider T0 = 290K.",
-                   DoubleValue (9.0),
+                   //DoubleValue (9.0),
+                   DoubleValue (0.0),
                    MakeDoubleAccessor (&LteUePhy::SetNoiseFigure, 
                                        &LteUePhy::GetNoiseFigure),
                    MakeDoubleChecker<double> ())
@@ -371,6 +389,7 @@ LteUePhy::DoInitialize ()
 
   //ScheduleWithContext() is needed here to set context for logs,
   //because Initialize() is called outside of Node::AddDevice().
+  wokeup = false;
 
   Simulator::ScheduleWithContext (nodeId, Seconds (0), &LteUePhy::SubframeIndication, this, 1, 1);
 
@@ -592,25 +611,28 @@ LteUePhy::GenerateCqiRsrpRsrq (const SpectrumValue& sinr)
                        << " ms. Last reported at : " << m_p10CqiLast.GetMilliSeconds() << " ms");
           Ptr<LteUeNetDevice> thisDevice = GetDevice ()->GetObject<LteUeNetDevice> ();
           Ptr<DlCqiLteControlMessage> msg = CreateDlCqiFeedbackMessage (sinr);
+          // ONLY FOR NOW
+          msg->rsrp = DoGetRSRP();
           if (msg)
             {
               DoSendLteControlMessage (msg);
             }
           m_p10CqiLast = Simulator::Now ();
         }
-      // check aperiodic high-layer configured subband CQI
-      if  (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
-        {
-          NS_LOG_DEBUG("Reporting A30 CQI at : " << Simulator::Now().GetMilliSeconds()
-                       << " ms. Last reported at : " << m_a30CqiLast.GetMilliSeconds() << " ms");
-          Ptr<LteUeNetDevice> thisDevice = GetDevice ()->GetObject<LteUeNetDevice> ();
-          Ptr<DlCqiLteControlMessage> msg = CreateDlCqiFeedbackMessage (sinr);
-          if (msg)
-            {
-              DoSendLteControlMessage (msg);
-            }
-          m_a30CqiLast = Simulator::Now ();
-        }
+      //Performance Improvements
+      //// check aperiodic high-layer configured subband CQI
+      //if  (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
+      //  {
+      //    NS_LOG_DEBUG("Reporting A30 CQI at : " << Simulator::Now().GetMilliSeconds()
+      //                 << " ms. Last reported at : " << m_a30CqiLast.GetMilliSeconds() << " ms");
+      //    Ptr<LteUeNetDevice> thisDevice = GetDevice ()->GetObject<LteUeNetDevice> ();
+      //    Ptr<DlCqiLteControlMessage> msg = CreateDlCqiFeedbackMessage (sinr);
+      //    if (msg)
+      //      {
+      //        DoSendLteControlMessage (msg);
+      //      }
+      //    m_a30CqiLast = Simulator::Now ();
+      //  }
     }
 
   // Generate PHY trace
@@ -852,86 +874,92 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
   // CREATE DlCqiLteControlMessage
   Ptr<DlCqiLteControlMessage> msg = Create<DlCqiLteControlMessage> ();
   CqiListElement_s dlcqi;
-  std::vector<int> cqi;
-  if (Simulator::Now () > m_p10CqiLast + m_p10CqiPeriodicity)
-    {
-      cqi = m_amc->CreateCqiFeedbacks (newSinr, m_dlBandwidth);
 
-      int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
-      int nbSubChannels = cqi.size ();
-      double cqiSum = 0.0;
-      int activeSubChannels = 0;
-      // average the CQIs of the different RBs
-      for (int i = 0; i < nbSubChannels; i++)
-        {
-          if (cqi.at (i) != -1)
-            {
-              cqiSum += cqi.at (i);
-              activeSubChannels++;
-            }
-          NS_LOG_DEBUG (this << " subch " << i << " cqi " <<  cqi.at (i));
-        }
-      dlcqi.m_rnti = m_rnti;
-      dlcqi.m_ri = 1; // not yet used
-      dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
-      NS_ASSERT_MSG (nLayer > 0, " nLayer negative");
-      NS_ASSERT_MSG (nLayer < 3, " nLayer limit is 2s");
-      for (int i = 0; i < nLayer; i++)
-        {
-          if (activeSubChannels > 0)
-            {
-              dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / activeSubChannels);
-            }
-          else
-            {
-              // approximate with the worst case -> CQI = 1
-              dlcqi.m_wbCqi.push_back (1);
-            }
-        }
-      //NS_LOG_DEBUG (this << " Generate P10 CQI feedback " << (uint16_t) cqiSum / activeSubChannels);
-      dlcqi.m_wbPmi = 0; // not yet used
-      // dl.cqi.m_sbMeasResult others CQI report modes: not yet implemented
-    }
-  else if (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
-    {
-      cqi = m_amc->CreateCqiFeedbacks (newSinr, GetRbgSize ());
-      int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
-      int nbSubChannels = cqi.size ();
-      int rbgSize = GetRbgSize ();
-      double cqiSum = 0.0;
-      int cqiNum = 0;
-      SbMeasResult_s rbgMeas;
-      //NS_LOG_DEBUG (this << " Create A30 CQI feedback, RBG " << rbgSize << " cqiNum " << nbSubChannels << " band "  << (uint16_t)m_dlBandwidth);
-      for (int i = 0; i < nbSubChannels; i++)
-        {
-          if (cqi.at (i) != -1)
-            {
-              cqiSum += cqi.at (i);
-            }
-          // else "nothing" no CQI is treated as CQI = 0 (worst case scenario)
-          cqiNum++;
-          if (cqiNum == rbgSize)
-            {
-              // average the CQIs of the different RBGs
-              //NS_LOG_DEBUG (this << " RBG CQI "  << (uint16_t) cqiSum / rbgSize);
-              HigherLayerSelected_s hlCqi;
-              hlCqi.m_sbPmi = 0; // not yet used
-              for (int i = 0; i < nLayer; i++)
-                {
-                  hlCqi.m_sbCqi.push_back ((uint16_t) cqiSum / rbgSize);
-                }
-              rbgMeas.m_higherLayerSelected.push_back (hlCqi);
-              cqiSum = 0.0;
-              cqiNum = 0;
-            }
-        }
-      dlcqi.m_rnti = m_rnti;
-      dlcqi.m_ri = 1; // not yet used
-      dlcqi.m_cqiType = CqiListElement_s::A30; // Aperidic CQI using PUSCH
-      //dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / nbSubChannels);
-      dlcqi.m_wbPmi = 0; // not yet used
-      dlcqi.m_sbMeasResult = rbgMeas;
-    }
+  dlcqi.m_rnti = m_rnti;
+  dlcqi.m_ri = 1; // not yet used
+  dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
+
+  //NB-Iot has no CqiTransfer, also huge performance gain
+  //std::vector<int> cqi;
+  //if (Simulator::Now () > m_p10CqiLast + m_p10CqiPeriodicity)
+  //  {
+  //    cqi = m_amc->CreateCqiFeedbacks (newSinr, m_dlBandwidth);
+
+  //    int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
+  //    int nbSubChannels = cqi.size ();
+  //    double cqiSum = 0.0;
+  //    int activeSubChannels = 0;
+  //    // average the CQIs of the different RBs
+  //    for (int i = 0; i < nbSubChannels; i++)
+  //      {
+  //        if (cqi.at (i) != -1)
+  //          {
+  //            cqiSum += cqi.at (i);
+  //            activeSubChannels++;
+  //          }
+  //        NS_LOG_DEBUG (this << " subch " << i << " cqi " <<  cqi.at (i));
+  //      }
+  //    dlcqi.m_rnti = m_rnti;
+  //    dlcqi.m_ri = 1; // not yet used
+  //    dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
+  //    NS_ASSERT_MSG (nLayer > 0, " nLayer negative");
+  //    NS_ASSERT_MSG (nLayer < 3, " nLayer limit is 2s");
+  //    for (int i = 0; i < nLayer; i++)
+  //      {
+  //        if (activeSubChannels > 0)
+  //          {
+  //            dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / activeSubChannels);
+  //          }
+  //        else
+  //          {
+  //            // approximate with the worst case -> CQI = 1
+  //            dlcqi.m_wbCqi.push_back (1);
+  //          }
+  //      }
+  //    //NS_LOG_DEBUG (this << " Generate P10 CQI feedback " << (uint16_t) cqiSum / activeSubChannels);
+  //    dlcqi.m_wbPmi = 0; // not yet used
+  //    // dl.cqi.m_sbMeasResult others CQI report modes: not yet implemented
+  //  }
+  //else if (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriodicity)
+  //  {
+  //    cqi = m_amc->CreateCqiFeedbacks (newSinr, GetRbgSize ());
+  //    int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
+  //    int nbSubChannels = cqi.size ();
+  //    int rbgSize = GetRbgSize ();
+  //    double cqiSum = 0.0;
+  //    int cqiNum = 0;
+  //    SbMeasResult_s rbgMeas;
+  //    //NS_LOG_DEBUG (this << " Create A30 CQI feedback, RBG " << rbgSize << " cqiNum " << nbSubChannels << " band "  << (uint16_t)m_dlBandwidth);
+  //    for (int i = 0; i < nbSubChannels; i++)
+  //      {
+  //        if (cqi.at (i) != -1)
+  //          {
+  //            cqiSum += cqi.at (i);
+  //          }
+  //        // else "nothing" no CQI is treated as CQI = 0 (worst case scenario)
+  //        cqiNum++;
+  //        if (cqiNum == rbgSize)
+  //          {
+  //            // average the CQIs of the different RBGs
+  //            //NS_LOG_DEBUG (this << " RBG CQI "  << (uint16_t) cqiSum / rbgSize);
+  //            HigherLayerSelected_s hlCqi;
+  //            hlCqi.m_sbPmi = 0; // not yet used
+  //            for (int i = 0; i < nLayer; i++)
+  //              {
+  //                hlCqi.m_sbCqi.push_back ((uint16_t) cqiSum / rbgSize);
+  //              }
+  //            rbgMeas.m_higherLayerSelected.push_back (hlCqi);
+  //            cqiSum = 0.0;
+  //            cqiNum = 0;
+  //          }
+  //      }
+  //    dlcqi.m_rnti = m_rnti;
+  //    dlcqi.m_ri = 1; // not yet used
+  //    dlcqi.m_cqiType = CqiListElement_s::A30; // Aperidic CQI using PUSCH
+  //    //dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / nbSubChannels);
+  //    dlcqi.m_wbPmi = 0; // not yet used
+  //    dlcqi.m_sbMeasResult = rbgMeas;
+  //  }
 
   msg->SetDlCqi (dlcqi);
   return msg;
@@ -1010,6 +1038,20 @@ LteUePhy::DoSendRachPreamble (uint32_t raPreambleId, uint32_t raRnti)
   m_controlMessagesQueue.at (0).push_back (msg);
 }
 
+void 
+LteUePhy::DoSendNprachPreamble (uint32_t raPreambleId, uint32_t raRnti, uint8_t subcarrieroffset)
+{
+  NS_LOG_FUNCTION (this << raPreambleId << "BLA");
+  // unlike other control messages, RACH preamble is sent ASAP
+   Ptr<NprachPreambleNbiotControlMessage> msg = Create<NprachPreambleNbiotControlMessage> ();
+   msg->SetRapId (raPreambleId);
+   msg->SetSubcarrierOffset(subcarrieroffset);
+   msg->SetRanti(raRnti);
+   m_raPreambleId = raPreambleId+subcarrieroffset;
+   m_raRnti = raRnti;
+   m_controlMessagesQueue.at (0).push_back (msg);
+}
+
 void
 LteUePhy::DoNotifyConnectionSuccessful ()
 {
@@ -1026,7 +1068,10 @@ LteUePhy::DoNotifyConnectionSuccessful ()
     }
 }
 
-
+double LteUePhy::DoGetRSRP(){
+  ;
+  return m_ueMeasurementsMap[m_cellId].rsrpSum/m_ueMeasurementsMap[m_cellId].rsrpNum;
+}
 
 void
 LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgList)
@@ -1171,6 +1216,127 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           Ptr<Sib1LteControlMessage> msg2 = DynamicCast<Sib1LteControlMessage> (msg);
           m_ueCphySapUser->RecvSystemInformationBlockType1 (m_cellId, msg2->GetSib1 ());
         }
+      else if (msg->GetMessageType () == LteControlMessage::MIB_NB)
+        {
+          NS_LOG_INFO ("received MIB_NB");
+          NS_ASSERT (m_cellId > 0);
+          Ptr<MibNbiotControlMessage> msg2 = DynamicCast<MibNbiotControlMessage> (msg);
+          // implement time for aquirering MIB-NB 
+          m_ueCphySapUser->RecvMasterInformationBlockNb (m_cellId, msg2->GetMib());
+        }
+      else if (msg->GetMessageType () == LteControlMessage::SIB1_NB)
+        {
+          NS_LOG_INFO ("received SIB1_NB");
+          NS_ASSERT (m_cellId > 0);
+          Ptr<Sib1NbiotControlMessage> msg2 = DynamicCast<Sib1NbiotControlMessage> (msg);
+          m_ueCphySapUser->RecvSystemInformationBlockType1Nb (m_cellId, msg2->GetSib1());
+        }
+      else if (msg->GetMessageType () == LteControlMessage::DL_DCI_NB)
+        {
+          Ptr<DlDciN1NbiotControlMessage> msg2 = DynamicCast<DlDciN1NbiotControlMessage> (msg);
+
+          NbIotRrcSap::DciN1 dci = msg2->GetDci ();
+          if (msg2->GetRnti() != m_rnti)
+            {
+              // DCI not for me
+              continue;
+            }
+
+          // send TB info to LteSpectrumPhy
+          //NS_LOG_DEBUG (this << " UE " << m_rnti << " DL-DCI " << dci.m_rnti << " bitmap "  << dci.m_rbBitmap);
+          /*
+          Calculate corret TBS
+          */
+          
+          int currentsubframe =  10*(m_frameNo-1)+(m_subframeNo-1);
+          int subframes_to_wait = *(dci.npdschOpportunity.end()-1)-currentsubframe;
+          m_uePhySapUser->NotifyAboutHarqOpportunity(dci.npuschOpportunity);
+          //m_downlinkSpectrumPhy->AddExpectedTb (msg2->GetRnti(),dci.NDI, 192, 0, std::vector<int>({0}), 0, 0, 0, true /* DL */);
+          //AddNbiotExpectedTb(msg2->GetRnti(),dci.NDI, 192, 0, std::vector<int>({0}), 0, 0, 0, true /* DL */);
+
+          Simulator::Schedule (MilliSeconds(subframes_to_wait), &LteUePhy::AddNbiotExpectedTb, this);
+//                                      (short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool), 
+ //                      ns3::LteUePhy*, unsigned int, bool&, int, int, std::vector<int>, int, int, int, bool)’
+//                       short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool
+//       ns3::LteUePhy*, short unsigned int, unsigned char, short unsigned int, unsigned char, std::vector<int>, unsigned char, unsigned char, unsigned char, bool
+
+          SetSubChannelsForReception (std::vector<int>({0}));
+
+          m_uePhySapUser->ReceiveLteControlMessage (msg);
+        }
+      else if (msg->GetMessageType () == LteControlMessage::RAR_NB)
+        {
+          Ptr<RarNbiotControlMessage> rarMsg = DynamicCast<RarNbiotControlMessage> (msg);
+          if (rarMsg->GetRaRnti () == m_raRnti)
+            {
+
+              for (std::list<NbIotRrcSap::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
+                {
+                  if (it->rapId != m_raPreambleId)
+                    {
+                      // UL grant not for me
+                      continue;
+                    }
+                  else
+                    {
+
+                      //NS_BUILD_DEBUG(std::cout << "Received My RAR at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
+                      NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
+                      // set the uplink bandwidth according to the UL grant
+                      //std::vector <int> ulRb;
+                      //for (int i = 0; i < it->rarPayload.m_grant.m_rbLen; i++)
+                      //  {
+                      //    ulRb.push_back (i + it->rarPayload.m_grant.m_rbStart);
+                      //  }
+                      Ptr<DlCqiLteControlMessage> report = Create<DlCqiLteControlMessage>();
+                      CqiListElement_s dlcqi;
+
+                      dlcqi.m_rnti = it->rarPayload.cellRnti;
+                      dlcqi.m_ri = 1; // not yet used
+                      dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
+
+                      report->SetDlCqi (dlcqi);
+                      //std::cout << DoGetRSRP() << std::endl;
+                      report->rsrp = DoGetRSRP();
+                      DoSendLteControlMessage (report);
+                      //Simulator::Schedule() QueueSubChannelsForTransmission (std::vector<int>{0});
+                      // pass the info to the MACo
+                      int subframes = *(it->rarPayload.ulGrant.subframes.second.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
+                      int subcarrier =it->rarPayload.ulGrant.subframes.first;
+                      Simulator::Schedule (MilliSeconds(subframes), &LteUePhy::QueueSubChannelsForTransmission, this, std::vector<int>{subcarrier});
+                      m_uePhySapUser->ReceiveLteControlMessage (msg);
+                      // reset RACH variables with out of range values
+                      m_raPreambleId = 255;
+                      m_raRnti = 11;
+                    }
+                }
+            }
+        }
+      else if (msg->GetMessageType () == LteControlMessage::UL_DCI_NB)
+        {
+          Ptr<UlDciN0NbiotControlMessage> dci = DynamicCast<UlDciN0NbiotControlMessage> (msg);
+          if (dci->GetRnti() == m_rnti)
+            {
+              //NS_BUILD_DEBUG(std::cout << "Received My NPUSCH Schedule at " << 10*(m_frameNo-1) +(m_subframeNo-1) << std::endl);
+              NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
+              // set the uplink bandwidth according to the UL grant
+              //std::vector <int> ulRb;
+              //for (int i = 0; i < it->rarPayload.m_grant.m_rbLen; i++)
+              //  {
+              //    ulRb.push_back (i + it->rarPayload.m_grant.m_rbStart);
+              //  }
+
+              //Simulator::Schedule() QueueSubChannelsForTransmission (std::vector<int>{0});
+              // pass the info to the MACo
+              int subframes = *(dci->GetDci().npuschOpportunity[0].second.end()-1)-(10*(m_frameNo-1)+ m_subframeNo-1);
+              int subcarrier =dci->GetDci().npuschOpportunity[0].first;
+              Simulator::Schedule (MilliSeconds(subframes), &LteUePhy::QueueSubChannelsForTransmission, this, std::vector<int>{subcarrier});
+              m_uePhySapUser->ReceiveLteControlMessage (msg);
+              // reset RACH variables with out of range values
+                    
+                
+            }
+        }
       else
         {
           // pass the message to UE-MAC
@@ -1181,7 +1347,17 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
 
 
 }
+void LteUePhy::AddNbiotExpectedTb(){
+          //m_downlinkSpectrumPhy->AddExpectedTb (rnti,ndi, size, mcs, map, layer, harqId, rv, downlink/* DL */);
+          m_downlinkSpectrumPhy->AddExpectedTb (m_rnti,1, 192, 0, std::vector<int>{0}, 0, 1, 0, true/* DL */);
+}
 
+void LteUePhy::DoSendHarqResponse(bool ack){
+  Ptr<DlHarqFeedbackNbiotControlMessage> msg = Create<DlHarqFeedbackNbiotControlMessage>();
+  msg->SetAcknowledgement(ack);
+  msg->SetRnti(m_rnti);
+  m_controlMessagesQueue.at(0).push_back(msg);
+}
 
 void
 LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
@@ -1198,13 +1374,61 @@ LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
       sum += powerTxW;
       nRB++;
     }
-
   // measure instantaneous RSRP now
   double rsrp_dBm = 10 * log10 (1000 * (sum / (double)nRB));
   NS_LOG_INFO (this << " PSS RNTI " << m_rnti << " cellId " << m_cellId
                     << " has RSRP " << rsrp_dBm << " and RBnum " << nRB);
   // note that m_pssReceptionThreshold does not apply here
+  // store measurements
+  std::map <uint16_t, UeMeasurementsElement>::iterator itMeasMap = m_ueMeasurementsMap.find (cellId);
+  if (itMeasMap == m_ueMeasurementsMap.end ())
+    {
+      // insert new entry
+      UeMeasurementsElement newEl;
+      newEl.rsrpSum = rsrp_dBm;
+      newEl.rsrpNum = 1;
+      newEl.rsrqSum = 0;
+      newEl.rsrqNum = 0;
+      m_ueMeasurementsMap.insert (std::pair <uint16_t, UeMeasurementsElement> (cellId, newEl));
+    }
+  else
+    {
+      (*itMeasMap).second.rsrpSum += rsrp_dBm;
+      (*itMeasMap).second.rsrpNum++;
+    }
 
+  /*
+   * Collect the PSS for later processing in GenerateCtrlCqiReport()
+   * (to be called from ChunkProcessor after RX is finished).
+   */
+  m_pssReceived = true;
+  //PssElement el;
+  //el.cellId = cellId;
+  //el.pssPsdSum = sum;
+  //el.nRB = nRB;
+  //m_pssList.push_back (el);
+
+} // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
+void
+LteUePhy::ReceiveNpss (uint16_t cellId, Ptr<SpectrumValue> p)
+{
+  NS_LOG_FUNCTION (this << cellId << (*p));
+
+  double sum = 0.0;
+  uint16_t nRB = 0;
+  Values::const_iterator itPi;
+  for (itPi = p->ConstValuesBegin (); itPi != p->ConstValuesEnd (); itPi++)
+    {
+      // convert PSD [W/Hz] to linear power [W] for the single RE
+      double powerTxW = ((*itPi) * 180000.0) / 12.0;
+      sum += powerTxW;
+      nRB++;
+    }
+  // measure instantaneous RSRP now
+  double rsrp_dBm = 10 * log10 (1000 * (sum / (double)nRB));
+  NS_LOG_INFO (this << " PSS RNTI " << m_rnti << " cellId " << m_cellId
+                    << " has RSRP " << rsrp_dBm << " and RBnum " << nRB);
+  // note that m_pssReceptionThreshold does not apply here
   // store measurements
   std::map <uint16_t, UeMeasurementsElement>::iterator itMeasMap = m_ueMeasurementsMap.find (cellId);
   if (itMeasMap == m_ueMeasurementsMap.end ())
@@ -1229,12 +1453,65 @@ LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
    */
   m_pssReceived = true;
   PssElement el;
-  el.cellId = cellId;
-  el.pssPsdSum = sum;
-  el.nRB = nRB;
-  m_pssList.push_back (el);
+  //el.cellId = cellId;
+  //el.pssPsdSum = sum;
+  //el.nRB = nRB;
+  //m_pssList.push_back (el);
 
 } // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
+
+
+void
+LteUePhy::ReceiveNsss (uint16_t cellId, Ptr<SpectrumValue> p)
+{
+  NS_LOG_FUNCTION (this << cellId << (*p));
+
+  double sum = 0.0;
+  uint16_t nRB = 0;
+  Values::const_iterator itPi;
+  for (itPi = p->ConstValuesBegin (); itPi != p->ConstValuesEnd (); itPi++)
+    {
+      // convert PSD [W/Hz] to linear power [W] for the single RE
+      double powerTxW = ((*itPi) * 180000.0) / 12.0;
+      sum += powerTxW;
+      nRB++;
+    }
+  // measure instantaneous RSRP now
+  double rsrp_dBm = 10 * log10 (1000 * (sum / (double)nRB));
+  NS_LOG_INFO (this << " PSS RNTI " << m_rnti << " cellId " << m_cellId
+                    << " has RSRP " << rsrp_dBm << " and RBnum " << nRB);
+  // note that m_pssReceptionThreshold does not apply here
+  // store measurements
+  std::map <uint16_t, UeMeasurementsElement>::iterator itMeasMap = m_ueMeasurementsMap.find (cellId);
+  if (itMeasMap == m_ueMeasurementsMap.end ())
+    {
+      // insert new entry
+      UeMeasurementsElement newEl;
+      newEl.rsrpSum = rsrp_dBm;
+      newEl.rsrpNum = 1;
+      newEl.rsrqSum = 0;
+      newEl.rsrqNum = 0;
+      m_ueMeasurementsMap.insert (std::pair <uint16_t, UeMeasurementsElement> (cellId, newEl));
+    }
+  else
+    {
+      (*itMeasMap).second.rsrpSum += rsrp_dBm;
+      (*itMeasMap).second.rsrpNum++;
+    }
+
+  /*
+   * Collect the PSS for later processing in GenerateCtrlCqiReport()
+   * (to be called from ChunkProcessor after RX is finished).
+   */
+  m_pssReceived = true;
+  PssElement el;
+  //el.cellId = cellId;
+  //el.pssPsdSum = sum;
+  //el.nRB = nRB;
+  //m_pssList.push_back (el);
+
+} // end of void LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
+
 
 
 void
@@ -1245,9 +1522,9 @@ LteUePhy::QueueSubChannelsForTransmission (std::vector <int> rbMap)
 
 
 void
-LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
-{
+LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo){
   NS_LOG_FUNCTION (this << frameNo << subframeNo);
+  m_frameNo = frameNo;
 
   NS_ASSERT_MSG (frameNo > 0, "the SRS index check code assumes that frameNo starts at 1");
 
@@ -1331,7 +1608,13 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
     }
 
   // schedule next subframe indication
-  Simulator::Schedule (Seconds (GetTti ()), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+  if(wokeup){
+    m_subIndEvent = Simulator::Schedule (Seconds (GetTti ())+NanoSeconds(1), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+    wokeup = false;
+  }else{
+
+    m_subIndEvent = Simulator::Schedule (Seconds (GetTti ()), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+  }
 }
 
 
@@ -1356,6 +1639,22 @@ LteUePhy::SendSrs ()
   m_uplinkSpectrumPhy->StartTxUlSrsFrame ();
 }
 
+void LteUePhy::DoResetUlConfigured(){
+  m_ulConfigured = false;
+  m_subIndEvent.Cancel();
+  m_measurementEvent.Cancel();
+
+}
+
+void LteUePhy::DoStartUp(){
+  m_ulConfigured = true;
+  uint64_t microseconds2wait = 1000-(Simulator::Now().GetMicroSeconds()%1000);
+  uint64_t frameNo = (Simulator::Now().GetMilliSeconds()/10)+1;
+  uint64_t subframeNo = (Simulator::Now().GetMilliSeconds()%10)+1;
+  m_subIndEvent = Simulator::Schedule (MicroSeconds(microseconds2wait)-NanoSeconds(1), &LteUePhy::SubframeIndication, this, frameNo, subframeNo);
+  m_measurementEvent = Simulator::Schedule (m_ueMeasurementsFilterPeriod, &LteUePhy::ReportUeMeasurements, this);
+  wokeup = true;
+}
 
 void
 LteUePhy::DoReset ()
@@ -1449,7 +1748,7 @@ LteUePhy::DoSetDlBandwidth (uint16_t dlBandwidth)
   NS_LOG_FUNCTION (this << (uint32_t) dlBandwidth);
   if (m_dlBandwidth != dlBandwidth or !m_dlConfigured)
     {
-      m_dlBandwidth = dlBandwidth;
+      m_dlBandwidth = 1;
 
       static const int Type0AllocationRbg[4] = {
         10,     // RGB size 1
@@ -1466,7 +1765,7 @@ LteUePhy::DoSetDlBandwidth (uint16_t dlBandwidth)
             }
         }
 
-      m_noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_dlEarfcn, m_dlBandwidth, m_noiseFigure);
+      m_noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_dlEarfcn, 1, m_noiseFigure);
       m_downlinkSpectrumPhy->SetNoisePowerSpectralDensity (m_noisePsd);
       m_downlinkSpectrumPhy->GetChannel ()->AddRx (m_downlinkSpectrumPhy);
     }
@@ -1513,7 +1812,7 @@ LteUePhy::DoSetSrsConfigurationIndex (uint16_t srcCi)
   NS_LOG_FUNCTION (this << srcCi);
   m_srsPeriodicity = GetSrsPeriodicity (srcCi);
   m_srsSubframeOffset = GetSrsSubframeOffset (srcCi);
-  m_srsConfigured = true;
+  //m_srsConfigured = true;
 
   // a guard time is needed for the case where the SRS periodicity is changed dynamically at run time
   // if we use a static one, we can have a 0ms guard time

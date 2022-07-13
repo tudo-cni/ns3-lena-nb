@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011,2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Marco Miozzo  <marco.miozzo@cttc.es>
  *         Nicola Baldo <nbaldo@cttc.es>
+ * Modified by:	
+ * Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 #ifndef EPS_BEARER_TAG_H
 #define EPS_BEARER_TAG_H
@@ -54,7 +57,7 @@ public:
    * @param rnti the value of the RNTI to set
    * @param bid the value of the Bearer Id to set
    */
-  EpsBearerTag (uint16_t  rnti, uint8_t bid);
+  EpsBearerTag (uint16_t  rnti, uint8_t bid, uint64_t imsi);
   
   /**
    * Set the RNTI to the given value.
@@ -69,6 +72,13 @@ public:
    * @param bid the value of the Bearer Id to set
    */
   void SetBid (uint8_t bid);
+
+  /**
+   * Set the bearer id to the given value.
+   *
+   * @param bid the value of the Bearer Id to set
+   */
+  void SetImsi(uint64_t imsi);
 
   virtual void Serialize (TagBuffer i) const;
   virtual void Deserialize (TagBuffer i);
@@ -86,9 +96,17 @@ public:
    */
   uint8_t GetBid (void) const;
 
+  /**
+   * Get Bearer Id function
+   * \returns the Bearer Id
+   */
+  uint64_t GetImsi (void) const;
+
+
 private:
   uint16_t m_rnti; ///< RNTI value
   uint8_t m_bid; ///< Bearer Id value
+  uint64_t m_imsi; ///< Bearer Id value
 
 };
 

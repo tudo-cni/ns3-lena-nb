@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,6 +20,8 @@
  *         Giuseppe Piro <g.piro@poliba.it> (parts of the PHY & channel  creation & configuration copied from the GSoC 2011 code)
  * Modified by: Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *              Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation) 
+ *              Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *              Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #include "lte-helper.h"
@@ -27,7 +30,6 @@
 #include <ns3/abort.h>
 #include <ns3/pointer.h>
 #include <ns3/lte-enb-rrc.h>
-#include <ns3/epc-ue-nas.h>
 #include <ns3/epc-enb-application.h>
 #include <ns3/lte-ue-rrc.h>
 #include <ns3/lte-ue-mac.h>
@@ -65,7 +67,7 @@
 #include <ns3/epc-x2.h>
 #include <ns3/object-map.h>
 #include <ns3/object-factory.h>
-
+//#include <ns3/epc-ue-nas.h>
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteHelper");
@@ -152,7 +154,7 @@ TypeId LteHelper::GetTypeId (void)
     .AddAttribute ("UseIdealRrc",
                    "If true, LteRrcProtocolIdeal will be used for RRC signaling. "
                    "If false, LteRrcProtocolReal will be used.",
-                   BooleanValue (true), 
+                   BooleanValue (false), 
                    MakeBooleanAccessor (&LteHelper::m_useIdealRrc),
                    MakeBooleanChecker ())
     .AddAttribute ("AnrEnabled",
@@ -557,6 +559,9 @@ LteHelper::InstallSingleEnbDevice (Ptr<Node> n)
 
       Ptr<LteChunkProcessor> pData = Create<LteChunkProcessor> ();
       pData->AddCallback (MakeCallback (&LteEnbPhy::GenerateDataCqiReport, phy));
+
+      //Change for NB-Iot
+      //pData->AddCallback (MakeCallback (&LteEnbPhy::GenerateCqiReportNb, phy));
       pData->AddCallback (MakeCallback (&LteSpectrumPhy::UpdateSinrPerceived, ulPhy));
       ulPhy->AddDataSinrChunkProcessor (pData);   // for evaluating PUSCH UL-CQI
 
@@ -937,6 +942,8 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
       ccPhy->GetDlSpectrumPhy ()->SetLtePhyRxDataEndOkCallback (MakeCallback (&LteUePhy::PhyPduReceived, ccPhy));
       ccPhy->GetDlSpectrumPhy ()->SetLtePhyRxCtrlEndOkCallback (MakeCallback (&LteUePhy::ReceiveLteControlMessageList, ccPhy));
       ccPhy->GetDlSpectrumPhy ()->SetLtePhyRxPssCallback (MakeCallback (&LteUePhy::ReceivePss, ccPhy));
+      ccPhy->GetDlSpectrumPhy ()->SetNbiotPhyRxNpssCallback (MakeCallback (&LteUePhy::ReceiveNpss, ccPhy)); // Nbiot 
+      ccPhy->GetDlSpectrumPhy ()->SetNbiotPhyRxNsssCallback (MakeCallback (&LteUePhy::ReceiveNsss, ccPhy)); // Nbiot
       ccPhy->GetDlSpectrumPhy ()->SetLtePhyDlHarqFeedbackCallback (MakeCallback (&LteUePhy::EnqueueDlHarqFeedback, ccPhy));
     }
 
@@ -987,16 +994,52 @@ LteHelper::Attach (Ptr<NetDevice> ueDevice)
   Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas ();
   NS_ASSERT (ueNas != 0);
   uint32_t dlEarfcn = ueLteDevice->GetDlEarfcn ();
-  ueNas->StartCellSelection (dlEarfcn);
+  //ueNas->StartCellSelection (dlEarfcn);
 
   // instruct UE to immediately enter CONNECTED mode after camping
-  ueNas->Connect ();
+  //ueNas->Connect ();
+  Simulator::Schedule(MilliSeconds(8000), &EpcUeNas::StartCellSelection, ueNas, dlEarfcn);
+  Simulator::Schedule(MilliSeconds(8000), &EpcUeNas::ConnectSchedule, ueNas);
 
   // activate default EPS bearer
   m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (),
                                   EpcTft::Default (),
                                   EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
 }
+void
+LteHelper::AttachAtTimeNb (Ptr<NetDevice> ueDevice, uint64_t delay)
+{
+  NS_LOG_FUNCTION (this);
+
+  if (m_epcHelper == 0)
+    {
+      NS_FATAL_ERROR ("This function is not valid without properly configured EPC");
+    }
+
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  if (ueLteDevice == 0)
+    {
+      NS_FATAL_ERROR ("The passed NetDevice must be an LteUeNetDevice");
+    }
+
+  // initiate cell selection
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas ();
+  NS_ASSERT (ueNas != 0);
+  uint32_t dlEarfcn = ueLteDevice->GetDlEarfcn ();
+  //ueNas->StartCellSelection (dlEarfcn);
+
+  // instruct UE to immediately enter CONNECTED mode after camping
+  //ueNas->Connect ();
+  Simulator::Schedule(MilliSeconds(delay), &EpcUeNas::StartCellSelection, ueNas, dlEarfcn);
+  //Simulator::Schedule(MilliSeconds(delay), &EpcUeNas::ConnectSchedule, ueNas);
+
+
+  // activate default EPS bearer
+  m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (),
+                                  EpcTft::Default (),
+                                  EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+}
+
 
 void
 LteHelper::Attach (NetDeviceContainer ueDevices, Ptr<NetDevice> enbDevice)
@@ -1031,6 +1074,75 @@ LteHelper::Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
     {
       ueDevice->GetObject<LteUeNetDevice> ()->SetTargetEnb (enbDevice->GetObject<LteEnbNetDevice> ());
     }
+}
+
+void
+LteHelper::AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
+{
+  NS_LOG_FUNCTION (this);
+  //enbRrc->SetCellId (enbDevice->GetObject<LteEnbNetDevice> ()->GetCellId ());
+
+  if (m_epcHelper == 0)
+    {
+      NS_FATAL_ERROR ("This function is not valid without properly configured EPC");
+    }
+
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+  if (ueLteDevice == 0)
+    {
+      NS_FATAL_ERROR ("The passed NetDevice must be an LteUeNetDevice");
+    }
+// activate default EPS bearer
+  m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (),
+                                  EpcTft::Default (),
+                                  EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
+  Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+  Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
+
+  uint64_t resumeId = enbRrc->AttachSuspendedUeNb(ueRrc->GetImsi());
+  Simulator::Schedule(MilliSeconds(20), &LteHelper::AttachSuspend, this, ueDevice, enbDevice, resumeId);
+}
+
+void LteHelper::AttachSuspend(Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, uint64_t resumeId){
+  // initiate cell selection
+
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas (); 
+  Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
+  Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
+  NbIotRrcSap::SystemInformationBlockType1Nb sib1Nb = enbRrc->GetSib1Nb();
+  NbIotRrcSap::SystemInformationNb siNb = enbRrc->GetSiNb();
+  LteRrcSap::RadioResourceConfigDedicated rrcd = enbRrc->GetUeManagerbyResumeId(resumeId)->GetRadioResourceConfigForHandoverPreparationInfo(); // ShortCut to get RadioResourceConfig
+
+  ueRrc->AttachSuspendedNb(resumeId,enbLteDevice->GetCellId (),enbLteDevice->GetDlEarfcn (), rrcd, sib1Nb, siNb);
+
+}
+
+void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){
+  Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas();
+  ueNas->Connect();
+  //Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
+  //Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
+
+  //Ptr<EpcUeNas> ueNas = ueLteDevice->GetNas ();
+  //ueNas->Connect (enbLteDevice->GetCellId (), enbLteDevice->GetDlEarfcn ());
+
+  //if (m_epcHelper != 0)
+  //  {
+  //    // activate default EPS bearer
+  //    m_epcHelper->ActivateEpsBearer (ueDevice, ueLteDevice->GetImsi (), EpcTft::Default (), EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+  //  }
+
+  //// tricks needed for the simplified LTE-only simulations 
+  //if (m_epcHelper == 0)
+  //  {
+  // ueDevice->GetObject<LteUeNetDevice> ()->SetTargetEnb (enbDevice->GetObject<LteEnbNetDevice> ());
+  //  }
 }
 
 void
@@ -1181,7 +1293,7 @@ DrbActivator::ActivateDrb (uint64_t imsi, uint16_t cellId, uint16_t rnti)
       Ptr<LteEnbNetDevice> enbLteDevice = m_ueDevice->GetObject<LteUeNetDevice> ()->GetTargetEnb ();
       Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetObject<LteEnbNetDevice> ()->GetRrc ();
       NS_ASSERT (ueRrc->GetCellId () == enbLteDevice->GetCellId ());
-      Ptr<UeManager> ueManager = enbRrc->GetUeManager (rnti);
+      Ptr<UeManager> ueManager = enbRrc->GetUeManagerbyRnti (rnti);
       NS_ASSERT (ueManager->GetState () == UeManager::CONNECTED_NORMALLY
                  || ueManager->GetState () == UeManager::CONNECTION_RECONFIGURATION);
       EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters params;
@@ -1587,6 +1699,17 @@ Ptr<RadioBearerStatsCalculator>
 LteHelper::GetPdcpStats (void)
 {
   return m_pdcpStats;
+}
+
+void 
+LteHelper::EnableRrcLogging(){
+  m_rrc_logging = true;
+}
+
+void 
+LteHelper::SetLogDir(std::string dirname){
+  m_logdir = dirname;
+  //rrc->GetUeRrc->SetLogDir(m_logdir)
 }
 
 } // namespace ns3

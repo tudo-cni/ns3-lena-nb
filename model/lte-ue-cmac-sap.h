@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_UE_CMAC_SAP_H
@@ -25,13 +28,14 @@
 #include <ns3/ff-mac-common.h>
 #include <ns3/eps-bearer.h>
 #include <ns3/lte-common.h>
+#include "nb-iot-rrc-sap.h"
+#include "nb-iot-energy.h"
 
 namespace ns3 {
 
 
 
 class LteMacSapUser;
-
 /**
  * Service Access Point (SAP) offered by the UE MAC to the UE RRC
  *
@@ -50,21 +54,31 @@ public:
     uint8_t raResponseWindowSize; ///< RA response window size
     uint8_t connEstFailCount; ///< the counter value for T300 timer expiration
   };
-  
+      /// RachConfig structure
   /** 
    * Configure RACH function 
    *
    * \param rc the RACH config
    */
   virtual void ConfigureRach (RachConfig rc) = 0;
-
+/** 
+   * Configure RACH function 
+   *
+   * \param rc the RACH config
+   */
+  virtual void ConfigureRadioResourceConfig(NbIotRrcSap::RadioResourceConfigCommonNb rc) = 0;
   /** 
    * tell the MAC to start a contention-based random access procedure,
    * e.g., to perform RRC connection establishment 
    * 
    */
   virtual void StartContentionBasedRandomAccessProcedure () = 0;
-
+/** 
+   * tell the MAC to start a contention-based random access procedure,
+   * e.g., to perform RRC connection establishment 
+   * 
+   */
+  virtual void StartRandomAccessProcedureNb (bool edt) = 0;
   /** 
    * tell the MAC to start a non-contention-based random access
    * procedure, e.g., as a consequence of handover
@@ -125,6 +139,16 @@ public:
    */
   virtual void SetImsi (uint64_t imsi) = 0;
 
+  /**
+   * \brief A method call by UE RRC to communicate the IMSI to the UE MAC
+   * \param imsi the IMSI of the UE
+   */
+  virtual void NotifyEdrx() = 0;
+  virtual void NotifyPsm() = 0;
+
+  virtual void SetMsg5Buffer(uint32_t buffersize) = 0;
+
+  virtual NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel GetCoverageEnhancementLevel() =0;
 };
 
 
@@ -151,13 +175,20 @@ public:
    * Notify the RRC that the MAC Random Access procedure completed successfully
    * 
    */
-  virtual void NotifyRandomAccessSuccessful () = 0;
+  virtual void NotifyRandomAccessSuccessful (bool edt) = 0;
 
   /** 
    * Notify the RRC that the MAC Random Access procedure failed
    * 
    */
   virtual void NotifyRandomAccessFailed () = 0;
+
+  virtual void NotifyEnergyState(NbiotEnergyModel::PowerState state)= 0;
+
+  virtual NbiotEnergyModel::PowerState GetEnergyState() = 0;
+
+  virtual bool GetEdtEnabled() = 0;
+
 };
 
 

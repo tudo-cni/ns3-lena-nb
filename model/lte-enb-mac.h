@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,6 +21,8 @@
  * Modified by:
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
+ *          Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *          Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_ENB_MAC_H
@@ -39,6 +42,8 @@
 #include <ns3/packet.h>
 #include <ns3/packet-burst.h>
 #include <ns3/lte-ccm-mac-sap.h>
+#include "nb-iot-rrc-sap.h"
+#include "nb-iot-scheduler.h"
 
 namespace ns3 {
 
@@ -229,6 +234,16 @@ private:
   */
   void DoRemoveUe (uint16_t rnti);
   /**
+  * \brief Remove UE function
+  * \param rnti the RNTI
+  */
+  void DoMoveUeToResume(uint16_t rnti, uint64_t resumeId);
+  /**
+  * \brief Remove UE function
+  * \param rnti the RNTI
+  */
+  void DoResumeUe(uint16_t rnti, uint64_t resumeId);
+  /**
   * \brief Add LC function
   * \param lcinfo the LC info
   * \param msu the LTE MAC SAP user
@@ -256,6 +271,11 @@ private:
   */
   LteEnbCmacSapProvider::RachConfig DoGetRachConfig ();
   /**
+  * \brief Get RACH configuration function
+  * \returns LteEnbCmacSapProvider::RachConfig
+  */
+  LteEnbCmacSapProvider::RachConfigNb DoGetRachConfigNb ();
+  /**
   * \brief Allocate NC RA preamble function
   * \param rnti the RNTI
   * \returns LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue
@@ -273,6 +293,7 @@ private:
   * \param params LteMacSapProvider::ReportBufferStatusParameters
   */
   void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+
 
 
   // forwarded from FfMacCchedSapUser
@@ -331,12 +352,12 @@ private:
   * \param subframeNo subframe number
   */
   void DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo);
-  /**
+    /**
   * \brief Receive RACH Preamble function
   * \param prachId PRACH ID number
   */
   void DoReceiveRachPreamble (uint8_t prachId);
-
+  
   // forwarded by LteCcmMacSapProvider
   /**
    * Report MAC CE to scheduler
@@ -376,6 +397,7 @@ private:
 
   /// RNTI, LC ID, SAP of the RLC instance
   std::map <uint16_t, std::map<uint8_t, LteMacSapUser*> > m_rlcAttached;
+  std::map <uint64_t, std::map<uint8_t, LteMacSapUser*> > m_resumeRlcAttached;
 
   std::vector <CqiListElement_s> m_dlCqiReceived; ///< DL-CQI received
   std::vector <FfMacSchedSapProvider::SchedUlCqiInfoReqParameters> m_ulCqiReceived; ///< UL-CQI received
@@ -411,6 +433,7 @@ private:
   // Sap For ComponentCarrierManager 'Uplink case'
   LteCcmMacSapProvider* m_ccmMacSapProvider; ///< CCM MAC SAP provider
   LteCcmMacSapUser* m_ccmMacSapUser; ///< CCM MAC SAP user
+
   /**
    * frame number of current subframe indication
    */
@@ -443,6 +466,13 @@ private:
   uint8_t m_raResponseWindowSize; ///< RA response window size
   uint8_t m_connEstFailCount; ///< the counter value for T300 timer expiration
 
+
+  uint8_t m_preambleTransMaxCe;
+  uint8_t m_powerRampingStep;
+  uint8_t m_preambleInitialReceivedTargetPower;
+  NbIotRrcSap::RachInfoList m_rachInfoList;
+  uint8_t m_connEstFailOffset;
+
   /**
    * info associated with a preamble allocated for non-contention based RA
    * 
@@ -463,11 +493,79 @@ private:
   std::map<uint8_t, uint32_t> m_receivedRachPreambleCount; ///< received RACH preamble count
 
   std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
-
   /// component carrier Id used to address sap
   uint8_t m_componentCarrierId;
- 
-};
+  
+
+  /*
+  Nb-Iot Specific methods and members
+  */
+
+  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
+
+  /**
+  * \brief Subrame Indication function
+  * \param frameNo frame number
+  * \param subframeNo subframe number
+  */
+  void DoSubframeIndicationNb (uint32_t frameNo, uint32_t subframeNo);
+
+  // Temp, might not be needed later
+  void ScheduleType2CssNb(NbIotRrcSap::NprachParametersNb ce);
+  void CheckIfPreambleWasReceived(NbIotRrcSap::NprachParametersNb ce, bool edt);
+  void CheckPreambleReceptionForAllCoverageClases();
+  /**
+  * \brief Receive RACH Preamble function
+  * \param prachId PRACH ID number
+  */
+  void DoReceiveNprachPreamble (uint8_t prachId, uint8_t subcarrierOffset, uint32_t ranti);
+  void DoUlCqiReportNb (std::vector<double> cqi);
+
+  void DoNotifyConnectionSuccessful(uint16_t rnti);
+
+  void CheckForDataInactivity(uint16_t rnti);
+  void DoReportNoTransmissionNb(uint16_t rnti, uint8_t lcid);
+  void SetCoverageLevelAndSib2Nb();
+  
+  
+  void DoRemoveUeFromScheduler(uint16_t rnti);
+  
+  void DoSetLogDir(std::string logdir);
+  
+
+  NbiotScheduler* m_schedulerNb = nullptr;
+  std::map<uint16_t, uint32_t> m_rapIdRantiMap; ///< RAPID RNTI map
+  std::map<uint32_t, NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel> m_RntiCeMap;
+  std::map<uint16_t, bool> m_rapIdCollisionMap; // Used when contention resolution is involved
+  std::map<uint8_t, std::map<uint8_t, uint32_t>> m_receivedNprachPreambleCount;
+  bool m_dropPreambleCollision;
+  std::map<uint8_t, std::vector<NbIotRrcSap::DciN1>> m_DlDcis;
+  NbIotRrcSap::SystemInformationBlockType2Nb m_sib2Nb;
+  NbIotRrcSap::NprachParametersNb m_ce0Parameter;
+  NbIotRrcSap::NprachParametersNb m_ce1Parameter;
+  NbIotRrcSap::NprachParametersNb m_ce2Parameter;
+  NbIotRrcSap::NprachParametersNb m_ce0ParameterEdt;
+  NbIotRrcSap::NprachParametersNb m_ce1ParameterEdt;
+  NbIotRrcSap::NprachParametersNb m_ce2ParameterEdt;
+  bool m_SearchSpaceType2C0;
+  bool m_SearchSpaceType2C1;
+  bool m_SearchSpaceType2C2;
+  uint32_t m_SearchSpaceType2C0SfBegin;
+  uint32_t m_SearchSpaceType2C1SfBegin;
+  uint32_t m_SearchSpaceType2C2SfBegin;
+  uint32_t m_currentRepetitions; 
+  uint8_t R;
+  std::vector<Ptr<LteControlMessage>> m_hyperframe;
+  std::map<uint16_t, bool> m_connectionSuccessful;
+  std::map<uint16_t, double> m_ulRsrpReceivedNb;
+  std::vector<std::vector<double>> m_ulCqiReceivedNb;
+  std::map<uint16_t, uint16_t> m_ueStoredBSR;
+  std::map<uint16_t, std::map<uint8_t, LteMacSapProvider::ReportBufferStatusParameters>> m_lastDlBSR;
+  std::map<uint16_t, EventId> m_noDataIndicators;
+  bool m_edt;
+  bool m_mac_logging;
+  std::string m_logdir;
+  };
 
 } // end namespace ns3
 

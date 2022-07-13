@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Giuseppe Piro  <g.piro@poliba.it>
  * Author: Marco Miozzo <marco.miozzo@cttc.es>
+ * Modified by:	
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_CONTROL_MESSAGES_H
@@ -27,6 +30,8 @@
 #include <ns3/ff-mac-common.h>
 #include <ns3/lte-rrc-sap.h>
 #include <list>
+
+#include "nb-iot-rrc-sap.h"
 
 namespace ns3 {
 
@@ -61,6 +66,13 @@ public:
     RAR, // Random Access Response
     MIB, // Master Information Block
     SIB1, // System Information Block Type 1
+    MIB_NB,
+    SIB1_NB,
+    SIB2_NB,
+    DL_DCI_NB, UL_DCI_NB, // Downlink/Uplink Data Control Indicator
+    NPRACH_PREAMBLE,
+    RAR_NB,
+    DL_HARQ_NB
   };
 
   LteControlMessage (void);
@@ -154,7 +166,7 @@ class DlCqiLteControlMessage : public LteControlMessage
 public:
   DlCqiLteControlMessage (void);
   virtual ~DlCqiLteControlMessage (void);
-
+  double rsrp; // TEMPORARY
   /**
   * \brief add a DL-CQI feedback record into the message.
   * \param dlcqi the DL cqi feedback
@@ -402,6 +414,298 @@ private:
 
 }; // end of class Sib1LteControlMessage
 
+
+// ---------------------------------------------------------------------------
+
+
+/**
+ * \ingroup lte
+ * \brief Abstract model for broadcasting the Master Information Block (MIB)
+ *        within the control channel (BCCH).
+ *
+ * MIB is transmitted by eNodeB RRC and received by UE RRC at every radio frame,
+ * i.e., every 10 milliseconds.
+ *
+ * \sa LteEnbRrc::ConfigureCell, LteEnbPhy::StartFrame,
+ *     LteUeRrc::DoRecvMasterInformationBlock
+ */
+class MibNbiotControlMessage : public LteControlMessage
+{
+public:
+  /**
+   * \brief Create a new instance of MIB control message.
+   */
+  MibNbiotControlMessage (void);
+
+  /**
+   * \brief Replace the MIB content of this control message.
+   * \param mib the desired MIB content
+   */
+  void SetMib (NbIotRrcSap::MasterInformationBlockNb mib);
+
+  /**
+   * \brief Retrieve the MIB content from this control message.
+   * \return the current MIB content that this control message holds
+   */
+  NbIotRrcSap::MasterInformationBlockNb GetMib () const;
+
+private:
+  NbIotRrcSap::MasterInformationBlockNb m_mib; ///< MIB
+
+}; // end of class MibLteControlMessage
+
+
+// ---------------------------------------------------------------------------
+
+
+/**
+ * \ingroup lte
+ * \brief Abstract model for broadcasting the Master Information Block (MIB)
+ *        within the control channel (BCCH).
+ *
+ * MIB is transmitted by eNodeB RRC and received by UE RRC at every radio frame,
+ * i.e., every 10 milliseconds.
+ *
+ * \sa LteEnbRrc::ConfigureCell, LteEnbPhy::StartFrame,
+ *     LteUeRrc::DoRecvMasterInformationBlock
+ */
+class Sib1NbiotControlMessage : public LteControlMessage
+{
+public:
+  /**
+   * \brief Create a new instance of MIB control message.
+   */
+  Sib1NbiotControlMessage (void);
+
+  /**
+   * \brief Replace the MIB content of this control message.
+   * \param sib1 the desired MIB content
+   */
+  void SetSib1 (NbIotRrcSap::SystemInformationBlockType1Nb sib1);
+
+  /**
+   * \brief Retrieve the MIB content from this control message.
+   * \return the current MIB content that this control message holds
+   */
+  NbIotRrcSap::SystemInformationBlockType1Nb GetSib1 () const;
+
+private:
+  NbIotRrcSap::SystemInformationBlockType1Nb m_sib1; ///< MIB
+
+}; // end of class MibLteControlMessage
+
+
+// ---------------------------------------------------------------------------
+
+/**
+ * \ingroup lte
+ * \brief Abstract model for broadcasting the Master Information Block (MIB)
+ *        within the control channel (BCCH).
+ *
+ * MIB is transmitted by eNodeB RRC and received by UE RRC at every radio frame,
+ * i.e., every 10 milliseconds.
+ *
+ * \sa LteEnbRrc::ConfigureCell, LteEnbPhy::StartFrame,
+ *     LteUeRrc::DoRecvMasterInformationBlock
+ */
+class Sib2NbiotControlMessage : public LteControlMessage
+{
+public:
+  /**
+   * \brief Create a new instance of MIB control message.
+   */
+  Sib2NbiotControlMessage (void);
+
+  /**
+   * \brief Replace the MIB content of this control message.
+   * \param sib2 the desired MIB content
+   */
+  void SetSib2 (NbIotRrcSap::SystemInformationBlockType2Nb sib2);
+
+  /**
+   * \brief Retrieve the MIB content from this control message.
+   * \return the current MIB content that this control message holds
+   */
+  NbIotRrcSap::SystemInformationBlockType2Nb GetSib2 () const;
+
+private:
+  NbIotRrcSap::SystemInformationBlockType2Nb m_sib2; ///< MIB
+
+}; // end of class MibLteControlMessage
+
+
+// ---------------------------------------------------------------------------
+/**
+ * \ingroup lte
+ *
+ * abstract model for the Random Access Preamble
+ */
+class NprachPreambleNbiotControlMessage : public LteControlMessage
+{
+public:
+  NprachPreambleNbiotControlMessage (void);
+  
+  /** 
+   * Set the Random Access Preamble Identifier (RAPID), see 3GPP TS 36.321 6.2.2
+   *
+   * \param rapid the RAPID
+   */
+  void SetRapId (uint8_t rapid);
+  void SetSubcarrierOffset (uint8_t subcarrierOffset); // used so the eNB knows in which CE-Level the UE is
+  void SetRanti (uint32_t ranti); // used so the eNB knows in which CE-Level the UE is
+  
+  /** 
+   * 
+   * \return the RAPID
+   */
+  uint8_t GetRapId () const;
+  uint8_t GetSubcarrierOffset () const;
+  uint32_t GetRanti() const;
+
+private:
+  uint8_t m_rapId; ///< the RAPID
+  uint8_t m_subcarrierOffset;
+  uint32_t m_ranti;
+
+};
+
+class DlDciN1NbiotControlMessage : public LteControlMessage
+{
+public:
+  DlDciN1NbiotControlMessage (void);
+  virtual ~DlDciN1NbiotControlMessage (void);
+
+  /**
+  * \brief add a DCI into the message
+  * \param dci the dci
+  */
+  void SetDci (NbIotRrcSap::DciN1 dci);
+  void SetRnti (uint32_t rnti);
+
+  /**
+  * \brief Get dic information
+  * \return dci messages
+  */
+  NbIotRrcSap::DciN1 GetDci (void);
+  uint32_t GetRnti (void);
+
+private:
+  NbIotRrcSap::DciN1 m_dci; ///< DCI
+  uint m_rnti;
+};
+
+// ---------------------------------------------------------------------------
+
+/**
+ * \ingroup lte
+ *
+ * abstract model for the MAC Random Access Response message
+ */
+class RarNbiotControlMessage : public LteControlMessage
+{
+public:
+  RarNbiotControlMessage (void);
+
+  /** 
+   * 
+   * \param raRnti the RA-RNTI, see 3GPP TS 36.321 5.1.4
+   */
+  void SetRaRnti (uint16_t raRnti);
+
+  /** 
+   * 
+   * \return  the RA-RNTI, see 3GPP TS 36.321 5.1.4
+   */
+  uint16_t GetRaRnti () const;
+
+  /**
+   * a MAC RAR and the corresponding RAPID subheader 
+   * 
+   */
+  
+
+
+  /** 
+   * add a RAR to the MAC PDU, see 3GPP TS 36.321 6.2.3
+   * 
+   * \param rar the rar
+   */
+  void AddRar (NbIotRrcSap::Rar rar);
+
+  /** 
+   * 
+   * \return a const iterator to the beginning of the RAR list
+   */
+  std::list<NbIotRrcSap::Rar>::const_iterator RarListBegin () const;
+  
+  /** 
+   * 
+   * \return a const iterator to the end of the RAR list
+   */
+  std::list<NbIotRrcSap::Rar>::const_iterator RarListEnd () const;
+
+private:
+  std::list<NbIotRrcSap::Rar> m_rarList; ///< RAR list
+  uint16_t m_raRnti; ///< RA RNTI
+
+
+};
+
+class DlHarqFeedbackNbiotControlMessage : public LteControlMessage
+{
+public:
+  DlHarqFeedbackNbiotControlMessage (void);
+  virtual ~DlHarqFeedbackNbiotControlMessage (void);
+
+  /**
+  * \brief add a DL HARQ feedback record into the message.
+  * \param m the DL HARQ feedback
+  */
+
+  /**
+  * \brief Get DL HARQ information
+  * \return DL HARQ message
+  */
+
+void SetAcknowledgement(bool ack);
+bool GetAcknowledgement(void);
+
+void SetRnti(int16_t rnti);
+int16_t GetRnti(void);
+
+private:
+  bool m_ack; // true = ACK, false = NACK
+  int16_t m_rnti;
+
+};
+
+class UlDciN0NbiotControlMessage : public LteControlMessage
+{
+public:
+  UlDciN0NbiotControlMessage (void);
+  virtual ~UlDciN0NbiotControlMessage (void);
+
+  /**
+  * \brief add a DCI into the message
+  * \param dci the dci
+  */
+  void SetDci (NbIotRrcSap::DciN0 dci);
+  void SetRnti (uint32_t rnti);
+  void SetLc(uint8_t lc);
+
+  /**
+  * \brief Get dic information
+  * \return dci messages
+  */
+  NbIotRrcSap::DciN0 GetDci (void);
+  uint32_t GetRnti (void);
+  uint8_t GetLc();
+
+private:
+  NbIotRrcSap::DciN0 m_dci; ///< DCI
+  uint m_rnti;
+  uint8_t m_lc;
+};
 
 } // namespace ns3
 

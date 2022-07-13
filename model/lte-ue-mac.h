@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,9 @@
  *
  * Author: Nicola Baldo  <nbaldo@cttc.es>
  * Author: Marco Miozzo <mmiozzo@cttc.es>
+ * Modified by: 
+ *          Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *          Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_UE_MAC_ENTITY_H
@@ -29,6 +33,7 @@
 #include <ns3/lte-mac-sap.h>
 #include <ns3/lte-ue-cmac-sap.h>
 #include <ns3/lte-ue-phy-sap.h>
+#include "lte-control-messages.h"
 #include <ns3/nstime.h>
 #include <ns3/event-id.h>
 #include <vector>
@@ -126,6 +131,8 @@ public:
   */
   int64_t AssignStreams (int64_t stream);
 
+  void SetLogDir(std::string dirname);
+
 private:
   // forwarded from MAC SAP
  /**
@@ -140,6 +147,7 @@ private:
   * \param params LteMacSapProvider::ReportBufferStatusParameters
   */
   void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+  void DoReportBufferStatusNb (LteMacSapProvider::ReportBufferStatusParameters params, NbIotRrcSap::NpdcchMessage::SearchSpaceType searchspace);
 
   // forwarded from UE CMAC SAP
  /**
@@ -149,9 +157,19 @@ private:
   */
   void DoConfigureRach (LteUeCmacSapProvider::RachConfig rc);
  /**
+  * Configure RACH function
+  *
+  * \param rc LteUeCmacSapProvider::RachConfig
+  */
+  void DoConfigureRadioResourceConfig (NbIotRrcSap::RadioResourceConfigCommonNb rc);
+ /**
   * Start contention based random access procedure function
   */
   void DoStartContentionBasedRandomAccessProcedure ();
+ /**
+  * Start contention based random access procedure function
+  */
+  void DoStartRandomAccessProcedureNb (bool edt);
  /**
   * Set RNTI
   *
@@ -189,6 +207,7 @@ private:
    * establishment.
    */
   void DoNotifyConnectionSuccessful ();
+
   /**
    * Set IMSI
    *
@@ -209,18 +228,27 @@ private:
   * \param msg the LTE control message
   */
   void DoReceiveLteControlMessage (Ptr<LteControlMessage> msg);
+
+  void DoNotifyAboutHarqOpportunity (std::vector<std::pair<uint64_t,std::vector<uint64_t>>> subframes);
   
   // internal methods
   /// Randomly select and send RA preamble function
   void RandomlySelectAndSendRaPreamble ();
+
+  // internal methods
+  /// Randomly select and send RA preamble function
+  void RandomlySelectAndSendRaPreambleNb ();
  /**
   * Send RA preamble function
   *
   * \param contention if true randomly select and send the RA preamble
   */
   void SendRaPreamble (bool contention);
+  void SendRaPreambleNb (bool contention);
   /// Start waiting for RA response function
   void StartWaitingForRaResponse ();
+/// Start waiting for RA response function
+  void StartWaitingForRaResponseNb ();
  /**
   * Receive the RA response function
   *
@@ -228,16 +256,40 @@ private:
   */
   void RecvRaResponse (BuildRarListElement_s raResponse);
  /**
+  * Receive the RA response function
+  *
+  * \param raResponse RA response received
+  */
+  void RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse);
+ /**
   * RA response timeout function
   *
   * \param contention if true randomly select and send the RA preamble
   */
   void RaResponseTimeout (bool contention);
+ /**
+  * RA response timeout function
+  *
+  * \param contention if true randomly select and send the RA preamble
+  */
+  void RaResponseTimeoutNb (bool contention);
   /// Send report buffer status
   void SendReportBufferStatus (void);
   /// Refresh HARQ processes packet buffer function
   void RefreshHarqProcessesPacketBuffer (void);
 
+  uint64_t GetBufferSize();
+  uint64_t GetBufferSizeComplete();
+
+  void DoSetTransmissionScheduled(bool scheduled);
+
+  void DoNotifyEdrx();
+  void DoNotifyPsm();
+  void DoSetMsg5Buffer(uint32_t buffersize);
+
+  
+
+  NbIotRrcSap::NprachParametersNb::CoverageEnhancementLevel DoGetCoverageEnhancementLevel();
   /// component carrier Id --> used to address sap
   uint8_t m_componentCarrierId;
 
@@ -276,9 +328,13 @@ private:
   uint16_t m_imsi; ///< IMSI
 
   bool m_rachConfigured; ///< is RACH configured?
+  bool m_nprachConfigured; ///< is RACH configured?
   LteUeCmacSapProvider::RachConfig m_rachConfig; ///< RACH configuration
+  NbIotRrcSap::RachInfo m_rachConfigCe; ///< RACH configuration
+  NbIotRrcSap::RadioResourceConfigCommonNb m_radioResourceConfig; ///< RACH configuration
   uint8_t m_raPreambleId; ///< RA preamble ID
   uint8_t m_preambleTransmissionCounter; ///< preamble tranamission counter
+  uint8_t m_preambleTransmissionCounterCe; ///< preamble tranamission counter
   uint16_t m_backoffParameter; ///< backoff parameter
   EventId m_noRaResponseReceivedEvent; ///< no RA response received event ID
   Ptr<UniformRandomVariable> m_raPreambleUniformVariable; ///< RA preamble random variable
@@ -288,6 +344,21 @@ private:
   uint8_t m_raRnti; ///< RA RNTI
   bool m_waitingForRaResponse; ///< waiting for RA response
 
+  NbIotRrcSap::NprachParametersNb m_CeLevel;
+  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
+  bool m_simplifiedNprach;
+  bool m_inSearchSpace;
+  bool m_transmissionScheduled;
+  bool m_listenToSearchSpaces;
+  bool m_edrx;
+  bool m_psm;
+  bool m_nextIsMsg5;
+  NbIotRrcSap::EdtTbsNb DoGetEdtTbsInfo(); // return EdtTbsInfo based on RSRP (Coverage level)
+  uint32_t m_subframesInSearchSpace;
+  std::vector<uint32_t> m_logging;
+  bool m_mac_logging;
+  std::string m_logdir;
+  uint32_t m_msg5Buffer;
   /**
    * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
    * Exporting IMSI, contention flag, preamble transmission counter

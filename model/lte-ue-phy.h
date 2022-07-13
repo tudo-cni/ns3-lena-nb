@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
  * Copyright (c) 2018 Fraunhofer ESK : RLF extensions
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,6 +21,7 @@
  * Author: Marco Miozzo <mmiozzo@cttc.es>
  * Modified by:
  *          Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_UE_PHY_H
@@ -254,6 +256,8 @@ public:
    * \param p PSS list
    */
   virtual void ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p);
+  virtual void ReceiveNpss (uint16_t cellId, Ptr<SpectrumValue> p);
+  virtual void ReceiveNsss (uint16_t cellId, Ptr<SpectrumValue> p);
 
 
   /**
@@ -485,8 +489,20 @@ private:
   // UE CPHY SAP methods
   /**
    * \brief Do Reset function
+   *
+   * 
    */
+  bool wokeup;
   void DoReset ();
+// UE CPHY SAP methods
+  /**
+   * \brief Do Reset function
+   */
+  void DoResetUlConfigured();
+  /**
+   * \brief Do Reset function
+   */
+  void DoStartUp();
   /**
    * \brief Start the cell search function
    *
@@ -629,6 +645,7 @@ private:
    */
   double ComputeAvgSinr (const SpectrumValue& sinr);
 
+
   // UE PHY SAP methods 
   virtual void DoSendMacPdu (Ptr<Packet> p);
   /**
@@ -645,11 +662,23 @@ private:
    */
   virtual void DoSendRachPreamble (uint32_t prachId, uint32_t raRnti);
   /**
+   * \brief Send RACH preamble function
+   *
+   * \param prachId the RACH preamble ID
+   * \param raRnti the rnti
+   */
+  virtual void DoSendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset);
+  /**
    * \brief Notify PHY about the successful RRC connection
    * establishment.
    */
   virtual void DoNotifyConnectionSuccessful ();
 
+  virtual double DoGetRSRP();
+
+  virtual void DoSendHarqResponse(bool ack);
+
+  void AddNbiotExpectedTb();
   /// A list of sub channels to use in TX.
   std::vector <int> m_subChannelsForTransmission;
   /// A list of sub channels to use in RX.
@@ -711,6 +740,7 @@ private:
 
   /// \todo Can be removed.
   uint8_t m_subframeNo;
+  uint m_frameNo;
 
   bool m_rsReceivedPowerUpdated; ///< RS receive power updated?
   SpectrumValue m_rsReceivedPower; ///< RS receive power
@@ -790,6 +820,8 @@ private:
   TracedCallback<uint16_t, uint16_t, double, double, bool, uint8_t> m_reportUeMeasurements;
 
   EventId m_sendSrsEvent; ///< send SRS event
+  EventId m_subIndEvent; ///< send SRS event
+  EventId m_measurementEvent; ///< send SRS event
 
   /**
    * The `UlPhyTransmission` trace source. Contains trace information regarding
@@ -842,6 +874,13 @@ private:
   uint64_t m_imsi; ///< the IMSI of the UE
   bool m_enableRlfDetection; ///< Flag to enable/disable RLF detection
 
+  // for NB-IoT
+  // In NB-IoT the UE needs to receive multiple repetitions before it can decode the transmission
+  // for RRC and data messages the procedure is implemented on eNB site  
+  // following necessary infos for MIB-NB und SIB-NB
+  uint8_t m_requiredRepetitionsMibNb;
+  uint8_t m_requiredRepetitionsSib1Nb;
+  uint8_t m_requiredRepetitionsSib2Nb;
 }; // end of `class LteUePhy`
 
 

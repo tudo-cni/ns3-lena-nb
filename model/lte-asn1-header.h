@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Lluis Parcerisa <lparcerisa@cttc.cat>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef ASN1_HEADER_H
@@ -234,6 +237,11 @@ protected:
    * Serialize a bitstring
    * \param bitstring bitstring to serialize
    */
+  void SerializeBitstring (std::bitset<3> bitstring) const;
+  /**
+   * Serialize a bitstring
+   * \param bitstring bitstring to serialize
+   */
   void SerializeBitstring (std::bitset<8> bitstring) const;
   /**
    * Serialize a bitstring
@@ -260,6 +268,11 @@ protected:
    * \param bitstring bitstring to serialize
    */
   void SerializeBitstring (std::bitset<32> bitstring) const;
+  /**
+   * Serialize a bitstring
+   * \param bitstring bitstring to serialize
+   */
+  void SerializeBitstring (std::bitset<40> bitstring) const;
 
   // Deserialization functions
 
@@ -482,6 +495,14 @@ protected:
    * \param bIterator buffer iterator
    * \returns the modified buffer iterator
    */
+  Buffer::Iterator DeserializeBitstring (std::bitset<3> *bitstring,
+                                         Buffer::Iterator bIterator);
+  /**
+   * Deserialize a bitstring
+   * \param bitstring buffer to store the result
+   * \param bIterator buffer iterator
+   * \returns the modified buffer iterator
+   */
   Buffer::Iterator DeserializeBitstring (std::bitset<8> *bitstring,
                                          Buffer::Iterator bIterator);
   /**
@@ -524,6 +545,15 @@ protected:
    */
   Buffer::Iterator DeserializeBitstring (std::bitset<32> *bitstring,
                                          Buffer::Iterator bIterator);
+  /**
+   * Deserialize a bitstring
+   * \param bitstring buffer to store the result
+   * \param bIterator buffer iterator
+   * \returns the modified buffer iterator
+   */
+  Buffer::Iterator DeserializeBitstring (std::bitset<40> *bitstring,
+                                         Buffer::Iterator bIterator);
+
 
   /**
    * Deserialize nothing (null op)

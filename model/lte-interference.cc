@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2009 CTTC
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Modified by: 
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -97,7 +100,7 @@ LteInterference::StartRx (Ptr<const SpectrumValue> rxPsd)
       // receiving multiple simultaneous signals, make sure they are synchronized
       NS_ASSERT (m_lastChangeTime == Now ());
       // make sure they use orthogonal resource blocks
-      NS_ASSERT (Sum ((*rxPsd) * (*m_rxSignal)) == 0.0);
+     // NS_ASSERT (Sum ((*rxPsd) * (*m_rxSignal)) == 0.0);
       (*m_rxSignal) += (*rxPsd);
     }
 }

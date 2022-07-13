@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +19,8 @@
  * Author: Nicola Baldo <nbaldo@cttc.es>
  * Modified by: Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *              Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation) 
+ *              Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
+ *              Pascal Jörke <pascal.joerke@tu-dortmund.de> (NB-IoT Extension)
  */
 
 #ifndef LTE_HELPER_H
@@ -41,6 +44,7 @@
 #include <ns3/mobility-model.h>
 #include <ns3/component-carrier-enb.h>
 #include <ns3/cc-helper.h>
+#include <ns3/epc-ue-nas.h>
 #include <map>
 
 namespace ns3 {
@@ -383,7 +387,13 @@ public:
    *
    * Note that this function can only be used in EPC-enabled simulation.
    */
+
   void Attach (Ptr<NetDevice> ueDevice);
+
+  void AttachAtTimeNb (Ptr<NetDevice> ueDevice, uint64_t delay);
+
+  void ScheduleConnect(Ptr<NetDevice> ueDevice);
+
 
   /**
    * \brief Manual attachment of a set of UE devices to the network via a given
@@ -413,6 +423,22 @@ public:
    * procedure.
    */
   void Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
+
+  /**
+   * \brief Manual attachment of a UE device to the network via a given eNodeB.
+   * \param ueDevice the UE device to be attached
+   * \param enbDevice the destination eNodeB device
+   *
+   * In addition, the function also instructs the UE to immediately enter
+   * CONNECTED mode and activates the default EPS bearer.
+   *
+   * The function can be used in both LTE-only and EPC-enabled simulations.
+   * Note that this function will disable Idle mode initial cell selection
+   * procedure.
+   */
+  void AttachSuspendedNb (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
+  void AttachSuspend (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, uint64_t resumeId);
+
 
   /** 
    * \brief Manual attachment of a set of UE devices to the network via the
@@ -669,12 +695,25 @@ public:
    */
   Ptr<SpectrumChannel> GetDownlinkSpectrumChannel (void) const;
 
+  /**
+   * Enable RRC Logging
+   */
+  void EnableRrcLogging();
+
+  /**
+   * Ste the directory for logging Messages
+   */
+  void SetLogDir(std::string dirname);
+
 
 protected:
   // inherited from Object
   virtual void DoInitialize (void);
 
 private:
+
+  bool m_rrc_logging;
+  std::string m_logdir;
 
   /**
    * Configure the component carriers

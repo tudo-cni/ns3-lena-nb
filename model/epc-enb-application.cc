@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,8 @@
  *
  * Author: Jaume Nin <jnin@cttc.cat>
  *         Nicola Baldo <nbaldo@cttc.cat>
+ * Modified by:	
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -39,16 +42,17 @@ EpcEnbApplication::EpsFlowId_t::EpsFlowId_t ()
 {
 }
 
-EpcEnbApplication::EpsFlowId_t::EpsFlowId_t (const uint16_t a, const uint8_t b)
+EpcEnbApplication::EpsFlowId_t::EpsFlowId_t (const uint16_t a, const uint8_t b, const uint64_t c)
   : m_rnti (a),
-    m_bid (b)
+    m_bid (b),
+    m_imsi (c)
 {
 }
 
 bool
 operator == (const EpcEnbApplication::EpsFlowId_t &a, const EpcEnbApplication::EpsFlowId_t &b)
 {
-  return ( (a.m_rnti == b.m_rnti) && (a.m_bid == b.m_bid) );
+  return ( (a.m_rnti == b.m_rnti) && (a.m_bid == b.m_bid) && (a.m_imsi == b.m_imsi));
 }
 
 bool
@@ -153,9 +157,15 @@ EpcEnbApplication::DoInitialUeMessage (uint64_t imsi, uint16_t rnti)
 {
   NS_LOG_FUNCTION (this);
   // side effect: create entry if not exist
+  if(m_imsiRntiMap.find(imsi) != m_imsiRntiMap.end()){
+    m_imsiRntiMap[imsi] = rnti;
+    return;
+  }
   m_imsiRntiMap[imsi] = rnti;
   m_s1apSapMme->InitialUeMessage (imsi, rnti, imsi, m_cellId);
 }
+
+
 
 void 
 EpcEnbApplication::DoPathSwitchRequest (EpcEnbS1SapProvider::PathSwitchRequestParameters params)
@@ -178,7 +188,7 @@ EpcEnbApplication::DoPathSwitchRequest (EpcEnbS1SapProvider::PathSwitchRequestPa
       flowId.m_bid = bit->epsBearerId;
       uint32_t teid = bit->teid;
       
-      EpsFlowId_t rbid (params.rnti, bit->epsBearerId);
+      EpsFlowId_t rbid (params.rnti, bit->epsBearerId, imsi);
       // side effect: create entries if not exist
       m_rbidTeidMap[params.rnti][bit->epsBearerId] = teid;
       m_teidRbidMap[teid] = rbid;
@@ -214,6 +224,39 @@ EpcEnbApplication::DoUeContextRelease (uint16_t rnti)
 }
 
 void 
+EpcEnbApplication::DoMoveUeToResume (uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  m_resumeRbidTeidMap[resumeId] = m_rbidTeidMap[rnti];
+  // Get Imsi to rnti
+  for (auto it = m_imsiRntiMap.begin(); it != m_imsiRntiMap.end(); ++it){
+    if (it->second == rnti){
+      m_imsiResumeIdMap[it->first] = resumeId;
+      break;
+    }
+  }
+  m_rbidTeidMap.erase(rnti);
+  
+}
+void 
+EpcEnbApplication::DoResumeUe(uint16_t rnti, uint64_t resumeId)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  m_rbidTeidMap[rnti] = m_resumeRbidTeidMap[resumeId];
+  std::map<uint16_t, std::map<uint8_t, uint32_t> >::iterator it = m_rbidTeidMap.find(rnti);
+  for(std::map<uint8_t, uint32_t>::iterator bidIt = it->second.begin(); bidIt != it->second.end(); ++bidIt){
+    m_teidRbidMap[bidIt->second].m_rnti = rnti;
+  }
+  m_resumeRbidTeidMap.erase(rnti);
+  for (auto it = m_imsiRntiMap.begin(); it != m_imsiRntiMap.end(); ++it){
+    if (it->second == rnti){
+      m_imsiRntiMap.erase(it);
+      break;
+    }
+  }
+  
+}
+void 
 EpcEnbApplication::DoInitialContextSetupRequest (uint64_t mmeUeS1Id, uint16_t enbUeS1Id, std::list<EpcS1apSapEnb::ErabToBeSetupItem> erabToBeSetupList)
 {
   NS_LOG_FUNCTION (this);
@@ -235,7 +278,7 @@ EpcEnbApplication::DoInitialContextSetupRequest (uint64_t mmeUeS1Id, uint16_t en
       params.gtpTeid = erabIt->sgwTeid;
       m_s1SapUser->DataRadioBearerSetupRequest (params);
 
-      EpsFlowId_t rbid (rnti, erabIt->erabId);
+      EpsFlowId_t rbid (rnti, erabIt->erabId, imsi);
       // side effect: create entries if not exist
       m_rbidTeidMap[rnti][erabIt->erabId] = params.gtpTeid;
       m_teidRbidMap[params.gtpTeid] = rbid;
@@ -282,10 +325,31 @@ EpcEnbApplication::RecvFromLteSocket (Ptr<Socket> socket)
   uint8_t bid = tag.GetBid ();
   NS_LOG_LOGIC ("received packet with RNTI=" << (uint32_t) rnti << ", BID=" << (uint32_t)  bid);
   std::map<uint16_t, std::map<uint8_t, uint32_t> >::iterator rntiIt = m_rbidTeidMap.find (rnti);
+
   if (rntiIt == m_rbidTeidMap.end ())
     {
-      NS_LOG_WARN ("UE context not found, discarding packet");
+      // We got an IP-Packet without restored/initial Context
+      // Either CIoT-Opt Early Data Transmission 
+      // Or someone might have made a mistake
+      uint64_t imsi = 0;
+      for (auto it = m_imsiRntiMap.begin(); it != m_imsiRntiMap.end(); ++it){
+        if (it->second == rnti){
+          imsi = it->first;
+        }
+      }
+      if(imsi != 0){
+        std::map<uint64_t, std::map<uint8_t, uint32_t> >::iterator resumeIt = m_resumeRbidTeidMap.find (m_imsiResumeIdMap[imsi]);
+        std::map<uint8_t, uint32_t>::iterator bidIt = resumeIt->second.find (bid);
+        NS_ASSERT (bidIt != rntiIt->second.end ());
+
+        uint32_t teid = bidIt->second;
+        m_teidRbidMap[teid].m_rnti = rnti;
+        m_rxLteSocketPktTrace (packet->Copy ());
+        SendToS1uSocket (packet, teid);
+      }
+          
     }
+  
   else
     {
       std::map<uint8_t, uint32_t>::iterator bidIt = rntiIt->second.find (bid);
@@ -313,15 +377,15 @@ EpcEnbApplication::RecvFromS1uSocket (Ptr<Socket> socket)
   else
     {
       m_rxS1uSocketPktTrace (packet->Copy ());
-      SendToLteSocket (packet, it->second.m_rnti, it->second.m_bid);
+      SendToLteSocket (packet, it->second.m_rnti, it->second.m_bid, it->second.m_imsi);
     }
 }
 
 void 
-EpcEnbApplication::SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid)
+EpcEnbApplication::SendToLteSocket (Ptr<Packet> packet, uint16_t rnti, uint8_t bid, uint64_t imsi)
 {
   NS_LOG_FUNCTION (this << packet << rnti << (uint16_t) bid << packet->GetSize ());  
-  EpsBearerTag tag (rnti, bid);
+  EpsBearerTag tag (rnti, bid, imsi);
   packet->AddPacketTag (tag);
   uint8_t ipType;
 

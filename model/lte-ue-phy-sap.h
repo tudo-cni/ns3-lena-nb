@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Marco Miozzo <mmiozzo@cttc.es>
+ * Modified by:
+ *			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -62,12 +65,22 @@ public:
    * \param raRnti the RA RNTI
    */
   virtual void SendRachPreamble (uint32_t prachId, uint32_t raRnti) = 0;
-
+  /** 
+   * \brief Send a preamble on the PRACH
+   * 
+   * \param prachId the ID of the preamble
+   * \param raRnti the RA RNTI
+   */
+  virtual void SendNprachPreamble (uint32_t prachId, uint32_t raRnti, uint8_t subcarrieroffset) = 0;
   /**
    * \brief Notify PHY about the successful RRC connection
    * establishment.
    */
   virtual void NotifyConnectionSuccessful () = 0;
+
+  virtual double GetRSRP() = 0;
+  
+  virtual void SendHarqAckResponse(bool ack) = 0;
 
 };
 
@@ -108,6 +121,7 @@ public:
    */
   virtual void ReceiveLteControlMessage (Ptr<LteControlMessage> msg) = 0;
 
+  virtual void NotifyAboutHarqOpportunity(std::vector<std::pair<uint64_t, std::vector<uint64_t>>> subframes) = 0;
 };
 
 

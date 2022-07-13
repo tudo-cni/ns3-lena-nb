@@ -1,6 +1,7 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2022 Communication Networks Institute at TU Dortmund University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Marco Miozzo <mmiozzo@cttc.es>
+ * Modified by:	
+ * 			Tim Gebauer <tim.gebauer@tu-dortmund.de> (NB-IoT Extension)
  */
 
 
@@ -104,12 +107,23 @@ public:
    */
   virtual void ReceiveRachPreamble (uint32_t prachId) = 0;
 
+  /** 
+   * notify the reception of a RACH preamble on the PRACH 
+   * 
+   * \param prachId the ID of the preamble
+   */
+  virtual void ReceiveNprachPreamble (uint32_t prachId, uint8_t subcarrierOffset, uint32_t ranti) = 0;
+
   /**
    * \brief Returns to MAC level the UL-CQI evaluated
    * \param ulcqi the UL-CQI (see FF MAC API 4.3.29)
    */
   virtual void UlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi) = 0;
-
+  /**
+   * \brief Returns to MAC level the UL-CQI evaluated
+   * \param ulcqi the UL-CQI (see FF MAC API 4.3.29)
+   */
+  virtual void UlCqiReportNb (std::vector<double> ulcqi) = 0;
   /**
    * Notify the HARQ on the UL tranmission status
    *
