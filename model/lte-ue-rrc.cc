@@ -3951,7 +3951,13 @@ NbIotRrcSap::PurSetupRequest LteUeRrc::SetUpPurConfigurationRequestNb(Time packe
   NbIotRrcSap::PurSetupRequest pur;
 
   // Convert packet intervals into the next larger PUR periodicities
-  pur.requestedOffsetR16 = nextaccess/10240;
+  double offset = nextaccess/10240;
+  if (fmod(offset, 1) > 0){
+    pur.requestedOffsetR16 = offset + 1; // If offset is not equal to a full hyperframe, set offset to the next higher hyperframe, since double to int conversion always rounds off
+  }
+  else{
+    pur.requestedOffsetR16 = offset + 1;
+  }
   if (packetinterval <= Seconds(10.24) * 8){
     pur.requestedPeriodicityR16 = NbIotRrcSap::PurSetupRequest::RequestedPeriodicityR16::Periodicity8;
     if (pur.requestedOffsetR16 > 7){

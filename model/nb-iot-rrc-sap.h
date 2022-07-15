@@ -1105,8 +1105,8 @@ class NbIotRrcSap{
                 Periodicity8192
             } purPeriodicityNbR16;
             uint16_t purOffsetNbR16;
-            uint16_t startSfnR16;
-            uint8_t startSubframeR16;
+            uint64_t startSfnR16;
+            uint16_t startSubframeR16;
             uint8_t hsfnLsbInfoR16;
         };
 

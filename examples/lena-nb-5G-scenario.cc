@@ -258,7 +258,7 @@ main (int argc, char *argv[])
         ueRrc->SetAttribute("EDT", BooleanValue(false));
       }
       if(pur == true){
-        //std::cout << "Beep1" << std::endl;
+        std::cout << "Access: " << access << " ms" << std::endl;
         ueRrc->SetAttribute("PUR", BooleanValue(true));
         lteHelper->SetUpPurNb(ueLteDevs.Get(i), enbLteDevs.Get(0), packetinterval_app_a, packetsize_app_a, access, rnti);
       }

@@ -1136,13 +1136,13 @@ NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
   } else{
     infiniteOccasions = false;
   }
-  std::cout << "SchedulePurNb: " << periodicity << ", " << nextAccess << ", " << infiniteOccasions << "\n";
+  std::cout << "NbiotScheduler::SchedulePurNb: perdiodicity: " << periodicity << ", nextAccess: " << nextAccess << ", " << infiniteOccasions << "\n";
 
   uint64_t tbs = NbIotRrcSap::ConvertRequestedTbs2int(purSetupRequest.requestedTbsR16);
-  std::cout << "SchedulePurNb: imsi: "<< imsi<< "\n";
-  std::cout << "SchedulePurNb: RNTI: "<< rnti<< "\n";
-  int couplingloss = rsrp - 43.0 - correction_factor;
-  std::cout << "SchedulePurNb: Couplingloss: " << couplingloss<< "\n";
+  std::cout << "NbiotScheduler::SchedulePurNb: imsi: "<< imsi<< "\n";
+  std::cout << "NbiotScheduler::SchedulePurNb: RNTI: "<< rnti<< "\n";
+  int couplingloss = (rsrp - 43.0 - correction_factor) * -1;
+  std::cout << "NbiotScheduler::SchedulePurNb: Couplingloss: " << couplingloss<< "\n";
 
   NpuschMeasurementValues npusch = m_Amc.getBareboneNpusch (m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, 15000, 15);
   if(ScheduleNpuschPur(npusch,rnti,periodicity, nextAccess,infiniteOccasions)){
@@ -1204,12 +1204,28 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
     {
       for (size_t j = 0; j < purGrant[i].second.size (); j++)
       {
+        //std::cout << i <<", " << j << "\n";
+        //std::cout << purGrant[i].first <<", " << purGrant[i].second[j] << "\n";
         m_uplink[purGrant[i].first][purGrant[i].second[j]] = rnti;
       }
     }
-    NbIotRrcSap::PurStartTimeParametersR16 purStartTimeParametersR16;
-    std::cout << "NbiotScheduler::ScheduleNpuschPur - Time of first subframe: " << purGrant[0].second[0] << "\n";
+    
+    //std::cout << "NbiotScheduler::ScheduleNpuschPur - Time of first subframe: " << purGrant[0].second[0] << "\n";
   }
+    
+    std::vector<NbIotRrcSap::PurConfigNbR16> purGrants;
+    for (size_t i = 0; i < purGrant.size(); i++)
+    {
+      NbIotRrcSap::PurConfigNbR16 purConfigNbR16;
+      NbIotRrcSap::PurStartTimeParametersR16 purStartTimeParametersR16;
+      purStartTimeParametersR16.startSubframeR16 = purGrant[i].second[0] % 10;
+      purStartTimeParametersR16.startSfnR16 = purGrant[i].second[0] - purStartTimeParametersR16.startSubframeR16;
+      
+      std::cout << "NbiotScheduler::ScheduleNpuschPur - Time of first subframe: " << purGrant[i].second[0] << ", startSfn: "<< purStartTimeParametersR16.startSfnR16 << ", StartSf: "<< purStartTimeParametersR16.startSubframeR16 << "\n";
+
+      purConfigNbR16.purStartTimeParametersR16 = purStartTimeParametersR16;
+      purGrants.push_back(purConfigNbR16);
+    }
     
     //purStartTimeParametersR16.startSfnR16
 
@@ -1294,7 +1310,7 @@ NbiotScheduler::GetNextAvailablePurNpuschCandidate (uint16_t rnti, uint32_t peri
       }
     }
 
-    // After the first PUR resources were found, check if all other occasions can be scheduled in the current hyperframe cycle
+    // After the first PUR resources are found, check if all other occasions can be scheduled in the current hyperframe cycle
     period = period + 1;
     candidate = m_frameNo*10 + m_subframeNo + nextAccess + periodicity*period;
     purResourcesFound = true;
