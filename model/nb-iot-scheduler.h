@@ -114,8 +114,8 @@ std::vector<NbIotRrcSap::NpdcchMessage> ScheduleSearchSpace(SearchSpaceConfig ss
 std::vector<std::pair<uint64_t, std::vector<uint64_t>>> GetNextAvailableNpuschCandidate(uint64_t endSubframeNpdsch, uint64_t minSchedulingDelay, uint64_t numSubframes, bool isHarq);
 std::pair<NbIotRrcSap::UlGrant, std::pair<uint64_t,std::vector<uint64_t>>> GetNextAvailableMsg3UlGrantCandidate(uint64_t endSubframeMsg2, uint64_t numSubframes);
 NbIotRrcSap::NpdcchMessage CreateDciNpdcchMessage(uint16_t rnti, NbIotRrcSap::NpdcchMessage::DciType dci_type);
-void SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
-bool ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint32_t nextaccess, bool infiniteOcassions);
+std::vector<NbIotRrcSap::PurConfigNbR16> SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
+std::vector<NbIotRrcSap::PurConfigNbR16> ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint32_t nextaccess, bool infiniteOcassions);
 std::vector<std::pair<uint64_t, std::vector<uint64_t>>>GetNextAvailablePurNpuschCandidate (uint16_t rnti, uint32_t periodicity, uint32_t nextAccess, uint64_t numSubframes);
 
 void SetLogDir(std::string logdir);

@@ -85,7 +85,7 @@ public:
   virtual RachConfigNb GetRachConfigNb ();
   virtual void NotifyConnectionSuccessful(uint16_t rnti);
   virtual AllocateNcRaPreambleReturnValue AllocateNcRaPreamble (uint16_t rnti);
-  virtual void SetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
+  virtual std::vector<NbIotRrcSap::PurConfigNbR16> SetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
   virtual void SetLogDir(std::string logdir);
   
 
@@ -176,10 +176,11 @@ EnbMacMemberLteEnbCmacSapProvider::AllocateNcRaPreamble (uint16_t rnti)
   return m_mac->DoAllocateNcRaPreamble (rnti);
 }
 
-void 
+std::vector<NbIotRrcSap::PurConfigNbR16> 
 EnbMacMemberLteEnbCmacSapProvider::SetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
 {
-  m_mac->DoSetUpPurNb(infoPurRequest);
+  std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16 = m_mac->DoSetUpPurNb(infoPurRequest);
+  return allPurConfigNbR16;
 }
 
 void
@@ -1436,10 +1437,11 @@ void LteEnbMac::DoRemoveUeFromScheduler(uint16_t rnti){
   m_schedulerNb->RemoveUe(rnti);
 }
 
-void LteEnbMac::DoSetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest){
+std::vector<NbIotRrcSap::PurConfigNbR16> LteEnbMac::DoSetUpPurNb(NbIotRrcSap::InfoPurRequest infoPurRequest){
   // Based on the given PUR setup parameters, a corresponding transmission slot for PUR needs to be identified and reserved
   //std::cout << "Beep4" << std::endl;
-  m_schedulerNb->SchedulePurNb(infoPurRequest);
+  std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16 = m_schedulerNb->SchedulePurNb(infoPurRequest);
+  return allPurConfigNbR16;
 }
 
 void LteEnbMac::DoSetLogDir(std::string logdir){

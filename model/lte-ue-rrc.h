@@ -331,6 +331,13 @@ public:
    */
   void SetUseRlcSm (bool val);
 
+  /** 
+   * 
+   * 
+   * \param allPurConfigNbR16 Includes the PUR configurationd determined by PurRequest
+   */
+  void SetPurConfigNb (std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16);
+
   /**
    * TracedCallback signature for imsi, cellId and rnti events.
    *
@@ -1417,6 +1424,7 @@ private:
   bool m_cIotOpt;
   bool m_edt;
   bool m_pur;
+  std::vector<NbIotRrcSap::PurConfigNbR16> m_purConfigNb;
   bool m_logging;
   std::vector<Ptr<Packet>> m_packetStored;
   NbIotRrcSap::RadioResourceConfigCommonNb m_rc;

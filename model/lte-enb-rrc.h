@@ -1908,7 +1908,7 @@ public:
   NbIotRrcSap::SystemInformationBlockType1Nb GetSib1Nb();
   NbIotRrcSap::SystemInformationNb GetSiNb();
 
-  void SetUpPurConfigurationNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
+  std::vector<NbIotRrcSap::PurConfigNbR16> SetUpPurConfigurationNb(NbIotRrcSap::InfoPurRequest infoPurRequest);
 
 }; // end of `class LteEnbRrc`
 

@@ -169,6 +169,7 @@ LteUeRrc::LteUeRrc ()
     m_rnti (0),
     m_cellId (0),
     m_useRlcSm (true),
+    m_pur(false),
     m_connectionPending (false),
     m_hasReceivedMib (false),
     m_hasReceivedSib1 (false),
@@ -304,12 +305,6 @@ LteUeRrc::GetTypeId (void)
                    "Standard values: true, false",
                    BooleanValue(false),
                    MakeBooleanAccessor(&LteUeRrc::m_edt),
-                   MakeBooleanChecker())
-    .AddAttribute ("PUR",
-                   "This specifies if Preconfigured Uplink Resources are used. This feature is available with 3GPP Rel. 16. "
-                   "Standard values: true, false",
-                   BooleanValue(false),
-                   MakeBooleanAccessor(&LteUeRrc::m_pur),
                    MakeBooleanChecker())
     .AddTraceSource ("MibReceived",
                      "trace fired upon reception of Master Information Block",
@@ -586,6 +581,14 @@ LteUeRrc::SetUseRlcSm (bool val)
   m_useRlcSm = val;
 }
 
+void
+LteUeRrc::SetPurConfigNb (std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16) 
+{
+  NS_LOG_FUNCTION (this);
+  m_pur = true;
+  m_purConfigNb = allPurConfigNbR16;
+}
+
 
 void
 LteUeRrc::DoInitialize (void)
@@ -690,6 +693,10 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
       m_useEdtPreamble = false;
     }
   }
+
+  if(m_pur){
+    
+  }
   
   if (m_state == CONNECTED_NORMALLY){
     SendDataNb(packet, bid);
@@ -705,7 +712,7 @@ LteUeRrc::DoSendData (Ptr<Packet> packet, uint8_t bid)
     //m_cphySapProvider.at(0)->StartUp();
     m_hasReceivedMibNb = false;
     m_resumePending = true;
-    SwitchToState(IDLE_WAIT_MIB); // After PSM UE hast to receive MIB again
+    SwitchToState(IDLE_WAIT_MIB); // After PSM UE has to receive MIB again
   }
   else if(m_state == IDLE_SUSPEND_EDRX){
       if(!m_eDrxTimeout.IsExpired()){

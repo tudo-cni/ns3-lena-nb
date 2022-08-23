@@ -31,6 +31,9 @@
 #include "ns3/random-variable-stream.h"
 #include "ns3/lte-module.h"
 #include <ns3/winner-plus-propagation-loss-model.h>
+#include "ns3/application-5g-client.h"
+#include "ns3/application-5g-helper.h"
+#include "ns3/application-5g-server.h"
 //#include "ns3/gtk-config-store.h"
 #include <chrono>
 #include <iomanip>
@@ -230,7 +233,8 @@ main (int argc, char *argv[])
 
 
   // Install and start applications on UEs and remote host
-  uint16_t ulPort = 2000;
+  uint16_t srvRcvPort = 2000;
+  uint16_t cltRcvPort = 2000;
   ApplicationContainer clientApps;
   ApplicationContainer serverApps;
   
@@ -263,45 +267,98 @@ main (int argc, char *argv[])
         lteHelper->SetUpPurNb(ueLteDevs.Get(i), enbLteDevs.Get(0), packetinterval_app_a, packetsize_app_a, access, rnti);
       }
 
-      ++ulPort;
-      UdpEchoServerHelper server (ulPort);
-      serverApps.Add(server.Install (remoteHost));
+      ++srvRcvPort;
+      ++cltRcvPort;
       //
-      // Create a UdpEchoClient application to send UDP datagrams from node zero to
+      // Create a Application5GClient application to send UDP datagrams from node zero to
       // node one.
       //
       if (i < num_ues_app_a){
-        uint packetsize = packetsize_app_a;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_a));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_a;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_a;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
       else if (i < num_ues_app_a+num_ues_app_b){
-        uint packetsize = packetsize_app_b;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_b));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_b;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_b;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
       else {
-        uint packetsize = packetsize_app_c;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_c));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_c;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_c;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
     }
 
@@ -333,46 +390,95 @@ main (int argc, char *argv[])
         //std::cout << "PUR" << std::endl;
       }
 
-      ++ulPort;
-      UdpEchoServerHelper server (ulPort);
-      serverApps.Add(server.Install (remoteHost));
-      //
-      // Create a UdpEchoClient application to send UDP datagrams from node zero to
-      // node one.
-      //
-
+      ++srvRcvPort;
+      ++cltRcvPort;
+      
       if (i < ues_to_consider+num_ues_app_a){
-        uint packetsize = packetsize_app_a;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_a));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_a;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_a;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
       else if (i < ues_to_consider+num_ues_app_a+num_ues_app_b){
-        uint packetsize = packetsize_app_b;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_b));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_b;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_b;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
       else {
-        uint packetsize = packetsize_app_c;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_c));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_c;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_c;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
     }
   
@@ -404,45 +510,99 @@ main (int argc, char *argv[])
         //std::cout << "PUR" << std::endl;
       }
 
-      ++ulPort;
-      UdpEchoServerHelper server (ulPort);
-      serverApps.Add(server.Install (remoteHost));
+      ++srvRcvPort;
+      ++cltRcvPort;
+      
       //
-      // Create a UdpEchoClient application to send UDP datagrams from node zero to
+      // Create a Application5GClient application to send UDP datagrams from node zero to
       // node one.
       //
       if (i < ues_to_consider*2 + num_ues_app_a){
-        uint packetsize = packetsize_app_a;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_a));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_a;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_a;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
       else if (i < ues_to_consider*2 + num_ues_app_a+num_ues_app_b){
-        uint packetsize = packetsize_app_b;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_b));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_b;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_b;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
       else {
-        uint packetsize = packetsize_app_c;
-        UdpEchoClientHelper ulClient (remoteHostAddr, ulPort);
-        ulClient.SetAttribute ("Interval", TimeValue (packetinterval_app_c));
-        ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
-        ulClient.SetAttribute ("PacketSize", UintegerValue(packetsize));
-        clientApps.Add (ulClient.Install (ueNodes.Get(i)));
+        std::vector<Application5GHelper::Application5GMessage> messages;
+        Application5GHelper::Application5GMessage msg1;
+        msg1.isUL = true;
+        msg1.sizeBytes= packetsize_app_c;
+        msg1.remoteAddr = remoteHostAddr;
+        msg1.remotePort = srvRcvPort;
+        messages.push_back(msg1);
+        Application5GHelper::Application5GMessage msg2;
+        msg2.isUL = false;
+        msg2.sizeBytes = packetsize_app_c;
+        msg2.remotePort = cltRcvPort;
+        messages.push_back(msg2);
 
-        serverApps.Get(i)->SetStartTime (MilliSeconds (access));
-        clientApps.Get(i)->SetStartTime (MilliSeconds (access));
+        ApplicationContainer srv;
+        Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
+        s->SetTrafficModel(messages);
+        srv.Add(s);
+        srv.Start(MilliSeconds (access));
+        remoteHost->AddApplication(s);
+
+        ApplicationContainer clt;
+        Ptr<Application5GClient> c = CreateObject<Application5GClient> ();
+        c->SetTrafficModel(messages);
+        remoteHost->AddApplication(c);
+        clt.Add(c);
+        clt.Start(MilliSeconds (access));
+        ueNodes.Get(i)->AddApplication(c);
       }
     }
 

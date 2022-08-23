@@ -9,12 +9,12 @@ import time
 
 configure_command = "cd ../../ && ./waf clean && CXXFLAGS=\"-O3 -w\" ./waf -d optimized configure --enable-examples --enable-modules=lte --disable-python"
 
-simulation_command = "cd ../../ && ./waf --run \"lena-nb-5G-scenario"
+simulation_command = "cd ../../ && ./waf --run \"lena-nb-5G-application"
 
 callgrind_command = "cd ../../ && ./waf --command-template\"valgrind --tool=callgrind  \%\s\" --run \"lena-nb-udp-data-transfer"
 
 #sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-optimized"
-sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-debug"
+sim_command = "cd ../../ && ./build/src/lte/examples/ns3.32-lena-nb-5G-application-debug"
 
 
 class SimulationParameters:

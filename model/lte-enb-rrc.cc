@@ -3860,9 +3860,10 @@ void LteEnbRrc::GenerateSystemInformationBlockType2Nb(std::pair<const uint8_t, n
   }
 }
 
-void LteEnbRrc::SetUpPurConfigurationNb(NbIotRrcSap::InfoPurRequest infoPurRequest){
+std::vector<NbIotRrcSap::PurConfigNbR16> LteEnbRrc::SetUpPurConfigurationNb(NbIotRrcSap::InfoPurRequest infoPurRequest){
   //std::cout << "Beep3" << std::endl;
-  m_cmacSapProvider.at(0)->SetUpPurNb(infoPurRequest);
+  std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16 = m_cmacSapProvider.at(0)->SetUpPurNb(infoPurRequest);
+  return allPurConfigNbR16;
 }
 
 void LteEnbRrc::SetLogDir(std::string logdir){

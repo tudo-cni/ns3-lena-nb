@@ -71,6 +71,9 @@ def build(bld):
     obj = bld.create_ns3_program('lena-nb-5G-scenario',
                                  ['lte'])
     obj.source = 'lena-nb-5G-scenario.cc'
+    obj = bld.create_ns3_program('lena-nb-5G-application',
+                                 ['lte'])
+    obj.source = 'lena-nb-5G-application.cc'
     if bld.env['ENABLE_EMU']:
         obj = bld.create_ns3_program('lena-simple-epc-emu',
                                      ['lte', 'fd-net-device'])

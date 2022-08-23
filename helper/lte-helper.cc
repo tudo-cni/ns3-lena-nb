@@ -1166,7 +1166,8 @@ LteHelper::SetUpPur (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, NbIotRrc
   infoPurRequest.rnti = rnti;
   infoPurRequest.rsrp = rsrp;
 
-  enbRrc->SetUpPurConfigurationNb(infoPurRequest);
+  std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16 = enbRrc->SetUpPurConfigurationNb(infoPurRequest);
+  ueRrc->SetPurConfigNb(allPurConfigNbR16);
 }
 
 void LteHelper::ScheduleConnect(Ptr<NetDevice> ueDevice){

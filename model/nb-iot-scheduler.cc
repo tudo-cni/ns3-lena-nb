@@ -1114,7 +1114,7 @@ NbiotScheduler::CreateDciNpdcchMessage (uint16_t rnti, NbIotRrcSap::NpdcchMessag
 
 
 
-void 
+std::vector<NbIotRrcSap::PurConfigNbR16>  
 NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
 {
   NbIotRrcSap::PurSetupRequest purSetupRequest = infoPurRequest.purSetupRequest;
@@ -1145,29 +1145,12 @@ NbiotScheduler::SchedulePurNb(NbIotRrcSap::InfoPurRequest infoPurRequest)
   std::cout << "NbiotScheduler::SchedulePurNb: Couplingloss: " << couplingloss<< "\n";
 
   NpuschMeasurementValues npusch = m_Amc.getBareboneNpusch (m_rntiRsrpMap[rnti] - 43.0 - correction_factor, tbs, 15000, 15);
-  if(ScheduleNpuschPur(npusch,rnti,periodicity, nextAccess,infiniteOccasions)){
-    // Do something
-  }
-
-  // if (ScheduleNpdcchMessage (dci_candidate, ssc))
-  //             {
-  //               scheduledMessages.push_back (dci_candidate);
-  //               if (int (m_rntiUeConfigMap[(*it)].rlcUlBuffer - (dci_candidate.tbs / 8)) > 0)
-  //                 {
-  //                   m_rntiUeConfigMap[(*it)].rlcUlBuffer =
-  //                       m_rntiUeConfigMap[(*it)].rlcUlBuffer - (dci_candidate.tbs / 8);
-  //                 }
-  //               else
-  //                 {
-  //                   m_rntiUeConfigMap[(*it)].rlcUlBuffer = 0;
-  //                 }
-  //               m_RoundRobinLastScheduled[ssc] = (*it);
-  //               m_rntiUeConfigMap[(*it)].priority = UeConfig::SchedulePriority::DOWNLINK;
-  //             }
-
+  std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16 = ScheduleNpuschPur(npusch,rnti,periodicity, nextAccess,infiniteOccasions);
+  
+  return allPurConfigNbR16;
 }
 
-bool 
+std::vector<NbIotRrcSap::PurConfigNbR16> 
 NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti, uint32_t periodicity, uint32_t nextAccess, bool infiniteOcassions){
   bool scheduleSuccessful = false;
   
@@ -1192,11 +1175,11 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
   }
   uint16_t subframesNpusch = lenRu * npusch.NRU * npusch.NRep;
 
-  std::cout << "NbiotScheduler::ScheduleNpuschPur: " << npusch.SCS << ", " << npusch.NRUSC << ", " << npusch.NRU << ", " << npusch.TTI << "\n";
+  //std::cout << "NbiotScheduler::ScheduleNpuschPur: " << npusch.SCS << ", " << npusch.NRUSC << ", " << npusch.NRU << ", " << npusch.TTI << "\n";
 
 
   std::vector<std::pair<uint64_t, std::vector<uint64_t>>> purGrant = GetNextAvailablePurNpuschCandidate (rnti, periodicity, nextAccess, subframesNpusch);
-
+  std::vector<NbIotRrcSap::PurConfigNbR16> allPurConfigNbR16;
   if (purGrant.size () > 0)
   {
     scheduleSuccessful = true;
@@ -1208,72 +1191,20 @@ NbiotScheduler::ScheduleNpuschPur(NpuschMeasurementValues npusch, uint16_t rnti,
         //std::cout << purGrant[i].first <<", " << purGrant[i].second[j] << "\n";
         m_uplink[purGrant[i].first][purGrant[i].second[j]] = rnti;
       }
-    }
-    
-    //std::cout << "NbiotScheduler::ScheduleNpuschPur - Time of first subframe: " << purGrant[0].second[0] << "\n";
-  }
-    
-    std::vector<NbIotRrcSap::PurConfigNbR16> purGrants;
-    for (size_t i = 0; i < purGrant.size(); i++)
-    {
       NbIotRrcSap::PurConfigNbR16 purConfigNbR16;
       NbIotRrcSap::PurStartTimeParametersR16 purStartTimeParametersR16;
       purStartTimeParametersR16.startSubframeR16 = purGrant[i].second[0] % 10;
       purStartTimeParametersR16.startSfnR16 = purGrant[i].second[0] - purStartTimeParametersR16.startSubframeR16;
       
-      std::cout << "NbiotScheduler::ScheduleNpuschPur - Time of first subframe: " << purGrant[i].second[0] << ", startSfn: "<< purStartTimeParametersR16.startSfnR16 << ", StartSf: "<< purStartTimeParametersR16.startSubframeR16 << "\n";
+      //std::cout << "NbiotScheduler::ScheduleNpuschPur - Time of first subframe: " << purGrant[i].second[0] << ", startSfn: "<< purStartTimeParametersR16.startSfnR16 << ", StartSf: "<< purStartTimeParametersR16.startSubframeR16 << "\n";
 
       purConfigNbR16.purStartTimeParametersR16 = purStartTimeParametersR16;
-      purGrants.push_back(purConfigNbR16);
+      allPurConfigNbR16.push_back(purConfigNbR16);
     }
     
-    //purStartTimeParametersR16.startSfnR16
+  }
 
-    // Now a PURConfigNB message is applied as a response
-
-    
-    
-
-  // if (test.size () > 0)
-  //   {
-  //     uint64_t size_ru = 8; // 15 khz bandwidth // TODO Pascal: This was 1 by Tim. Why? Since BW is fixed to 15 KHz for now, each RU is 8ms long.
-  //     uint64_t subframesNpusch = NbIotRrcSap::ConvertNumResourceUnits2int (message.dciN0)*size_ru *
-  //                                 NbIotRrcSap::ConvertNumNpuschRepetitions2int (message.dciN0);
-  //     // Have to be set by higher layer | 4 for debugging
-  //     std::vector<std::pair<uint64_t, std::vector<uint64_t>>> npuschsubframes =
-  //         GetNextAvailableNpuschCandidate (*(test.end () - 1), 0, subframesNpusch, true);
-
-  //     if (npuschsubframes.size () > 0)
-  //       {
-  //         //NS_BUILD_DEBUG (std::cout << "Scheduling NPDCCH at ");
-
-  //         for (size_t j = 0; j < test.size (); ++j)
-  //           {
-  //             m_downlink[test[j]] = message.rnti;//m_currenthyperindex;
-  //             //NS_BUILD_DEBUG (std::cout << test[j] << " ");
-  //           }
-
-  //         //NS_BUILD_DEBUG (std::cout << std::endl);
-  //         //NS_BUILD_DEBUG (std::cout << "Scheduling NPUSCH at ");
-  //         scheduleSuccessful = true;
-  //         for (size_t i = 0; i < npuschsubframes[0].second.size (); i++)
-  //           {
-  //             m_uplink[npuschsubframes[0].first][npuschsubframes[0].second[i]] =
-  //                 message.rnti;
-  //                 //m_currenthyperindex;
-  //             //NS_BUILD_DEBUG (std::cout << npuschsubframes[0].second[i] << " ");
-  //           }
-  //         //NS_BUILD_DEBUG (std::cout << std::endl);
-
-  //         message.dciRepetitionsubframes = test;
-  //         message.dciN0.npuschOpportunity = npuschsubframes;
-  //         message.dciN0.dciSubframes = test;
-  //         m_rntiUeConfigMap[message.rnti].lastUl = npuschsubframes[0].second.back ();
-  //         //NS_BUILD_DEBUG (std::cout << std::endl);
-  //         return true;
-  //       }
-// }
-  return false;
+  return allPurConfigNbR16;
 }
 
 std::vector<std::pair<uint64_t, std::vector<uint64_t>>>
