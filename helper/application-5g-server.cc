@@ -287,7 +287,7 @@ Application5GServer::Send (void)
 }
 
 void 
-Application5GServer::NextSend (void){
+Application5GServer::NextSend (Ptr<Socket> socket){
   NS_LOG_FUNCTION (this);
 
   NS_ASSERT (m_sendEvent.IsExpired ());
@@ -295,7 +295,7 @@ Application5GServer::NextSend (void){
   Ptr<Packet> p;
 
     Application5GHelper::Application5GMessage nextMsg = m_messages[m_count_per_run];
-    if (nextMsg.isUL){
+    if (!nextMsg.isUL){
       m_size = nextMsg.sizeBytes;
       if (m_dataSize)
         {
@@ -320,45 +320,45 @@ Application5GServer::NextSend (void){
           //
           p = Create<Packet> (m_size);
         }
-      Address localAddress;
-      m_socket->GetSockName (localAddress);
+      //Address localAddress;
+      //m_socket->GetSockName (localAddress);
       // call to the trace sinks before the packet is actually sent,
       // so that tags added to the packet can be sent as well
-      m_txTrace (p);
-      if (Ipv4Address::IsMatchingType (m_remote))
-        {
-          m_txTraceWithAddresses (p, localAddress, InetSocketAddress (Ipv4Address::ConvertFrom (m_remote), m_remote_port));
-        }
-      else if (Ipv6Address::IsMatchingType (m_remote))
-        {
-          m_txTraceWithAddresses (p, localAddress, Inet6SocketAddress (Ipv6Address::ConvertFrom (m_remote), m_remote_port));
-        }
-      m_socket->Send (p);
+      //m_txTrace (p);
+      // if (Ipv4Address::IsMatchingType (m_remote))
+      //   {
+      //     m_txTraceWithAddresses (p, localAddress, InetSocketAddress (Ipv4Address::ConvertFrom (m_remote), m_remote_port));
+      //   }
+      // else if (Ipv6Address::IsMatchingType (m_remote))
+      //   {
+      //     m_txTraceWithAddresses (p, localAddress, Inet6SocketAddress (Ipv6Address::ConvertFrom (m_remote), m_remote_port));
+      //   }
+      socket->Send (p);
         m_count_per_run = m_count_per_run + 1;
       ++m_sent;
 
       if (Ipv4Address::IsMatchingType (m_remote))
         {
-          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << Ipv4Address::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
-          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " << Ipv4Address::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
+          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " <<
                       Ipv4Address::ConvertFrom (m_remote) << " port " << m_remote_port);
         }
       else if (Ipv6Address::IsMatchingType (m_remote))
         {
-          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << Ipv6Address::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
-          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " << Ipv6Address::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
+          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " <<
                       Ipv6Address::ConvertFrom (m_remote) << " port " << m_remote_port);
         }
       else if (InetSocketAddress::IsMatchingType (m_remote))
         {
-          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << InetSocketAddress::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
-          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " << InetSocketAddress::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
+          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " <<
                       InetSocketAddress::ConvertFrom (m_remote).GetIpv4 () << " port " << InetSocketAddress::ConvertFrom (m_remote).GetPort ());
         }
       else if (Inet6SocketAddress::IsMatchingType (m_remote))
         {
-          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << Inet6SocketAddress::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
-          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " << Inet6SocketAddress::ConvertFrom (m_remote) << " port " << m_remote_port << std::endl;
+          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server sent " << m_size << " bytes to " <<
                       Inet6SocketAddress::ConvertFrom (m_remote).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (m_remote).GetPort ());
         }
 
@@ -393,6 +393,8 @@ Application5GServer::HandleRead (Ptr<Socket> socket)
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server received " << packet->GetSize () << " bytes from " <<
                        InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
                        InetSocketAddress::ConvertFrom (from).GetPort ());
+          m_remote = from;
+          m_remote_port = InetSocketAddress::ConvertFrom (from).GetPort ();
         }
       else if (Inet6SocketAddress::IsMatchingType (from))
         {
@@ -401,6 +403,8 @@ Application5GServer::HandleRead (Ptr<Socket> socket)
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server received " << packet->GetSize () << " bytes from " <<
                        Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
+          m_remote = from;
+          m_remote_port = InetSocketAddress::ConvertFrom (from).GetPort ();
         }
       socket->GetSockName (localAddress);
       m_txTrace (packet);
@@ -408,7 +412,7 @@ Application5GServer::HandleRead (Ptr<Socket> socket)
     }
   if (m_count_per_run < m_messages.size()) // There are additional messages that need to be transmitted
   {
-    NextSend();
+    NextSend(socket);
   }
   else
   {

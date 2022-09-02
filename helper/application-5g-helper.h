@@ -37,6 +37,8 @@ class Application5GHelper
     bool isUL;
     uint16_t sizeBytes;
     std::string content;
+    Address remoteAddr;
+    uint16_t remotePort;
   };
 };
 

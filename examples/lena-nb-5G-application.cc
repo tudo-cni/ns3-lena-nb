@@ -64,12 +64,12 @@ main (int argc, char *argv[])
   std::string simName = "test";
   double cellsize = 2500; // in meters
   int num_ues_app_a = 1;
-  int num_ues_app_b = 2;
-  int num_ues_app_c = 3;
+  int num_ues_app_b = 0;
+  int num_ues_app_c = 0;
   int packetsize_app_a = 49; // 32 Bytes 5G mMTC payload + 4 Bytes CoAP Header + 13 Bytes DTLS Header // UDP Header and IP Header  are added by NS-3
   int packetsize_app_b = 49;
   int packetsize_app_c = 49;
-  Time packetinterval_app_a = Minutes(15); // Days(1); TODO PASCAL 
+  Time packetinterval_app_a = Days(1);
   Time packetinterval_app_b = Days(1);
   Time packetinterval_app_c = Days(1);
   bool ciot = false;
@@ -394,6 +394,7 @@ main (int argc, char *argv[])
       ++cltRcvPort;
       
       if (i < ues_to_consider+num_ues_app_a){
+        //std::cout << "Midrun App A" << std::endl;
         std::vector<Application5GHelper::Application5GMessage> messages;
         Application5GHelper::Application5GMessage msg1;
         msg1.isUL = true;
@@ -406,6 +407,17 @@ main (int argc, char *argv[])
         msg2.sizeBytes = packetsize_app_a;
         msg2.remotePort = cltRcvPort;
         messages.push_back(msg2);
+        Application5GHelper::Application5GMessage msg3;
+        msg3.isUL = true;
+        msg3.sizeBytes= packetsize_app_a;
+        msg3.remoteAddr = remoteHostAddr;
+        msg3.remotePort = srvRcvPort;
+        messages.push_back(msg3);
+        Application5GHelper::Application5GMessage msg4;
+        msg4.isUL = false;
+        msg4.sizeBytes = packetsize_app_a;
+        msg4.remotePort = cltRcvPort;
+        messages.push_back(msg4);
 
         ApplicationContainer srv;
         Ptr<Application5GServer> s = CreateObject<Application5GServer> ();
@@ -423,6 +435,7 @@ main (int argc, char *argv[])
         ueNodes.Get(i)->AddApplication(c);
       }
       else if (i < ues_to_consider+num_ues_app_a+num_ues_app_b){
+        //std::cout << "Midrun App B" << std::endl;
         std::vector<Application5GHelper::Application5GMessage> messages;
         Application5GHelper::Application5GMessage msg1;
         msg1.isUL = true;
@@ -452,6 +465,7 @@ main (int argc, char *argv[])
         ueNodes.Get(i)->AddApplication(c);
       }
       else {
+        //std::cout << "Midrun App C" << std::endl;
         std::vector<Application5GHelper::Application5GMessage> messages;
         Application5GHelper::Application5GMessage msg1;
         msg1.isUL = true;
