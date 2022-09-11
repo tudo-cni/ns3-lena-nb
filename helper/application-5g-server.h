@@ -89,7 +89,7 @@ private:
   /**
    * \brief Send additional packets
    */
-  void NextSend (Ptr<Socket> socket);
+  void NextSend (Ptr<Socket> socket, Address to);
 
   /**
    * \brief Handle a packet reception.

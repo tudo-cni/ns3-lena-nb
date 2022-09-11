@@ -429,7 +429,7 @@ Application5GClient::NextSend (void){
   Ptr<Packet> p;
 
   m_count_per_run = m_count_per_run + 1;
-    Application5GHelper::Application5GMessage nextMsg = m_messages[m_count_per_run];
+    Application5GHelper::Application5GMessage nextMsg = m_messages[m_count_per_run-1];
     if (nextMsg.isUL){
       m_size = nextMsg.sizeBytes;
       if (m_dataSize)
@@ -473,21 +473,25 @@ Application5GClient::NextSend (void){
 
       if (Ipv4Address::IsMatchingType (m_peerAddress))
         {
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << Ipv4Address::ConvertFrom (m_peerAddress) << " port " << m_peerPort << std::endl;
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
                       Ipv4Address::ConvertFrom (m_peerAddress) << " port " << m_peerPort);
         }
       else if (Ipv6Address::IsMatchingType (m_peerAddress))
         {
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << Ipv6Address::ConvertFrom (m_peerAddress) << " port " << m_peerPort << std::endl;
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
                       Ipv6Address::ConvertFrom (m_peerAddress) << " port " << m_peerPort);
         }
       else if (InetSocketAddress::IsMatchingType (m_peerAddress))
         {
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << InetSocketAddress::ConvertFrom (m_peerAddress) << " port " << InetSocketAddress::ConvertFrom (m_peerAddress).GetPort () << std::endl;
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
                       InetSocketAddress::ConvertFrom (m_peerAddress).GetIpv4 () << " port " << InetSocketAddress::ConvertFrom (m_peerAddress).GetPort ());
         }
       else if (Inet6SocketAddress::IsMatchingType (m_peerAddress))
         {
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " << Inet6SocketAddress::ConvertFrom (m_peerAddress) << " port " << Inet6SocketAddress::ConvertFrom (m_peerAddress).GetPort () << std::endl;
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client sent " << m_size << " bytes to " <<
                       Inet6SocketAddress::ConvertFrom (m_peerAddress).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (m_peerAddress).GetPort ());
         }
@@ -518,6 +522,7 @@ Application5GClient::HandleRead (Ptr<Socket> socket)
       if (InetSocketAddress::IsMatchingType (from))
         {
           m_count_per_run = m_count_per_run + 1; // Server message received
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client received " << packet->GetSize () << " bytes from " << InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " << InetSocketAddress::ConvertFrom (from).GetPort () << std::endl;;
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client received " << packet->GetSize () << " bytes from " <<
                        InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
                        InetSocketAddress::ConvertFrom (from).GetPort ());
@@ -525,6 +530,7 @@ Application5GClient::HandleRead (Ptr<Socket> socket)
       else if (Inet6SocketAddress::IsMatchingType (from))
         {
           m_count_per_run = m_count_per_run + 1; // Server message received
+          std::cout << "At time " << Simulator::Now ().As (Time::S) << " client received " << packet->GetSize () << " bytes from " << Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (from).GetPort () << std::endl;
           NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " client received " << packet->GetSize () << " bytes from " <<
                        Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
