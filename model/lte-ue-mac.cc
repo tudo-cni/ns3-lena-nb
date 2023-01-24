@@ -614,11 +614,7 @@ LteUeMac::SendRaPreambleNb (bool contention)
 
   if (m_mac_logging)
   {
-    std::string logfile_path = m_logdir+"MAC.log";
-    std::ofstream logfile;
-    logfile.open(logfile_path, std::ios_base::app);
-    logfile <<  m_imsi << ",SendRaPreambleNb," << Simulator::Now().GetMilliSeconds() <<"\n";
-    logfile.close();
+    LogMessage("SendRaPreambleNb");
   }
 
   // 3GPP 36.321 5.1.4
@@ -716,11 +712,8 @@ LteUeMac::RecvRaResponseNb (NbIotRrcSap::RarPayload raResponse)
                                     
   if (m_mac_logging)
   {
-    std::string logfile_path = m_logdir+"MAC.log";
-    std::ofstream logfile;
-    logfile.open(logfile_path, std::ios_base::app);
-    logfile <<  m_imsi << ",RecvRaResponseNb," << Simulator::Now().GetMilliSeconds() << ",cellRNTI," << raResponse.cellRnti << "\n";
-    logfile.close();
+    std::string msg = "RecvRaResponseNb,cellRNTI," + std::to_string(raResponse.cellRnti) + ",";
+    LogMessage(msg);
   }
 
   m_rnti = raResponse.cellRnti;
@@ -816,24 +809,81 @@ LteUeMac::RaResponseTimeout (bool contention)
 void
 LteUeMac::RaResponseTimeoutNb (bool contention)
 {
+  // Based on ETSI TS 136 321 V13.9.0, 5.1.4: Random Access Response reception:
+  // When RAP fails, and the MaxNumPreambleAttemptCE counter is reached, the UE resets MaxNumPreambleAttemptCE 
+  // and retries in the next CE level, until preambleTransMax is reached
   NS_LOG_FUNCTION (this << contention);
   m_waitingForRaResponse = false;
   //NS_BUILD_DEBUG(std::cout << "Window End" << std::endl);
   // 3GPP 36.321 5.1.4
   ++m_preambleTransmissionCounter;
+  ++m_preambleTransmissionCounterCe;
   //fire RA response timeout trace
   m_raResponseTimeoutTrace (m_imsi, contention, m_preambleTransmissionCounter,
-                            m_rachConfig.preambleTransMax + 1);
-  if (m_preambleTransmissionCounter ==
-      NbIotRrcSap::ConvertMaxNumPreambleAttemptCE2int (m_CeLevel) + 1)
+                            m_rachConfig.preambleTransMax);
+  if (m_preambleTransmissionCounter == m_radioResourceConfig.rachConfigCommon.preambleTransMaxCE)
     {
       NS_LOG_INFO ("RAR timeout, preambleTransMax reached => giving up");
+      LogMessage("LteUeMac::RaResponseTimeoutNb,RAR timeout: preambleTransMax reached");
 
       m_cmacSapUser->NotifyRandomAccessFailed ();
     }
   else
     {
+      if (m_preambleTransmissionCounterCe ==
+      NbIotRrcSap::ConvertMaxNumPreambleAttemptCE2int (m_CeLevel)) // Max. number of retries in this CE level reached
+        {
+          m_preambleTransmissionCounterCe = 0;
+          NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled
+
+          if (m_CeLevel.coverageEnhancementLevel == m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb0.coverageEnhancementLevel) // CE0
+            {
+              // Increase to CE1
+              NS_LOG_INFO ("RAR timeout, MaxNumPreambleAttemptCE reached => increasing CE level to CE1");
+              LogMessage("LteUeMac::RaResponseTimeoutNb,RAR timeout, MaxNumPreambleAttemptCE reached => increasing CE level to CE1");              
+              m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb1;
+              m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo2;
+              if(m_edt){
+                tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb1;
+              }
+            }
+          else if (m_CeLevel.coverageEnhancementLevel == m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb1.coverageEnhancementLevel) // CE1
+            {
+              // Increase to CE2
+              NS_LOG_INFO ("RAR timeout, MaxNumPreambleAttemptCE reached => increasing CE level to CE2");
+              LogMessage("LteUeMac::RaResponseTimeoutNb,RAR timeout, MaxNumPreambleAttemptCE reached => increasing CE level to CE2");   
+              m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb2;
+              m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo3;
+              if(m_edt){
+                tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb2;
+              }
+            }
+          else if (m_CeLevel.coverageEnhancementLevel == m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb2.coverageEnhancementLevel) // CE2
+            {
+              // Can't increase further
+              NS_LOG_INFO ("RAR timeout, MaxNumPreambleAttemptCE in CE2 reached => giving up");
+              LogMessage("LteUeMac::RaResponseTimeoutNb,RAR timeout, MaxNumPreambleAttemptCE in CE2 reached => giving up");  
+              m_cmacSapUser->NotifyRandomAccessFailed ();
+              return;
+            }
+
+          if(m_edt){
+            // Overwrite R13 config with values for R15 EDT provided
+            // easiest way to access data not include in NprachParameterNBR14
+            m_CeLevel.coverageEnhancementLevel= tmp.coverageEnhancementLevel;
+            m_CeLevel.nprachPeriodicity = tmp.nprachPeriodicity; 
+            m_CeLevel.nprachStartTime = tmp.nprachStartTime;
+            m_CeLevel.nprachSubcarrierOffset = tmp.nprachSubcarrierOffset;
+            m_CeLevel.nprachNumSubcarriers = tmp.nprachNumSubcarriers;
+            m_CeLevel.nprachSubcarrierMsg3RangeStart= tmp.nprachSubcarrierMsg3RangeStart;
+            m_CeLevel.npdcchNumRepetitionsRA = tmp.npdcchNumRepetitionsRA;
+            m_CeLevel.npdcchStartSfCssRa = tmp.npdcchStartSfCssRa;
+            m_CeLevel.npdcchOffsetRa = tmp.npdcchOffsetRa;
+
+          }
+        }
       NS_LOG_INFO ("RAR timeout, re-send preamble");
+      LogMessage("LteUeMac::RaResponseTimeoutNb,RAR timeout, re-send preamble");  
       if (contention)
         {
           RandomlySelectAndSendRaPreambleNb ();
@@ -879,6 +929,7 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
   NS_ASSERT_MSG (m_nprachConfigured, "RACH not configured");
   m_preambleTransmissionCounter = 0;
   m_preambleTransmissionCounterCe = 0;
+  m_edt = edt;
   // Check CE Level
   double rsrp = m_uePhySapProvider->GetRSRP ();
   //NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm" << std::endl);
@@ -890,7 +941,7 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
       // CE2
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb2;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo3;
-      if(edt){
+      if(m_edt){
         tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb2;
       }
     }
@@ -899,7 +950,7 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
       // CE1
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb1;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo2;
-      if(edt){
+      if(m_edt){
         tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb1;
       }
     }
@@ -908,12 +959,12 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
       // CE0
       m_CeLevel = m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb0;
       m_rachConfigCe = m_radioResourceConfig.rachConfigCommon.rachInfoList.rachInfo1;
-      if(edt){
+      if(m_edt){
         tmp = m_radioResourceConfig.nprachConfigR15.nprachParameterListEdt.nprachParametersNb0;
       }
     }
 
-  if(edt){
+  if(m_edt){
     // Overwrite R13 config with values for R15 EDT provided
     // easiest way to access data not include in NprachParameterNBR14
     m_CeLevel.coverageEnhancementLevel= tmp.coverageEnhancementLevel;
@@ -931,11 +982,7 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
 
   if (m_mac_logging)
   {
-    std::string logfile_path = m_logdir+"MAC.log";
-    std::ofstream logfile;
-    logfile.open(logfile_path, std::ios_base::app);
-    logfile <<  m_imsi << ",StartRandomAccessProcedureNb," << Simulator::Now().GetMilliSeconds() << "\n";
-    logfile.close();
+    LogMessage("StartRandomAccessProcedureNb");
   }
 
   RandomlySelectAndSendRaPreambleNb ();
@@ -965,6 +1012,7 @@ LteUeMac::DoStartNonContentionBasedRandomAccessProcedure (uint16_t rnti, uint8_t
   m_rnti = rnti;
   m_raPreambleId = preambleId;
   m_preambleTransmissionCounter = 0;
+  m_preambleTransmissionCounterCe = 0;
   bool contention = false;
   SendRaPreamble (contention);
 }
@@ -1837,6 +1885,14 @@ void LteUeMac::DoSetMsg5Buffer(uint32_t buffersize){
 void LteUeMac::SetLogDir(std::string dirname){
   m_logdir = dirname;
   m_mac_logging = true;
+}
+
+void LteUeMac::LogMessage(std::string msg){
+  std::string logfile_path = m_logdir+"MAC.log";
+  std::ofstream logfile;
+  logfile.open(logfile_path, std::ios_base::app);
+  logfile <<  m_imsi << "," << msg << "," << Simulator::Now().GetMilliSeconds() << "\n";
+  logfile.close();
 }
 
 } // namespace ns3

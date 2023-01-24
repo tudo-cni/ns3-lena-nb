@@ -133,6 +133,8 @@ public:
 
   void SetLogDir(std::string dirname);
 
+  void LogMessage(std::string msg);
+
 private:
   // forwarded from MAC SAP
  /**
@@ -334,7 +336,7 @@ private:
   NbIotRrcSap::RadioResourceConfigCommonNb m_radioResourceConfig; ///< RACH configuration
   uint8_t m_raPreambleId; ///< RA preamble ID
   uint8_t m_preambleTransmissionCounter; ///< preamble tranamission counter
-  uint8_t m_preambleTransmissionCounterCe; ///< preamble tranamission counter
+  uint8_t m_preambleTransmissionCounterCe; ///< preamble tranamission counter per CE level
   uint16_t m_backoffParameter; ///< backoff parameter
   EventId m_noRaResponseReceivedEvent; ///< no RA response received event ID
   Ptr<UniformRandomVariable> m_raPreambleUniformVariable; ///< RA preamble random variable
@@ -344,7 +346,8 @@ private:
   uint8_t m_raRnti; ///< RA RNTI
   bool m_waitingForRaResponse; ///< waiting for RA response
 
-  NbIotRrcSap::NprachParametersNb m_CeLevel;
+  NbIotRrcSap::NprachParametersNb m_CeLevel; // CE Level based on RSRP
+  NbIotRrcSap::NprachParametersNb m_CeLevelRapRetries; // CE Level based on RSRP, but might be increased due to RA failures
   std::vector<std::pair<uint64_t, std::vector<uint64_t>>> m_nextPossibleHarqOpportunity;  // Subframes to send NPUSCH F2 if meessage received 
   bool m_simplifiedNprach;
   bool m_inSearchSpace;
@@ -353,6 +356,7 @@ private:
   bool m_edrx;
   bool m_psm;
   bool m_nextIsMsg5;
+  bool m_edt;
   NbIotRrcSap::EdtTbsNb DoGetEdtTbsInfo(); // return EdtTbsInfo based on RSRP (Coverage level)
   uint32_t m_subframesInSearchSpace;
   std::vector<uint32_t> m_logging;

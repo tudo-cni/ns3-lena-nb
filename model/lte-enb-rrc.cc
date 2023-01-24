@@ -198,7 +198,7 @@ UeManager::UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s, uint8_t compon
     m_pendingStartDataRadioBearers (false),
     m_t3412(Days(5)),
     m_t3324(MilliSeconds(3500)),
-    m_dataInactivityInterval(40), // TODO: Error in transmission multiple packets in one RRC_Connected session. For now use 40ms (like in Deutsche Telekom NB-IoT networks release the UE quickly
+    m_dataInactivityInterval(40), // TODO: Error in transmission multiple packets in one RRC_Connected session. For now use 40ms (like in Deutsche Telekom NB-IoT networks to release the UE quickly)
     m_eDrxCycle(0),
     m_enablePSM(true)
 { 
@@ -1921,7 +1921,7 @@ void UeManager::SwitchToResumeNb(){
   msg.resumeIdentity = m_resumeId; 
   m_rrc->m_rrcSapUser->SendRrcConnectionReleaseNb(m_rnti, msg);
   SwitchToState(IDLE_SUSPEND_EDRX);
-  m_rrc->MoveUeToResumed(m_rnti, m_resumeId);
+  Simulator::Schedule(MilliSeconds(1000), &LteEnbRrc::MoveUeToResumed, m_rrc, m_rnti, m_resumeId); // After 1000ms the ConnectionRelease should be scheduled and the UE can be released
 }
 
 void UeManager::SetLogDir(std::string logdir){
