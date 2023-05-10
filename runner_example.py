@@ -70,12 +70,12 @@ class TaskQueue(queue.Queue):
                 if result.returncode != 0:
                     # Task failed, maybe because of missing resources
                     # put simulation back on stac
-                    print(f"Something failed! Return code: {result.returncode}. Output: {result.stdout}. Error: {result.stderr}")
+                    print(f"Something failed! Return code: {result.returncode}. Output: {result.stdout}. Error: {result.stderr}. Original cmd: {cmd}")
                     self.put(simulationParameters)
             except:
                 # Task failed, maybe because of missing resources
                 # put simulation back on stac
-                print("Something failed due to unknown exception...")
+                print("Something failed due to unknown exception... Original cmd: {cmd}")
                 self.put(simulationParameters)
 
             self.task_done()

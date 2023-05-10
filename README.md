@@ -40,6 +40,9 @@ following parameters:
 With these parameters NB-IoT UEs are uniformly distributed on a disc with a diameter of ```cellsize=2500m```. Each UE transmits once a day a user payload 
 of ```packetsize_app_a=49 Bytes```. Tn this case the payload for App A, B and C are equal, but can be changed in the script.
 
+Additional Note: 
+Our implementation uses an additional propagation model, which is available here: https://github.com/tudo-cni/ns3-propagation-winner-plus and needs to be included in the code for successful building the code.
+
 ## Note regarding actual Simulation Time
 Note that the actual simulation time is 3*simTime. If simTime is set to 5 minutes, 15 minutes of simulation time are simulated, which is important for high-scaled 
 scenarios. The first 5 minutes produce no significant results since devices at the beginning are scheduled in an empty cell and experience very good transmission 

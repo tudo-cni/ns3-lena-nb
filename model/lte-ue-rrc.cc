@@ -1424,12 +1424,16 @@ LteUeRrc::DoRecvRrcConnectionResumeNb (NbIotRrcSap::RrcConnectionResumeNb msg)
 
         if(m_cIotOpt){
           if (m_packetStored.size() > 0 && size_left_to_fill > 0 && size_left_to_fill - (*next_packet)->GetSize() > 0){
-            msg2.dedicatedInfoNas = *next_packet;
+            msg2.dedicatedInfoNas = m_packetStored.front();
+            m_packetStored.erase(next_packet);
           }else{
+            SendDataNb(m_packetStored.front(),1);
+            m_packetStored.erase(next_packet);
             msg2.dedicatedInfoNas = Create<Packet>(0);
           }
         }else if (m_packetStored.size() > 0){
           SendDataNb(m_packetStored.front(),1);
+          m_packetStored.erase(next_packet);
           msg2.dedicatedInfoNas = Create<Packet>(0);
         }
 
