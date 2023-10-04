@@ -57,7 +57,25 @@ generates the required lena-nb-5G-scenario.cc calls including all parameters. Al
 one-by-one and automatically restarts a simulation if an error occured. The parameter num_workers is used for parallel simulations. If the simulations are used by 
 servers with e.g. 50 cores, the up to 50 workers can be set for up to 50 parallel simulations. Note that multiple parallel simulations consume much memory. 
 
-
+# Citation
+If you use this code or results in your paper, please cite our work as:
+```
+@inproceedings{10.1145/3532577.3532600,
+author = {J\"{o}rke, Pascal and Gebauer, Tim and Wietfeld, Christian},
+title = {From LENA to LENA-NB: Implementation and Performance Evaluation of NB-IoT and Early Data Transmission in Ns-3},
+year = {2022},
+isbn = {9781450396516},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3532577.3532600},
+doi = {10.1145/3532577.3532600},
+pages = {73–80},
+numpages = {8},
+keywords = {Internet of Things, LENA-NB, Early Data Transmission, NB-IoT, implementation, ns-3, performance evaluation, simulation},
+location = {Virtual Event, USA},
+series = {WNS3 '22}
+}
+```
 
 # References
 
