@@ -13,8 +13,13 @@ Currently, no NB-IoT specific error model is used. Instead, MATLAB was used to p
 A lookup table is derived from MATLAB NB-IoT BLER simulations to find a decent UL and DL configuration corresponding to a target BLER.
 In future work, an NB-IoT specific error model will be integrated in LENA-NB.
 
+# Publications using LENA-NB
+- P. Jörke, T. Gebauer, and C. Wietfeld, ‘From LENA to LENA-NB: Implementation and Performance Evaluation of NB-IoT and Early Data Transmission in ns-3’, in Proceedings of the 2022 Workshop on ns-3, 2022, pp. 73–80.
+- P. Jörke, T. Gebauer, S. Böcker, and C. Wietfeld, ‘Scaling Dense NB-IoT Networks to the Max: Performance Benefits of Early Data Transmission’, in 2022 IEEE 95th Vehicular Technology Conference:(VTC2022-Spring), 2022, pp. 1–7.
+- P. Jörke, D. Ronschka, and C. Wietfeld, ‘Performance Evaluation of Random Access for Small Data Transmissions in Highly Dense Public and Private NB-IoT Networks’, in 2023 IEEE 97th Vehicular Technology Conference (VTC2023-Spring), 2023, pp. 1–7.
+- M. Štůsek et al., ‘Exploiting NB-IoT Network Performance and Capacity for Smart-Metering Use-Cases’, in In proceedings of the 15th International Congress on Ultra Modern Telecommunications and Control Systems and Workshops (ICUMT)., 2023, pp. 193–199.
 
-
+If you use this code or results in your publications, please cite our work as mentioned in [Citation](#citation). Also, if you do not find your work in this list, please open a merge request. 
 # How to use LENA-NB 
 
 LENA-NB is based on the ns-3 release 3.32. We recommend using LENA-NB with ns-3 release 3.32, since other releases may have introduced changes in the source code 
