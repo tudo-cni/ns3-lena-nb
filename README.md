@@ -82,6 +82,9 @@ series = {WNS3 '22}
 }
 ```
 
+# Acknowledgement
+This work has been carried out in the course of the PuLS project, funded by the Federal Ministry of Transport and Digital Infrastructure (BMVI) under grant agreement no. 03EMF0203B and the project 5hine and Competence Center 5G.NRW, funded by means of the Federal State NRW by the Ministry for Economic Affairs, Innovation, Digitalization and Energy (MWIDE) under the Funding ID 005-2108-0073 resp. 005-01903-0047, and was supported by the Collaborative Research Center SFB 876 “Providing Information by Resource-Constrained Analysis”, project A4.
+
 # References
 
 [1] MathWorks. 2021. NB-IoT NPDSCH Block Error Rate Simulation. Retrieved December 11, 2021 from https://www.mathworks.com/help/lte/ug/nb-iot-npdsch-block-error-rate-simulation.html
