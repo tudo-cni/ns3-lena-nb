@@ -19,7 +19,7 @@ In future work, an NB-IoT specific error model will be integrated in LENA-NB.
 - P. Jörke, D. Ronschka, and C. Wietfeld, ‘Performance Evaluation of Random Access for Small Data Transmissions in Highly Dense Public and Private NB-IoT Networks’, in 2023 IEEE 97th Vehicular Technology Conference (VTC2023-Spring), 2023, pp. 1–7.
 - M. Štůsek et al., ‘Exploiting NB-IoT Network Performance and Capacity for Smart-Metering Use-Cases’, in In proceedings of the 15th International Congress on Ultra Modern Telecommunications and Control Systems and Workshops (ICUMT)., 2023, pp. 193–199.
 - M.T. Abbas et al., ‘Evaluating the Impact of Pre-Configured Uplink Resources in Narrowband IoT.‘, in Sensors 2024, 24, 5706.
-- P. Masek et al., ‘Quantifying NB-IoT Performance in 5G Use-Cases With Mixture of Regular and Stochastic Traffic‘ in IEEE Internet of Things Journal
+- P. Masek et al., ‘Quantifying NB-IoT Performance in 5G Use-Cases With Mixture of Regular and Stochastic Traffic‘, in IEEE Internet of Things Journal
   
 If you use this code or results in your publications, please cite our work as mentioned in [Citation](#citation). Also, if you do not find your work in this list, please open a merge request. 
 # How to use LENA-NB 
