@@ -9,6 +9,9 @@ This repository includes LENA-NB, an NB-IoT extension to ns-3. Currently, the fo
 - Adaptive Modulation and Coding
 - NB-IoT Energy State Machine
 
+If you are interested in the specific changes that were made to the original LENA source code, see commit [Implementation of NB-IoT
+](https://github.com/tudo-cni/ns3-lena-nb/commit/aebee244bdc8f95264b85df34042edcb393057b1) and onwards for reference. Furthermore, additional information about the design decisions and the overall structure of LENA-NB can be found in the provided [document](https://github.com/tudo-cni/ns3-lena-nb/blob/main/LENA-NB_Additional_Information.pdf).
+
 Currently, no NB-IoT specific error model is used. Instead, MATLAB was used to provide adequate configurations depending on a given SNR [1,2]. 
 A lookup table is derived from MATLAB NB-IoT BLER simulations to find a decent UL and DL configuration corresponding to a target BLER.
 In future work, an NB-IoT specific error model will be integrated in LENA-NB.
