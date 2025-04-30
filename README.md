@@ -4,10 +4,10 @@ This repository includes LENA-NB, an NB-IoT extension to ns-3. Currently, the fo
 - RRC Connection Resume Procedure (3GPP Rel. 13)
 - Cellular IoT Optimization (3GPP Rel. 13)
 - Early Data Transmission (3GPP Rel. 15)
-
-- Cross-Subframe Scheduling
-- Adaptive Modulation and Coding
-- NB-IoT Energy State Machine
+- Cross-Subframe Scheduling (including NPSS, NSSS, NPBCH, NPDCCH, NPDSCH & NPUSCH)
+- Adaptive Modulation and Coding 
+- Random Access Procedure with Coverage Enhancement Levels
+- NB-IoT Energy State Machine (including eDRX and PSM)
 
 If you are interested in the specific changes that were made to the original LENA source code, see commit [Implementation of NB-IoT
 ](https://github.com/tudo-cni/ns3-lena-nb/commit/aebee244bdc8f95264b85df34042edcb393057b1) and onwards for reference. Furthermore, additional information about the design decisions and the overall structure of LENA-NB can be found in the provided [document](https://github.com/tudo-cni/ns3-lena-nb/blob/main/LENA-NB_Additional_Information.pdf).
