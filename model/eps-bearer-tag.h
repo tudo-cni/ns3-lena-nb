@@ -57,8 +57,17 @@ public:
    * @param rnti the value of the RNTI to set
    * @param bid the value of the Bearer Id to set
    */
-  EpsBearerTag (uint16_t  rnti, uint8_t bid, uint64_t imsi);
+   EpsBearerTag (uint16_t  rnti, uint8_t bid);
   
+  /**
+   * Create a EpsBearerTag with the given RNTI and bearer id
+   *
+   * @param rnti the value of the RNTI to set
+   * @param bid the value of the Bearer Id to set
+   * @param imsi the value of the IMSI to set
+   */
+   EpsBearerTag (uint16_t  rnti, uint8_t bid, uint64_t imsi);
+
   /**
    * Set the RNTI to the given value.
    *
