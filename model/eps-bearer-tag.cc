@@ -61,6 +61,14 @@ EpsBearerTag::EpsBearerTag ()
     m_bid (0)
 {
 }
+
+EpsBearerTag::EpsBearerTag (uint16_t rnti, uint8_t bid)
+  : m_rnti (rnti),
+    m_bid (bid)
+{
+}
+
+// This is the original initializer. It has 3 parameters but `imsi` is not used!
 EpsBearerTag::EpsBearerTag (uint16_t rnti, uint8_t bid, uint64_t imsi)
   : m_rnti (rnti),
     m_bid (bid)
