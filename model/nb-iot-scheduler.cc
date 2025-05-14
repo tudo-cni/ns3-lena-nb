@@ -811,7 +811,7 @@ NbiotScheduler::GetNextAvailableMsg3UlGrantCandidate (uint64_t endSubframeMsg2,
               CheckforNContiniousSubframesUl (subframesOccupied, candidate, numSubframes, j);
           if (subframesOccupied.size () > 0)
             {
-              NbIotRrcSap::UlGrant ret;
+              NbIotRrcSap::UlGrant ret = {};
               ret.schedulingDelay = i;
               ret.msg3Repetitions = NbIotRrcSap::UlGrant::Msg3Repetitions::r4;
               ret.subcarrierIndication = j;
@@ -822,7 +822,7 @@ NbiotScheduler::GetNextAvailableMsg3UlGrantCandidate (uint64_t endSubframeMsg2,
             }
         }
     }
-  NbIotRrcSap::UlGrant ret;
+  NbIotRrcSap::UlGrant ret = {};
   ret.success = false;
   return std::make_pair (ret, std::make_pair (uint64_t (), std::vector<uint64_t> ()));
 }
