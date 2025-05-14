@@ -834,7 +834,7 @@ LteUeMac::RaResponseTimeoutNb (bool contention)
       NbIotRrcSap::ConvertMaxNumPreambleAttemptCE2int (m_CeLevel)) // Max. number of retries in this CE level reached
         {
           m_preambleTransmissionCounterCe = 0;
-          NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled
+          NbIotRrcSap::NprachParametersNbR14 tmp = {}; // needed if EDT is enabled
 
           if (m_CeLevel.coverageEnhancementLevel == m_radioResourceConfig.nprachConfig.nprachParametersList.nprachParametersNb0.coverageEnhancementLevel) // CE0
             {
@@ -934,7 +934,7 @@ LteUeMac::DoStartRandomAccessProcedureNb (bool edt)
   double rsrp = m_uePhySapProvider->GetRSRP ();
   //NS_BUILD_DEBUG (std::cout << "RSRP: " << rsrp << "dBm" << std::endl);
 
-  NbIotRrcSap::NprachParametersNbR14 tmp; // needed if EDT is enabled
+  NbIotRrcSap::NprachParametersNbR14 tmp = {}; // needed if EDT is enabled
 
   if (rsrp <= m_radioResourceConfig.nprachConfig.rsrpThresholdsPrachInfoList.ce2_lowerbound)
     {

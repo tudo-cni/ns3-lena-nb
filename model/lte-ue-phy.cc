@@ -873,7 +873,7 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
 
   // CREATE DlCqiLteControlMessage
   Ptr<DlCqiLteControlMessage> msg = Create<DlCqiLteControlMessage> ();
-  CqiListElement_s dlcqi;
+  CqiListElement_s dlcqi = {};
 
   dlcqi.m_rnti = m_rnti;
   dlcqi.m_ri = 1; // not yet used

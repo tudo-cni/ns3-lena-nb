@@ -280,7 +280,7 @@ EpcX2::RecvFromX2cSocket (Ptr<Socket> socket)
 
           NS_LOG_INFO ("X2 LoadInformation header: " << x2LoadInfoHeader);
 
-          EpcX2SapUser::LoadInformationParams params;
+          EpcX2SapUser::LoadInformationParams params = {};
           params.cellInformationList = x2LoadInfoHeader.GetCellInformationList ();
 
           NS_LOG_LOGIC ("cellInformationList size = " << params.cellInformationList.size ());
